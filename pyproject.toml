@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-claude-sdk = ["claude-agent-sdk>=1.0"]
+claude-sdk = ["claude-agent-sdk>=0.1.68"]
 slayer = ["motley-slayer"]
 dev = ["pytest", "pytest-asyncio"]
 
@@ -24,3 +24,7 @@ bird-interact = "bird_interact_agents.run:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/bird_interact_agents"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
