@@ -17,11 +17,14 @@ async def test_get_schema_tool():
         "instance_id": "alien_1",
     }
     load_db_data_if_needed("alien", settings.db_path)
-    agent_mod._ctx = {
+    agent_mod._ctx_var.set({
         "status": SampleStatus(idx=0, original_data=task_data),
         "data_path_base": settings.db_path,
+        "slayer_storage_dir": "",
+        "_slayer_client": None,
+        "_slayer_storage": None,
         "result": None,
-    }
+    })
 
     result = await agent_mod.get_schema.handler({})
     assert "content" in result
@@ -40,11 +43,14 @@ async def test_execute_sql_tool():
         "instance_id": "alien_1",
     }
     load_db_data_if_needed("alien", settings.db_path)
-    agent_mod._ctx = {
+    agent_mod._ctx_var.set({
         "status": SampleStatus(idx=0, original_data=task_data),
         "data_path_base": settings.db_path,
+        "slayer_storage_dir": "",
+        "_slayer_client": None,
+        "_slayer_storage": None,
         "result": None,
-    }
+    })
 
     result = await agent_mod.execute_sql.handler({"sql": "SELECT 1"})
     assert "content" in result
@@ -65,14 +71,18 @@ async def test_submit_correct_sql_tool():
     task = tasks[0]
     db_name = task["selected_database"]
     load_db_data_if_needed(db_name, settings.db_path)
-    agent_mod._ctx = {
+    agent_mod._ctx_var.set({
         "status": SampleStatus(idx=0, original_data=task),
         "data_path_base": settings.db_path,
+        "slayer_storage_dir": "",
+        "_slayer_client": None,
+        "_slayer_storage": None,
         "result": None,
-    }
+    })
 
     sol_sql = task["sol_sql"][0] if isinstance(task["sol_sql"], list) else task["sol_sql"]
     await agent_mod.submit_sql.handler({"sql": sol_sql})
 
-    assert agent_mod._ctx["result"] is not None
-    assert agent_mod._ctx["result"]["phase1_passed"] is True
+    result = agent_mod._ctx_var.get().get("result")
+    assert result is not None
+    assert result["phase1_passed"] is True

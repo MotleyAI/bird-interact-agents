@@ -108,3 +108,53 @@ def load_tasks(jsonl_path: str, limit: int | None = None) -> list[dict]:
     if limit is not None:
         tasks = tasks[:limit]
     return tasks
+
+
+# ---------------------------------------------------------------------------
+# SLayer MCP server (stdio) — used by all framework agents in slayer mode.
+# Each task spawns a per-DB instance pointing at the right model storage.
+# ---------------------------------------------------------------------------
+
+import os as _os
+import shutil as _shutil
+from pathlib import Path as _Path
+
+
+def _resolve_slayer_command() -> str:
+    """Locate the slayer CLI binary.
+
+    Prefers `.venv/bin/slayer` next to our package (so the spawned subprocess
+    uses the same Python environment), falls back to `slayer` on PATH.
+    """
+    # The .venv lives at the repo root; src/bird_interact_agents/harness.py
+    # is two levels deep below repo root.
+    repo_root = _Path(__file__).resolve().parent.parent.parent
+    venv_slayer = repo_root / ".venv" / "bin" / "slayer"
+    if venv_slayer.is_file() and _os.access(venv_slayer, _os.X_OK):
+        return str(venv_slayer)
+    on_path = _shutil.which("slayer")
+    if on_path:
+        return on_path
+    raise RuntimeError(
+        "slayer CLI not found. Install with `uv pip install motley-slayer` "
+        "or `uv pip install -e ../slayer` and try again."
+    )
+
+
+def slayer_mcp_stdio_config(storage_dir: str) -> dict:
+    """Return a stdio MCP server config for the per-task slayer storage.
+
+    Frameworks adapt this dict to their own MCP-server config type.
+
+    Keys:
+        command: absolute path to the slayer binary
+        args:    [`mcp`]
+        env:     full env dict with SLAYER_STORAGE pointing at the per-DB store
+    """
+    env = _os.environ.copy()
+    env["SLAYER_STORAGE"] = str(_Path(storage_dir).resolve())
+    return {
+        "command": _resolve_slayer_command(),
+        "args": ["mcp"],
+        "env": env,
+    }

@@ -28,6 +28,7 @@ from bird_interact_agents.harness import (
     execute_submit_action,
     load_db_data_if_needed,
     parse_encoder_response,
+    slayer_mcp_stdio_config,
 )
 
 logger = logging.getLogger(__name__)
@@ -232,11 +233,15 @@ async def submit_sql(args: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# SLayer-mode tools — semantic layer access via local SlayerClient
+# SLayer-mode tools — agent reaches SLayer through its native MCP server
+# (configured in run_task via mcp_servers={"slayer": ...}). The only native
+# wrapper we keep is `submit_query`, which uses an in-process SlayerClient
+# to translate the agent's SLayer query into deterministic SQL and submit
+# it through bird-interact's eval pipeline.
 # ---------------------------------------------------------------------------
 
 def _slayer_client():
-    """Get or build a SlayerClient for the current task's DB."""
+    """Get or build a SlayerClient for the current task's DB (used by submit_query)."""
     client = _ctx.get("_slayer_client")
     if client is None:
         from slayer.client.slayer_client import SlayerClient
@@ -248,88 +253,6 @@ def _slayer_client():
         _ctx["_slayer_client"] = client
         _ctx["_slayer_storage"] = storage
     return client
-
-
-@tool(
-    "models_summary",
-    "List all available semantic models with a one-line summary of each",
-    {},
-)
-async def models_summary(args: dict) -> dict:
-    storage = _ctx.get("_slayer_storage")
-    if storage is None:
-        _slayer_client()
-        storage = _ctx["_slayer_storage"]
-    names = await storage.list_models()
-    lines = []
-    for name in names:
-        m = await storage.get_model(name)
-        n_dims = len(m.dimensions) if m and m.dimensions else 0
-        n_meas = len(m.measures) if m and m.measures else 0
-        lines.append(f"{name}: {n_dims} dimensions, {n_meas} measures")
-    return _text("\n".join(lines))
-
-
-@tool(
-    "inspect_model",
-    "Inspect a specific model — its dimensions, measures, and joins",
-    {"model_name": str},
-)
-async def inspect_model(args: dict) -> dict:
-    _slayer_client()
-    storage = _ctx["_slayer_storage"]
-    m = await storage.get_model(args["model_name"])
-    if m is None:
-        return _text(f"Model not found: {args['model_name']}")
-    info = {
-        "name": m.name,
-        "table": getattr(m, "table", None),
-        "dimensions": [
-            {"name": d.name, "sql": getattr(d, "sql", None), "type": getattr(d, "type", None)}
-            for d in (m.dimensions or [])
-        ],
-        "measures": [
-            {"name": x.name, "sql": getattr(x, "sql", None)}
-            for x in (m.measures or [])
-        ],
-        "joins": [
-            {"target": getattr(j, "target", None), "on": getattr(j, "on", None)}
-            for j in (m.joins or [])
-        ],
-    }
-    return _text(json.dumps(info, indent=2, default=str))
-
-
-@tool(
-    "query",
-    (
-        "Execute a SLayer query and return results plus the generated SQL. "
-        "The query argument is a JSON string with a SLayer query spec, e.g. "
-        '{"source_model": "orders", "dimensions": ["status"], '
-        '"measures": ["amount:sum"], "limit": 10}.'
-    ),
-    {"query_json": str},
-)
-async def slayer_query(args: dict) -> dict:
-    try:
-        query_dict = json.loads(args["query_json"])
-    except json.JSONDecodeError as e:
-        return _text(f"Invalid JSON: {e}")
-
-    client = _slayer_client()
-    try:
-        sql = client.sql_sync(query_dict)
-        resp = client.query_sync(query_dict)
-    except Exception as e:
-        return _text(f"Query error: {type(e).__name__}: {e}")
-
-    rows = resp.data[:50] if hasattr(resp, "data") else []
-    out = {
-        "sql": sql,
-        "row_count": len(rows),
-        "rows": rows,
-    }
-    return _text(json.dumps(out, indent=2, default=str))
 
 
 @tool(
@@ -387,17 +310,12 @@ RAW_A_TOOLS = [
 # clarifies and submits.
 RAW_C_TOOLS = [ask_user, submit_sql]
 
-SLAYER_A_TOOLS = [
-    models_summary,
-    inspect_model,
-    slayer_query,
-    ask_user,
-    submit_query,
-]
-
-# c-interact for slayer: models summary is injected in the prompt; agent
-# inspects, clarifies, and submits.
-SLAYER_C_TOOLS = [inspect_model, slayer_query, ask_user, submit_query]
+# In SLayer mode, exploration tools (help, models_summary, inspect_model,
+# query, list_datasources) come from the slayer MCP server itself —
+# wired into ClaudeAgentOptions.mcp_servers. We only register the native
+# bird-interact tools here.
+SLAYER_A_TOOLS = [ask_user, submit_query]
+SLAYER_C_TOOLS = [ask_user, submit_query]
 
 
 def _select_tools(query_mode: str, eval_mode: str) -> list:
@@ -447,7 +365,8 @@ async def _build_prompt(
         return SLAYER_A_INTERACT.format(budget=budget, user_query=user_query)
 
     if query_mode == "slayer" and eval_mode == "c-interact":
-        # Inject models summary
+        # Inject SLayer help text + models summary up front
+        from slayer.help import render_help
         from slayer.storage.yaml_storage import YAMLStorage
 
         storage = YAMLStorage(base_dir=_ctx["slayer_storage_dir"])
@@ -461,6 +380,7 @@ async def _build_prompt(
         return SLAYER_C_INTERACT.format(
             budget=budget,
             user_query=user_query,
+            slayer_help=render_help(),
             models_summary="\n".join(lines),
         )
 
@@ -525,9 +445,22 @@ class ClaudeSDKAgent:
         )
         tool_names = [f"mcp__bird-interact-tools__{t.name}" for t in tools]
 
+        mcp_servers: dict = {"bird-interact-tools": server}
+        if query_mode == "slayer":
+            mcp_servers["slayer"] = slayer_mcp_stdio_config(slayer_storage_dir)
+            # Allow the slayer MCP tools the agent will need
+            slayer_tools = [
+                "help",
+                "list_datasources",
+                "models_summary",
+                "inspect_model",
+                "query",
+            ]
+            tool_names.extend(f"mcp__slayer__{t}" for t in slayer_tools)
+
         options = ClaudeAgentOptions(
             system_prompt=prompt,
-            mcp_servers={"bird-interact-tools": server},
+            mcp_servers=mcp_servers,
             allowed_tools=tool_names,
         )
 
