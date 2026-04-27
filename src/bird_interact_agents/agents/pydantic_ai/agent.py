@@ -11,6 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent, RunContext
+from pydantic_ai.mcp import MCPServerStdio
 
 from bird_interact_agents.agents.claude_sdk.prompts import (
     RAW_A_INTERACT,
@@ -28,6 +29,7 @@ from bird_interact_agents.harness import (
     execute_submit_action,
     load_db_data_if_needed,
     parse_encoder_response,
+    slayer_mcp_stdio_config,
 )
 
 logger = logging.getLogger(__name__)
@@ -213,87 +215,33 @@ def _build_raw_c_agent(model: str) -> Agent:
     return agent
 
 
-def _build_slayer_a_agent(model: str) -> Agent:
-    agent = Agent(model=model, deps_type=TaskDeps, retries=2)
+def _build_slayer_agent(model: str, slayer_storage_dir: str) -> Agent:
+    """Build a SLayer-mode agent (shared between a- and c-interact variants).
+
+    Discovery tools come from the actual `slayer mcp` server attached as a
+    toolset. We only register `ask_user` and `submit_query` natively.
+    """
+    cfg = slayer_mcp_stdio_config(slayer_storage_dir)
+    slayer_server = MCPServerStdio(
+        command=cfg["command"], args=cfg["args"], env=cfg["env"]
+    )
+    agent = Agent(
+        model=model, deps_type=TaskDeps, retries=2, toolsets=[slayer_server]
+    )
 
     @agent.tool
-    async def models_summary(ctx: RunContext[TaskDeps]) -> str:
-        """List all available semantic models with one-line summaries."""
-        _slayer_client(ctx.deps)
-        storage = ctx.deps._slayer_storage
-        names = await storage.list_models()
-        lines = []
-        for name in names:
-            m = await storage.get_model(name)
-            n_dims = len(m.dimensions) if m and m.dimensions else 0
-            n_meas = len(m.measures) if m and m.measures else 0
-            lines.append(f"{name}: {n_dims} dimensions, {n_meas} measures")
-        return "\n".join(lines)
+    async def ask_user(ctx: RunContext[TaskDeps], question: str) -> str:
+        """Ask the user a clarification question."""
+        return await _ask_user_impl(ctx.deps, question)
 
     @agent.tool
-    async def inspect_model(ctx: RunContext[TaskDeps], model_name: str) -> str:
-        """Inspect a specific model — its dimensions, measures, and joins."""
-        _slayer_client(ctx.deps)
-        storage = ctx.deps._slayer_storage
-        m = await storage.get_model(model_name)
-        if m is None:
-            return f"Model not found: {model_name}"
-        info = {
-            "name": m.name,
-            "table": getattr(m, "table", None),
-            "dimensions": [
-                {"name": d.name, "sql": getattr(d, "sql", None)}
-                for d in (m.dimensions or [])
-            ],
-            "measures": [
-                {"name": x.name, "sql": getattr(x, "sql", None)}
-                for x in (m.measures or [])
-            ],
-            "joins": [
-                {"target": getattr(j, "target", None), "on": getattr(j, "on", None)}
-                for j in (m.joins or [])
-            ],
-        }
-        return json.dumps(info, indent=2, default=str)
-
-    @agent.tool
-    async def query(ctx: RunContext[TaskDeps], query_json: str) -> str:
-        """Execute a SLayer query and return rows + the generated SQL.
-
-        query_json is a JSON string with a SLayer query spec, e.g.
-        '{"source_model": "orders", "dimensions": ["status"],
-        "measures": ["amount:sum"], "limit": 10}'.
+    async def submit_query(ctx: RunContext[TaskDeps], query_json: str) -> str:
+        """Submit your final SLayer query for evaluation. Translates the
+        SLayer query JSON to SQL and tests it against the ground truth.
         """
         try:
             query_dict = json.loads(query_json)
         except json.JSONDecodeError as e:
-            return f"Invalid JSON: {e}"
-
-        client = _slayer_client(ctx.deps)
-        try:
-            sql = client.sql_sync(query_dict)
-            resp = client.query_sync(query_dict)
-        except Exception as e:
-            return f"Query error: {type(e).__name__}: {e}"
-
-        rows = resp.data[:50] if hasattr(resp, "data") else []
-        return json.dumps(
-            {"sql": sql, "row_count": len(rows), "rows": rows},
-            indent=2,
-            default=str,
-        )
-
-    @agent.tool
-    async def ask_user(ctx: RunContext[TaskDeps], question: str) -> str:
-        """Ask the user a clarification question."""
-        return await _ask_user_impl(ctx.deps, question)
-
-    @agent.tool
-    async def submit_query(ctx: RunContext[TaskDeps], query_json: str) -> str:
-        """Submit your final SLayer query for evaluation. Translates to SQL and tests against ground truth."""
-        try:
-            query_dict = json.loads(query_json)
-        except json.JSONDecodeError as e:
             return f"Invalid JSON — submission aborted: {e}"
 
         client = _slayer_client(ctx.deps)
@@ -302,72 +250,6 @@ def _build_slayer_a_agent(model: str) -> Agent:
         except Exception as e:
             return f"Could not generate SQL — submission aborted: {e}"
 
-        observation, reward, p1, p2, finished = execute_submit_action(
-            sql, ctx.deps.status, ctx.deps.data_path_base
-        )
-        ctx.deps.result = {
-            "phase1_passed": p1,
-            "phase2_passed": p2,
-            "total_reward": reward if reward is not None else 0.0,
-            "finished": finished,
-            "submitted_sql": sql,
-        }
-        return f"Generated SQL:\n{sql}\n\nResult: {observation}"
-
-    return agent
-
-
-def _build_slayer_c_agent(model: str) -> Agent:
-    agent = Agent(model=model, deps_type=TaskDeps, retries=2)
-
-    @agent.tool
-    async def inspect_model(ctx: RunContext[TaskDeps], model_name: str) -> str:
-        """Inspect a model's dimensions, measures, and joins."""
-        _slayer_client(ctx.deps)
-        storage = ctx.deps._slayer_storage
-        m = await storage.get_model(model_name)
-        if m is None:
-            return f"Model not found: {model_name}"
-        info = {
-            "name": m.name,
-            "dimensions": [d.name for d in (m.dimensions or [])],
-            "measures": [x.name for x in (m.measures or [])],
-        }
-        return json.dumps(info, indent=2, default=str)
-
-    @agent.tool
-    async def query(ctx: RunContext[TaskDeps], query_json: str) -> str:
-        """Execute a SLayer query."""
-        try:
-            query_dict = json.loads(query_json)
-        except json.JSONDecodeError as e:
-            return f"Invalid JSON: {e}"
-        client = _slayer_client(ctx.deps)
-        try:
-            sql = client.sql_sync(query_dict)
-            resp = client.query_sync(query_dict)
-        except Exception as e:
-            return f"Query error: {type(e).__name__}: {e}"
-        rows = resp.data[:50] if hasattr(resp, "data") else []
-        return json.dumps({"sql": sql, "rows": rows}, indent=2, default=str)
-
-    @agent.tool
-    async def ask_user(ctx: RunContext[TaskDeps], question: str) -> str:
-        """Ask the user a clarification question."""
-        return await _ask_user_impl(ctx.deps, question)
-
-    @agent.tool
-    async def submit_query(ctx: RunContext[TaskDeps], query_json: str) -> str:
-        """Submit your final SLayer query for evaluation."""
-        try:
-            query_dict = json.loads(query_json)
-        except json.JSONDecodeError as e:
-            return f"Invalid JSON — submission aborted: {e}"
-        client = _slayer_client(ctx.deps)
-        try:
-            sql = client.sql_sync(query_dict)
-        except Exception as e:
-            return f"Could not generate SQL — submission aborted: {e}"
         observation, reward, p1, p2, finished = execute_submit_action(
             sql, ctx.deps.status, ctx.deps.data_path_base
         )
@@ -399,15 +281,20 @@ class PydanticAIAgent:
         self.slayer_storage_root = slayer_storage_root
         self.model = model
 
-    def _select_agent(self, query_mode: str, eval_mode: str) -> Agent:
+    def _select_agent(
+        self,
+        query_mode: str,
+        eval_mode: str,
+        slayer_storage_dir: str = "",
+    ) -> Agent:
         if query_mode == "raw" and eval_mode == "a-interact":
             return _build_raw_a_agent(self.model)
         if query_mode == "raw" and eval_mode == "c-interact":
             return _build_raw_c_agent(self.model)
-        if query_mode == "slayer" and eval_mode == "a-interact":
-            return _build_slayer_a_agent(self.model)
-        if query_mode == "slayer" and eval_mode == "c-interact":
-            return _build_slayer_c_agent(self.model)
+        if query_mode == "slayer":
+            # Same agent shape for a- and c-interact; the system prompt
+            # differs in the runner.
+            return _build_slayer_agent(self.model, slayer_storage_dir)
         raise ValueError(f"Unknown mode combo: {query_mode}/{eval_mode}")
 
     async def _build_prompt(
@@ -434,7 +321,9 @@ class PydanticAIAgent:
         if query_mode == "slayer" and eval_mode == "a-interact":
             return SLAYER_A_INTERACT.format(budget=budget, user_query=user_query)
         if query_mode == "slayer" and eval_mode == "c-interact":
+            from slayer.help import render_help
             from slayer.storage.yaml_storage import YAMLStorage
+
             storage = YAMLStorage(base_dir=deps.slayer_storage_dir)
             names = await storage.list_models()
             lines = []
@@ -445,6 +334,7 @@ class PydanticAIAgent:
                 lines.append(f"- {name}: dims=[{dims}] measures=[{meas}]")
             return SLAYER_C_INTERACT.format(
                 budget=budget, user_query=user_query,
+                slayer_help=render_help(),
                 models_summary="\n".join(lines),
             )
         raise ValueError(f"Unknown mode combo: {query_mode}/{eval_mode}")
@@ -479,7 +369,7 @@ class PydanticAIAgent:
             slayer_storage_dir=slayer_storage_dir,
         )
 
-        agent = self._select_agent(query_mode, eval_mode)
+        agent = self._select_agent(query_mode, eval_mode, slayer_storage_dir)
         prompt = await self._build_prompt(query_mode, eval_mode, task_data, budget, deps)
 
         try:
