@@ -29,12 +29,41 @@ from bird_interact_agents.harness import (
     _schema_cache,
     build_user_decoder_prompt,
     build_user_encoder_prompt,
+    close_db_connection,
     execute_env_action,
     execute_submit_action,
     load_db_data_if_needed,
     parse_encoder_response,
     slayer_mcp_stdio_config,
 )
+
+
+def _ensure_thread_safe(db_name: str, data_path_base: str) -> None:
+    """Make sure the harness's SQLite connection cache has no entry for
+    this DB before we run a tool, so the current thread will open a fresh
+    connection.
+
+    The harness caches sqlite3 connections per db_path module-globally.
+    smolagents tool calls hop between threads, and sqlite3 raises
+    "SQLite objects created in a thread can only be used in that same
+    thread" when one thread tries to use (or close!) a connection that
+    another thread opened.
+
+    `close_db_connection` calls `.close()` on the cached object first,
+    which itself raises cross-thread and leaves the dict entries intact.
+    We bypass that and just `del` the cache entries, leaking the old
+    connection (it gets GC'd when its thread ends).
+    """
+    from bird_interact_agents import harness as _h
+
+    db_path = f"{data_path_base}/{db_name}/{db_name}.sqlite"
+    # Reach into the BIRD-Interact action_handler module's caches.
+    import batch_run_bird_interact.action_handler_sqlite as _ah  # type: ignore[import-not-found]
+    _ah._db_connections.pop(db_path, None)
+    _ah._db_cursors.pop(db_path, None)
+    _ah._db_configs.pop(db_path, None)
+    # Silence unused-import warning for the harness alias.
+    _ = _h, close_db_connection
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +143,8 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
         """
         return asyncio.run(_ask_user_impl(state, question))
 
+    db_name = state.status.original_data["selected_database"]
+
     @tool
     def execute_sql(sql: str) -> str:
         """Execute a SQL query against the database and return results.
@@ -121,6 +152,7 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
         Args:
             sql: The SQL query to execute.
         """
+        _ensure_thread_safe(db_name, state.data_path_base)
         observation, _ = execute_env_action(
             f"execute({sql})", state.status, state.data_path_base
         )
@@ -192,6 +224,7 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
         Args:
             sql: The final SQL query to submit.
         """
+        _ensure_thread_safe(db_name, state.data_path_base)
         observation, reward, p1, p2, finished = execute_submit_action(
             sql, state.status, state.data_path_base
         )
@@ -221,6 +254,7 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
             sql = client.sql_sync(query_dict)
         except Exception as e:
             return f"Could not generate SQL — submission aborted: {e}"
+        _ensure_thread_safe(db_name, state.data_path_base)
         observation, reward, p1, p2, finished = execute_submit_action(
             sql, state.status, state.data_path_base
         )
@@ -304,6 +338,9 @@ def _run_smolagents_sync(
 
     model = LiteLLMModel(model_id=model_id)
 
+    # max_tool_threads=1 keeps every tool call on the same OS thread —
+    # required because the BIRD-Interact harness caches sqlite3 connections
+    # per thread and SQLite connections are not thread-safe by default.
     if query_mode == "slayer":
         from mcp import StdioServerParameters
         from smolagents import MCPClient
@@ -318,11 +355,13 @@ def _run_smolagents_sync(
                 tools=[*slayer_tools, *native_tools],
                 model=model,
                 instructions=prompt,
+                max_tool_threads=1,
             )
             result = agent.run(user_query)
     else:
         agent = ToolCallingAgent(
-            tools=native_tools, model=model, instructions=prompt
+            tools=native_tools, model=model, instructions=prompt,
+            max_tool_threads=1,
         )
         result = agent.run(user_query)
     return str(result)
