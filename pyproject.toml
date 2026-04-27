@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bird-interact-agents"
+version = "0.1.0"
+description = "Pluggable agent benchmarks for BIRD-Interact (SLayer + raw SQL modes)"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = [
+    "pydantic>=2.7",
+    "pydantic-settings>=2.2",
+    "litellm>=1.0",
+]
+
+[project.optional-dependencies]
+claude-sdk = ["claude-agent-sdk>=1.0"]
+slayer = ["motley-slayer"]
+dev = ["pytest", "pytest-asyncio"]
+
+[project.scripts]
+bird-interact = "bird_interact_agents.run:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bird_interact_agents"]
