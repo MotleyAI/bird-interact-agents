@@ -60,6 +60,7 @@ async def run_evaluation(
     concurrency: int = 3,
     patience: int = 3,
     user_sim_model: str = "anthropic/claude-haiku-4-5-20251001",
+    slayer_storage_root: str | None = None,
 ) -> dict:
     """Run full evaluation across all tasks."""
     tasks = load_tasks(data_path, limit)
@@ -75,12 +76,28 @@ async def run_evaluation(
     elif framework == "claude_sdk":
         from bird_interact_agents.agents.claude_sdk.agent import ClaudeSDKAgent
 
-        agent = ClaudeSDKAgent()
+        agent = ClaudeSDKAgent(slayer_storage_root=slayer_storage_root)
 
         async def run_one(td: dict) -> dict:
             budget = calculate_budget(td, patience)
             return await agent.run_task(
                 td, data_dir, budget, query_mode,
+                eval_mode=mode,
+                user_sim_model=user_sim_model,
+            )
+    elif framework == "pydantic_ai":
+        from bird_interact_agents.agents.pydantic_ai.agent import PydanticAIAgent
+
+        agent_pa = PydanticAIAgent(
+            slayer_storage_root=slayer_storage_root,
+            model="anthropic:claude-sonnet-4-5",
+        )
+
+        async def run_one(td: dict) -> dict:
+            budget = calculate_budget(td, patience)
+            return await agent_pa.run_task(
+                td, data_dir, budget, query_mode,
+                eval_mode=mode,
                 user_sim_model=user_sim_model,
             )
     else:
@@ -156,7 +173,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--framework",
-        choices=["claude_sdk"],
+        choices=["claude_sdk", "pydantic_ai"],
         default="claude_sdk",
         help="Agent framework to use",
     )
@@ -189,6 +206,11 @@ def main() -> None:
         default="anthropic/claude-haiku-4-5-20251001",
         help="LiteLLM model for user simulator",
     )
+    parser.add_argument(
+        "--slayer-storage-root",
+        default="./slayer_storage",
+        help="Root dir of per-DB SLayer model stores (only used in --query-mode slayer)",
+    )
     args = parser.parse_args()
 
     asyncio.run(
@@ -203,6 +225,7 @@ def main() -> None:
             concurrency=args.concurrency,
             patience=args.patience,
             user_sim_model=args.user_sim_model,
+            slayer_storage_root=args.slayer_storage_root,
         )
     )
 

@@ -1,5 +1,7 @@
 """Claude Agent SDK implementation for BIRD-Interact."""
 
+import contextvars
+import json
 import logging
 import re
 
@@ -10,9 +12,15 @@ from claude_agent_sdk import (
     tool,
 )
 
-from bird_interact_agents.agents.claude_sdk.prompts import RAW_A_INTERACT, SLAYER_A_INTERACT
+from bird_interact_agents.agents.claude_sdk.prompts import (
+    RAW_A_INTERACT,
+    RAW_C_INTERACT,
+    SLAYER_A_INTERACT,
+    SLAYER_C_INTERACT,
+)
 from bird_interact_agents.harness import (
     SampleStatus,
+    _filter_knowledge_for_agent,
     _schema_cache,
     build_user_decoder_prompt,
     build_user_encoder_prompt,
@@ -25,26 +33,65 @@ from bird_interact_agents.harness import (
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Module-level task context — set by the agent before each task run.
-# Tools read from this to know which DB, task, etc. they're operating on.
+# Per-task context — uses contextvars so concurrent task runs don't collide.
+# Each invocation of run_task() sets the var, and tools read from it.
+# `_ctx` is exposed as a dict-like proxy for backward compat with tests.
 # ---------------------------------------------------------------------------
-_ctx: dict = {}
+_ctx_var: contextvars.ContextVar[dict] = contextvars.ContextVar("_ctx_var")
+
+
+class _CtxProxy:
+    """Dict-like proxy that reads/writes the current contextvar value.
+
+    Tests do `agent_mod._ctx = {...}` and `agent_mod._ctx["key"]` — both
+    work via this proxy by setting/reading the contextvar.
+    """
+
+    def __getitem__(self, key):
+        return _ctx_var.get()[key]
+
+    def __setitem__(self, key, value):
+        _ctx_var.get()[key] = value
+
+    def __contains__(self, key):
+        try:
+            return key in _ctx_var.get()
+        except LookupError:
+            return False
+
+    def get(self, key, default=None):
+        try:
+            return _ctx_var.get().get(key, default)
+        except LookupError:
+            return default
+
+    def update(self, *args, **kwargs):
+        try:
+            current = _ctx_var.get()
+        except LookupError:
+            current = {}
+            _ctx_var.set(current)
+        current.update(*args, **kwargs)
+
+
+_ctx = _CtxProxy()
 
 
 def _text(msg: str) -> dict:
     """Helper to build a tool return value."""
-    return {"content": [{"type": "text", "text": msg}]}
+    return {"content": [{"type": "text", "text": str(msg)}]}
 
 
 # ---------------------------------------------------------------------------
-# Raw-mode tools
+# Raw-mode tools — direct DB exploration + SQL execution
 # ---------------------------------------------------------------------------
 
 @tool("execute_sql", "Execute a SQL query against the database and return results", {"sql": str})
 async def execute_sql(args: dict) -> dict:
     status: SampleStatus = _ctx["status"]
-    action = f"execute({args['sql']})"
-    observation, success = execute_env_action(action, status, _ctx["data_path_base"])
+    observation, _ = execute_env_action(
+        f"execute({args['sql']})", status, _ctx["data_path_base"]
+    )
     return _text(observation)
 
 
@@ -118,24 +165,21 @@ async def get_all_knowledge_definitions(args: dict) -> dict:
     return _text(observation)
 
 
-@tool(
-    "ask_user",
-    "Ask the user a clarification question about their query",
-    {"question": str},
-)
-async def ask_user(args: dict) -> dict:
+# ---------------------------------------------------------------------------
+# Shared tools — user simulator + submission
+# ---------------------------------------------------------------------------
+
+async def _ask_user_impl(question: str) -> str:
+    """Encoder/decoder user simulator using LiteLLM."""
     status: SampleStatus = _ctx["status"]
     db_name = status.original_data["selected_database"]
     schema = _schema_cache.get(db_name, "")
     model = _ctx.get("user_sim_model", "anthropic/claude-haiku-4-5-20251001")
     prompt_version = _ctx.get("user_sim_prompt_version", "v2")
 
-    # Build encoder prompt and call LLM
-    encoder_prompt = build_user_encoder_prompt(
-        args["question"], status, schema, prompt_version
-    )
     import litellm
 
+    encoder_prompt = build_user_encoder_prompt(question, status, schema, prompt_version)
     encoder_resp = await litellm.acompletion(
         model=model,
         messages=[{"role": "user", "content": encoder_prompt}],
@@ -144,9 +188,8 @@ async def ask_user(args: dict) -> dict:
         encoder_resp.choices[0].message.content or ""
     )
 
-    # Build decoder prompt and call LLM
     decoder_prompt = build_user_decoder_prompt(
-        args["question"], encoder_action, status, schema, prompt_version
+        question, encoder_action, status, schema, prompt_version
     )
     decoder_resp = await litellm.acompletion(
         model=model,
@@ -154,10 +197,17 @@ async def ask_user(args: dict) -> dict:
     )
     raw_response = decoder_resp.choices[0].message.content or ""
 
-    # Extract between <s>...</s> tags
     match = re.search(r"<s>(.*?)</s>", raw_response, re.DOTALL)
-    answer = match.group(1).strip() if match else raw_response.strip()
+    return match.group(1).strip() if match else raw_response.strip()
 
+
+@tool(
+    "ask_user",
+    "Ask the user a clarification question about their query",
+    {"question": str},
+)
+async def ask_user(args: dict) -> dict:
+    answer = await _ask_user_impl(args["question"])
     return _text(answer)
 
 
@@ -171,7 +221,6 @@ async def submit_sql(args: dict) -> dict:
     observation, reward, p1, p2, finished = execute_submit_action(
         args["sql"], status, _ctx["data_path_base"]
     )
-    # Store result for the runner to collect
     _ctx["result"] = {
         "phase1_passed": p1,
         "phase2_passed": p2,
@@ -179,14 +228,150 @@ async def submit_sql(args: dict) -> dict:
         "finished": finished,
         "observation": observation,
     }
-    return _text(observation if isinstance(observation, str) else str(observation))
+    return _text(observation)
+
+
+# ---------------------------------------------------------------------------
+# SLayer-mode tools — semantic layer access via local SlayerClient
+# ---------------------------------------------------------------------------
+
+def _slayer_client():
+    """Get or build a SlayerClient for the current task's DB."""
+    client = _ctx.get("_slayer_client")
+    if client is None:
+        from slayer.client.slayer_client import SlayerClient
+        from slayer.storage.yaml_storage import YAMLStorage
+
+        storage_dir = _ctx["slayer_storage_dir"]
+        storage = YAMLStorage(base_dir=storage_dir)
+        client = SlayerClient(storage=storage)
+        _ctx["_slayer_client"] = client
+        _ctx["_slayer_storage"] = storage
+    return client
+
+
+@tool(
+    "models_summary",
+    "List all available semantic models with a one-line summary of each",
+    {},
+)
+async def models_summary(args: dict) -> dict:
+    storage = _ctx.get("_slayer_storage")
+    if storage is None:
+        _slayer_client()
+        storage = _ctx["_slayer_storage"]
+    names = await storage.list_models()
+    lines = []
+    for name in names:
+        m = await storage.get_model(name)
+        n_dims = len(m.dimensions) if m and m.dimensions else 0
+        n_meas = len(m.measures) if m and m.measures else 0
+        lines.append(f"{name}: {n_dims} dimensions, {n_meas} measures")
+    return _text("\n".join(lines))
+
+
+@tool(
+    "inspect_model",
+    "Inspect a specific model — its dimensions, measures, and joins",
+    {"model_name": str},
+)
+async def inspect_model(args: dict) -> dict:
+    _slayer_client()
+    storage = _ctx["_slayer_storage"]
+    m = await storage.get_model(args["model_name"])
+    if m is None:
+        return _text(f"Model not found: {args['model_name']}")
+    info = {
+        "name": m.name,
+        "table": getattr(m, "table", None),
+        "dimensions": [
+            {"name": d.name, "sql": getattr(d, "sql", None), "type": getattr(d, "type", None)}
+            for d in (m.dimensions or [])
+        ],
+        "measures": [
+            {"name": x.name, "sql": getattr(x, "sql", None)}
+            for x in (m.measures or [])
+        ],
+        "joins": [
+            {"target": getattr(j, "target", None), "on": getattr(j, "on", None)}
+            for j in (m.joins or [])
+        ],
+    }
+    return _text(json.dumps(info, indent=2, default=str))
+
+
+@tool(
+    "query",
+    (
+        "Execute a SLayer query and return results plus the generated SQL. "
+        "The query argument is a JSON string with a SLayer query spec, e.g. "
+        '{"source_model": "orders", "dimensions": ["status"], '
+        '"measures": ["amount:sum"], "limit": 10}.'
+    ),
+    {"query_json": str},
+)
+async def slayer_query(args: dict) -> dict:
+    try:
+        query_dict = json.loads(args["query_json"])
+    except json.JSONDecodeError as e:
+        return _text(f"Invalid JSON: {e}")
+
+    client = _slayer_client()
+    try:
+        sql = client.sql_sync(query_dict)
+        resp = client.query_sync(query_dict)
+    except Exception as e:
+        return _text(f"Query error: {type(e).__name__}: {e}")
+
+    rows = resp.data[:50] if hasattr(resp, "data") else []
+    out = {
+        "sql": sql,
+        "row_count": len(rows),
+        "rows": rows,
+    }
+    return _text(json.dumps(out, indent=2, default=str))
+
+
+@tool(
+    "submit_query",
+    (
+        "Submit your final SLayer query for evaluation. The query is translated "
+        "to SQL and tested against the ground truth."
+    ),
+    {"query_json": str},
+)
+async def submit_query(args: dict) -> dict:
+    try:
+        query_dict = json.loads(args["query_json"])
+    except json.JSONDecodeError as e:
+        return _text(f"Invalid JSON — submission aborted: {e}")
+
+    client = _slayer_client()
+    try:
+        sql = client.sql_sync(query_dict)
+    except Exception as e:
+        return _text(f"Could not generate SQL — submission aborted: {e}")
+
+    status: SampleStatus = _ctx["status"]
+    observation, reward, p1, p2, finished = execute_submit_action(
+        sql, status, _ctx["data_path_base"]
+    )
+    _ctx["result"] = {
+        "phase1_passed": p1,
+        "phase2_passed": p2,
+        "total_reward": reward if reward is not None else 0.0,
+        "finished": finished,
+        "observation": observation,
+        "submitted_sql": sql,
+    }
+    return _text(f"Generated SQL:\n{sql}\n\nResult: {observation}")
 
 
 # ---------------------------------------------------------------------------
 # Tool lists
 # ---------------------------------------------------------------------------
 
-RAW_TOOLS = [
+RAW_A_TOOLS = [
     execute_sql,
     get_schema,
     get_all_column_meanings,
@@ -198,8 +383,88 @@ RAW_TOOLS = [
     submit_sql,
 ]
 
-# SLayer tools will be added in a later phase
-SLAYER_TOOLS: list = []
+# c-interact: schema and knowledge are injected in the prompt; agent only
+# clarifies and submits.
+RAW_C_TOOLS = [ask_user, submit_sql]
+
+SLAYER_A_TOOLS = [
+    models_summary,
+    inspect_model,
+    slayer_query,
+    ask_user,
+    submit_query,
+]
+
+# c-interact for slayer: models summary is injected in the prompt; agent
+# inspects, clarifies, and submits.
+SLAYER_C_TOOLS = [inspect_model, slayer_query, ask_user, submit_query]
+
+
+def _select_tools(query_mode: str, eval_mode: str) -> list:
+    if query_mode == "raw" and eval_mode == "a-interact":
+        return RAW_A_TOOLS
+    if query_mode == "raw" and eval_mode == "c-interact":
+        return RAW_C_TOOLS
+    if query_mode == "slayer" and eval_mode == "a-interact":
+        return SLAYER_A_TOOLS
+    if query_mode == "slayer" and eval_mode == "c-interact":
+        return SLAYER_C_TOOLS
+    raise ValueError(f"Unknown mode combo: query_mode={query_mode} eval_mode={eval_mode}")
+
+
+# ---------------------------------------------------------------------------
+# Prompt builders
+# ---------------------------------------------------------------------------
+
+async def _build_prompt(
+    query_mode: str, eval_mode: str, task_data: dict, budget: float
+) -> str:
+    user_query = task_data["amb_user_query"]
+    db_name = task_data["selected_database"]
+
+    if query_mode == "raw" and eval_mode == "a-interact":
+        return RAW_A_INTERACT.format(
+            budget=budget, db_name=db_name, user_query=user_query
+        )
+
+    if query_mode == "raw" and eval_mode == "c-interact":
+        # Inject schema + knowledge directly
+        schema = _schema_cache.get(db_name, "")
+        knowledge = _filter_knowledge_for_agent(db_name, task_data)
+        knowledge_text = "\n".join(
+            f"- {k}: {v.get('description', '') or v.get('definition', '')}"
+            for k, v in (knowledge or {}).items()
+        )
+        return RAW_C_INTERACT.format(
+            budget=budget,
+            db_name=db_name,
+            user_query=user_query,
+            schema=schema,
+            knowledge=knowledge_text or "(no external knowledge available)",
+        )
+
+    if query_mode == "slayer" and eval_mode == "a-interact":
+        return SLAYER_A_INTERACT.format(budget=budget, user_query=user_query)
+
+    if query_mode == "slayer" and eval_mode == "c-interact":
+        # Inject models summary
+        from slayer.storage.yaml_storage import YAMLStorage
+
+        storage = YAMLStorage(base_dir=_ctx["slayer_storage_dir"])
+        names = await storage.list_models()
+        lines = []
+        for name in names:
+            m = await storage.get_model(name)
+            dims = ", ".join(d.name for d in (m.dimensions or [])[:8]) if m else ""
+            meas = ", ".join(x.name for x in (m.measures or [])[:8]) if m else ""
+            lines.append(f"- {name}: dims=[{dims}] measures=[{meas}]")
+        return SLAYER_C_INTERACT.format(
+            budget=budget,
+            user_query=user_query,
+            models_summary="\n".join(lines),
+        )
+
+    raise ValueError(f"Unknown mode combo: query_mode={query_mode} eval_mode={eval_mode}")
 
 
 # ---------------------------------------------------------------------------
@@ -210,22 +475,22 @@ SLAYER_TOOLS: list = []
 class ClaudeSDKAgent:
     """SystemAgent implementation using the Claude Agent SDK."""
 
+    def __init__(self, slayer_storage_root: str | None = None) -> None:
+        self.slayer_storage_root = slayer_storage_root
+
     async def run_task(
         self,
         task_data: dict,
         data_path_base: str,
         budget: float,
         query_mode: str,
+        eval_mode: str = "a-interact",
         user_sim_model: str = "anthropic/claude-haiku-4-5-20251001",
         user_sim_prompt_version: str = "v2",
     ) -> dict:
-        global _ctx
-
         db_name = task_data["selected_database"]
-        user_query = task_data["amb_user_query"]
         instance_id = task_data["instance_id"]
 
-        # Set up harness state
         status = SampleStatus(
             idx=0,
             original_data=task_data,
@@ -234,32 +499,30 @@ class ClaudeSDKAgent:
         )
         load_db_data_if_needed(db_name, data_path_base)
 
-        # Set module-level context for tools
-        _ctx = {
+        # Per-task SLayer storage path (only relevant for slayer query mode)
+        slayer_storage_dir = (
+            f"{self.slayer_storage_root}/{db_name}" if self.slayer_storage_root else ""
+        )
+
+        # Set the per-task context dict via contextvars — concurrent task
+        # runs each get their own dict instance.
+        _ctx_var.set({
             "status": status,
             "data_path_base": data_path_base,
             "user_sim_model": user_sim_model,
             "user_sim_prompt_version": user_sim_prompt_version,
+            "slayer_storage_dir": slayer_storage_dir,
+            "_slayer_client": None,
+            "_slayer_storage": None,
             "result": None,
-        }
+        })
 
-        # Select tools and prompt
-        if query_mode == "raw":
-            tools = RAW_TOOLS
-            prompt = RAW_A_INTERACT.format(
-                budget=budget, db_name=db_name, user_query=user_query
-            )
-        else:
-            if not SLAYER_TOOLS:
-                raise NotImplementedError("SLayer mode tools not yet implemented")
-            tools = SLAYER_TOOLS
-            prompt = SLAYER_A_INTERACT.format(budget=budget, user_query=user_query)
+        tools = _select_tools(query_mode, eval_mode)
+        prompt = await _build_prompt(query_mode, eval_mode, task_data, budget)
 
-        # Create in-process MCP server with tools
         server = create_sdk_mcp_server(
             name="bird-interact-tools", version="1.0.0", tools=tools
         )
-
         tool_names = [f"mcp__bird-interact-tools__{t.name}" for t in tools]
 
         options = ClaudeAgentOptions(
@@ -268,11 +531,10 @@ class ClaudeSDKAgent:
             allowed_tools=tool_names,
         )
 
-        # Run the agent
         trajectory: list[dict] = []
         try:
             async with ClaudeSDKClient(options=options) as client:
-                await client.query(user_query)
+                await client.query(task_data["amb_user_query"])
                 async for msg in client.receive_response():
                     trajectory.append(
                         {"type": str(type(msg).__name__), "data": str(msg)[:500]}

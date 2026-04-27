@@ -7,3 +7,5 @@ build/
 results/
 *.sqlite
 .venv/
+.claude/
+slayer_storage/
