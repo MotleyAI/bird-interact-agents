@@ -156,9 +156,13 @@ def test_compare_results_picks_up_ingested_original_row(tmp_path):
     db_path = orig_dir / "results.db"
     ingest_original_to_db(orig_dir=orig_dir, db_path=db_path, run_id="3way")
 
-    # No raw/slayer dirs — comparison should still run on just original.
+    # No raw/slayer dirs — pass --allow-missing so the script doesn't
+    # bail on the absent eval.json files.
     res = subprocess.run(
-        [sys.executable, "-m", "scripts.compare_results", str(base)],
+        [
+            sys.executable, "-m", "scripts.compare_results",
+            "--allow-missing", str(base),
+        ],
         cwd=Path(__file__).resolve().parent.parent,
         capture_output=True, text=True, check=True,
     )

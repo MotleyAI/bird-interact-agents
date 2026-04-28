@@ -8,10 +8,18 @@ See [ROADMAP.md](ROADMAP.md) for the multi-framework plan.
 
 ### Prerequisites
 
-1. Clone [BIRD-Interact](https://github.com/bird-bench/BIRD-Interact):
+1. Clone [BIRD-Interact](https://github.com/bird-bench/BIRD-Interact) **as a sibling of this checkout**:
    ```bash
+   # cd into the parent directory of where you cloned bird-interact-agents
    git clone https://github.com/bird-bench/BIRD-Interact.git
    ```
+   The `original` and `all` extras (used by `scripts/run_three_way.sh`) wire up
+   the upstream `mini-interact-agent` package via a relative path
+   (`../BIRD-Interact/mini_interact/knowledge_based/mini_interact_agent`) — so
+   the directory layout matters. If you work from a `git worktree` directory
+   the relative path won't resolve; either symlink `BIRD-Interact` next to the
+   worktree or `uv pip install -e <absolute-path>/mini_interact/knowledge_based/mini_interact_agent`
+   into the worktree's venv after `uv sync`.
 
 2. Get the mini-interact dataset (SQLite DBs + metadata) from [HuggingFace](https://huggingface.co/datasets/birdsql/mini-interact) or use a local copy.
 
