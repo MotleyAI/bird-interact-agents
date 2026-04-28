@@ -55,7 +55,7 @@ async def test_pydantic_ai_prepare_tools_forces_strict_false():
     assert all(t.strict is False for t in out)
 
 
-def test_pydantic_ai_each_factory_wires_prepare_tools():
+def test_pydantic_ai_each_factory_wires_prepare_tools(tmp_path):
     """All three pydantic_ai agent factories register the strict-forcing hook."""
     import os
 
@@ -63,10 +63,16 @@ def test_pydantic_ai_each_factory_wires_prepare_tools():
     from bird_interact_agents.agents.pydantic_ai.agent import (
         _build_raw_a_agent, _build_raw_c_agent, _build_slayer_agent,
     )
-    for build in (
+    builds = (
         lambda: _build_raw_a_agent("anthropic:claude-sonnet-4-5", strict_value=True),
         lambda: _build_raw_c_agent("anthropic:claude-sonnet-4-5", strict_value=True),
-    ):
+        lambda: _build_slayer_agent(
+            "anthropic:claude-sonnet-4-5",
+            slayer_storage_dir=str(tmp_path),
+            strict_value=True,
+        ),
+    )
+    for build in builds:
         agent = build()
         # PydanticAI stores the hook on the Agent. The internal attribute
         # name varies between minor versions; tolerate both forms.
@@ -80,12 +86,14 @@ def test_pydantic_ai_each_factory_wires_prepare_tools():
 # smolagents — _StrictLiteLLMModel mutates the tools dict before litellm call
 # ---------------------------------------------------------------------------
 
-def test_smolagents_strict_litellm_model_injects_strict_into_tools():
+def test_smolagents_strict_litellm_model_injects_strict_into_tools(monkeypatch):
     """The subclass overrides _prepare_completion_kwargs and adds
     strict=True to every entry's `function` dict."""
     import os
 
     os.environ.setdefault("CEREBRAS_API_KEY", "fake-key")
+    from smolagents import LiteLLMModel
+
     from bird_interact_agents.agents.smolagents.agent import (
         _build_strict_litellm_model_class,
     )
@@ -93,52 +101,48 @@ def test_smolagents_strict_litellm_model_injects_strict_into_tools():
     Strict = _build_strict_litellm_model_class()
     m = Strict(model_id="cerebras/zai-glm-4.7", _strict_value=True)
 
-    # We can't easily call _prepare_completion_kwargs in isolation
-    # without smolagents' message format, but we can verify the override
-    # is in place and applies to the kwargs dict it produces by calling
-    # super() with a minimal stub then asserting the post-processing.
-    # Easiest path: simulate the post-super() mutation directly.
     fake_kwargs = {
         "tools": [
             {"type": "function", "function": {"name": "x", "parameters": {}}},
             {"type": "function", "function": {"name": "y", "parameters": {}}},
         ]
     }
-    # The override mutates in-place; replicate the post-super branch:
-    for tool in fake_kwargs.get("tools") or []:
-        tool.setdefault("function", {})["strict"] = m._strict_value
-    assert all(t["function"]["strict"] is True for t in fake_kwargs["tools"])
+    # Force the parent's _prepare_completion_kwargs to return our payload so
+    # the override (which calls super()) actually runs against it.
+    monkeypatch.setattr(
+        LiteLLMModel, "_prepare_completion_kwargs",
+        lambda self, *a, **kw: fake_kwargs,
+    )
+    out = m._prepare_completion_kwargs()
+    assert all(t["function"]["strict"] is True for t in out["tools"])
 
 
 # ---------------------------------------------------------------------------
 # agno — _StrictLiteLLM.get_request_params sets strict on every tool
 # ---------------------------------------------------------------------------
 
-def test_agno_strict_litellm_subclass_injects_strict_into_request_params():
-    """When the agno path uses _StrictLiteLLM, every tool dict the
-    request_params produces carries strict=True for the configured value."""
+def test_agno_strict_litellm_subclass_injects_strict_into_request_params(monkeypatch):
+    """When the agno path uses the production _StrictLiteLLM, every tool dict
+    the request_params produces carries strict=True for the configured value."""
     import os
 
     os.environ.setdefault("CEREBRAS_API_KEY", "fake-key")
     from agno.models.litellm import LiteLLM
 
-    # Mirror the inner _StrictLiteLLM defined in agents/agno/agent.py
-    class _StrictLiteLLM(LiteLLM):
-        def __init__(self, *a, _strict_value: bool, **kw):
-            super().__init__(*a, **kw)
-            self._strict_value = _strict_value
+    from bird_interact_agents.agents.agno.agent import _build_strict_litellm_class
 
-        def get_request_params(self, tools=None):
-            params = super().get_request_params(tools=tools)
-            for t in params.get("tools") or []:
-                t.setdefault("function", {})["strict"] = self._strict_value
-            return params
-
-    m = _StrictLiteLLM(id="cerebras/zai-glm-4.7", _strict_value=True)
     fake_tools = [
         {"type": "function", "function": {"name": "x", "parameters": {}}},
         {"type": "function", "function": {"name": "y", "parameters": {}}},
     ]
+    # Stub the parent so super().get_request_params returns our payload —
+    # the production override should then mutate every tool with strict.
+    monkeypatch.setattr(
+        LiteLLM, "get_request_params",
+        lambda self, tools=None: {"tools": list(fake_tools)},
+    )
+    StrictLiteLLM = _build_strict_litellm_class()
+    m = StrictLiteLLM(id="cerebras/zai-glm-4.7", _strict_value=True)
     params = m.get_request_params(tools=fake_tools)
     assert all(t["function"]["strict"] is True for t in params["tools"])
 
