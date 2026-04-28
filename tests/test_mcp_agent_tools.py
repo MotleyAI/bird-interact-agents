@@ -130,8 +130,7 @@ async def test_prompt_building_raw_a():
     from bird_interact_agents.agents.mcp_agent.agent import _build_prompt
 
     state = _make_state()
-    task_data = state.status.original_data
-    task_data["amb_user_query"] = "How many signals are there?"
+    task_data = {**state.status.original_data, "amb_user_query": "How many signals are there?"}
     prompt = await _build_prompt("raw", "a-interact", task_data, 12.0, state)
     assert "How many signals" in prompt
     assert "alien" in prompt
