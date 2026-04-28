@@ -34,14 +34,14 @@ def test_taskdeps_constructible():
 
 def test_pydantic_ai_agent_imports():
     """The PydanticAI agent module imports without errors."""
-    from bird_interact_agents.agents.pydantic_ai.agent import (
+    from bird_interact_agents.agents.pydantic_ai.agent import (  # noqa: F401
         PydanticAIAgent,
         TaskDeps,
         _build_raw_a_agent,
         _build_raw_c_agent,
-        _build_slayer_a_agent,
-        _build_slayer_c_agent,
+        _build_slayer_agent,
     )
+
     assert PydanticAIAgent is not None
 
 
@@ -54,10 +54,10 @@ def test_pydantic_ai_agent_factory_smoke():
     )
     a1 = pa._select_agent("raw", "a-interact")
     a2 = pa._select_agent("raw", "c-interact")
-    a3 = pa._select_agent("slayer", "a-interact")
-    a4 = pa._select_agent("slayer", "c-interact")
-    # Each must be a distinct Agent instance
-    assert {id(a1), id(a2), id(a3), id(a4)} == {id(a1), id(a2), id(a3), id(a4)}
+    a3 = pa._select_agent("slayer", "a-interact", "./slayer_storage/alien")
+    a4 = pa._select_agent("slayer", "c-interact", "./slayer_storage/alien")
+    # Each is its own Agent instance
+    assert len({id(a1), id(a2), id(a3), id(a4)}) == 4
 
 
 @pytest.mark.asyncio

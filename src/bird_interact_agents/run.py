@@ -100,6 +100,42 @@ async def run_evaluation(
                 eval_mode=mode,
                 user_sim_model=user_sim_model,
             )
+    elif framework == "mcp_agent":
+        from bird_interact_agents.agents.mcp_agent.agent import McpAgentAgent
+
+        agent_mcp = McpAgentAgent(slayer_storage_root=slayer_storage_root)
+
+        async def run_one(td: dict) -> dict:
+            budget = calculate_budget(td, patience)
+            return await agent_mcp.run_task(
+                td, data_dir, budget, query_mode,
+                eval_mode=mode,
+                user_sim_model=user_sim_model,
+            )
+    elif framework == "agno":
+        from bird_interact_agents.agents.agno.agent import AgnoAgent
+
+        agent_agno = AgnoAgent(slayer_storage_root=slayer_storage_root)
+
+        async def run_one(td: dict) -> dict:
+            budget = calculate_budget(td, patience)
+            return await agent_agno.run_task(
+                td, data_dir, budget, query_mode,
+                eval_mode=mode,
+                user_sim_model=user_sim_model,
+            )
+    elif framework == "smolagents":
+        from bird_interact_agents.agents.smolagents.agent import SmolagentsAgent
+
+        agent_sa = SmolagentsAgent(slayer_storage_root=slayer_storage_root)
+
+        async def run_one(td: dict) -> dict:
+            budget = calculate_budget(td, patience)
+            return await agent_sa.run_task(
+                td, data_dir, budget, query_mode,
+                eval_mode=mode,
+                user_sim_model=user_sim_model,
+            )
     else:
         raise ValueError(f"Unknown framework: {framework}")
 
@@ -173,7 +209,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--framework",
-        choices=["claude_sdk", "pydantic_ai"],
+        choices=["claude_sdk", "pydantic_ai", "mcp_agent", "agno", "smolagents"],
         default="claude_sdk",
         help="Agent framework to use",
     )
