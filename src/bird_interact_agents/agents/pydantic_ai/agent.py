@@ -219,7 +219,13 @@ def _build_slayer_agent(
     """
     cfg = slayer_mcp_stdio_config(slayer_storage_dir)
     slayer_server = MCPServerStdio(
-        command=cfg["command"], args=cfg["args"], env=cfg["env"]
+        command=cfg["command"], args=cfg["args"], env=cfg["env"],
+        # Default is 1 retry, which is too tight: SLayer's underlying
+        # SQLAlchemy engine already retries OperationalError twice
+        # internally, so a single pydantic-ai retry can exhaust on a
+        # transient flake. 3 gives enough headroom without masking real
+        # bugs.
+        max_retries=3,
     )
     agent = Agent(
         model=model, deps_type=TaskDeps, retries=2, toolsets=[slayer_server],
@@ -376,6 +382,8 @@ class PydanticAIAgent:
             "phase1_passed": result.get("phase1_passed", False),
             "phase2_passed": result.get("phase2_passed", False),
             "total_reward": result.get("total_reward", 0.0),
+            "submitted_sql": result.get("submitted_sql"),
+            "submitted_query": result.get("submitted_query"),
             "trajectory": [{"final_output": output_text[:500]}],
             "error": None,
             "usage": deps.usage.model_dump(),

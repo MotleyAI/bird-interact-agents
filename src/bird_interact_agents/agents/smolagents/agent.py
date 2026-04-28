@@ -404,6 +404,8 @@ class SmolagentsAgent:
             "phase1_passed": result.get("phase1_passed", False),
             "phase2_passed": result.get("phase2_passed", False),
             "total_reward": result.get("total_reward", 0.0),
+            "submitted_sql": result.get("submitted_sql"),
+            "submitted_query": result.get("submitted_query"),
             "trajectory": [{"final_output": output[:500]}],
             "error": None,
             "usage": state.usage.model_dump(),

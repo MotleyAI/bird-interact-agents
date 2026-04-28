@@ -15,6 +15,12 @@ from bird_interact_agents.harness import (
     load_tasks,
     SampleStatus,
 )
+from bird_interact_agents.results_db import (
+    TaskResultRow,
+    insert_run_metadata,
+    insert_task_result,
+    open_db,
+)
 from bird_interact_agents.usage import TokenUsage
 
 logging.basicConfig(
@@ -164,6 +170,55 @@ async def run_evaluation(
     else:
         raise ValueError(f"Unknown framework: {framework}")
 
+    # Open the per-run results.db (lives next to eval.json) and write
+    # the run-metadata header before any task starts.
+    output_dir = Path(output_path).parent
+    output_dir.mkdir(parents=True, exist_ok=True)
+    db_path = output_dir / "results.db"
+    db_conn = open_db(db_path)
+    run_id = output_dir.name or "default"
+    insert_run_metadata(
+        db_conn,
+        run_id=run_id,
+        agent_model=agent_model,
+        user_sim_model=user_sim_model,
+        framework=framework,
+        mode=mode,
+        started_at=time.time(),
+    )
+
+    def _persist(td: dict, r: dict, started_at: float) -> None:
+        """Insert one task result into the DB. Called immediately after
+        each task — both successes and failures — so a mid-run crash
+        never throws away completed-task data."""
+        usage_blob = r.get("usage")
+        usage_json = json.dumps(usage_blob) if usage_blob is not None else "{}"
+        sol = td.get("sol_sql")
+        if isinstance(sol, list) and sol:
+            ground_truth = sol[0]
+        elif isinstance(sol, str):
+            ground_truth = sol
+        else:
+            ground_truth = None
+        insert_task_result(db_conn, TaskResultRow(
+            run_id=run_id,
+            framework=framework,
+            mode=mode,
+            query_mode=query_mode,
+            instance_id=str(r.get("instance_id") or td.get("instance_id") or ""),
+            database=str(r.get("database") or td.get("selected_database") or ""),
+            started_at=started_at,
+            duration_s=float(r.get("duration_s") or 0.0),
+            phase1_passed=bool(r.get("phase1_passed")),
+            phase2_passed=bool(r.get("phase2_passed")),
+            total_reward=float(r.get("total_reward") or 0.0),
+            submitted_sql=r.get("submitted_sql"),
+            submitted_query=r.get("submitted_query"),
+            ground_truth_sql=r.get("ground_truth_sql") or ground_truth,
+            error=r.get("error"),
+            usage_json=usage_json,
+        ))
+
     # Run tasks with concurrency limiter
     semaphore = asyncio.Semaphore(concurrency)
     results: list[dict] = []
@@ -176,6 +231,7 @@ async def run_evaluation(
         async with semaphore:
             instance_id = td["instance_id"]
             logger.info("Task %d/%d: %s", i + 1, len(tasks), instance_id)
+            started_at = time.time()
             t_start = time.perf_counter()
             try:
                 r = await run_one(td)
@@ -192,6 +248,7 @@ async def run_evaluation(
                     "error": str(e),
                 }
             r["duration_s"] = time.perf_counter() - t_start
+            _persist(td, r, started_at)
             results.append(r)
             total_reward += r.get("total_reward", 0)
             if r.get("phase1_passed"):
@@ -199,7 +256,10 @@ async def run_evaluation(
             if r.get("phase2_passed"):
                 p2_count += 1
 
-    await asyncio.gather(*[_run_with_sem(i, td) for i, td in enumerate(tasks)])
+    try:
+        await asyncio.gather(*[_run_with_sem(i, td) for i, td in enumerate(tasks)])
+    finally:
+        db_conn.close()
 
     # Sum per-task usage blocks into a top-level total. Any task missing
     # `usage` (e.g. oracle pre-instrumentation) is skipped without error.
