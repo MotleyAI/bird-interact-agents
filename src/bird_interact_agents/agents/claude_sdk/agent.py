@@ -12,16 +12,17 @@ from claude_agent_sdk import (
     tool,
 )
 
+from bird_interact_agents.agents._prompt_builders import (
+    build_raw_c_interact_prompt,
+    build_slayer_c_interact_prompt,
+)
 from bird_interact_agents.agents.claude_sdk.prompts import (
     RAW_A_INTERACT,
-    RAW_C_INTERACT,
     SLAYER_A_INTERACT,
-    SLAYER_C_INTERACT,
 )
 from bird_interact_agents.harness import (
     ACTION_COSTS,
     SampleStatus,
-    _filter_knowledge_for_agent,
     _schema_cache,
     build_user_decoder_prompt,
     build_user_encoder_prompt,
@@ -396,57 +397,23 @@ async def _build_prompt(
         )
 
     if query_mode == "raw" and eval_mode == "c-interact":
-        # Inject schema + knowledge directly. Knowledge is rendered as JSON
-        # to match the ADK reference (db_environment/server.py:368-385): the
-        # agent sees full {id, knowledge, description, definition} records,
-        # not a stripped markdown bullet list.
-        schema = _schema_cache.get(db_name, "")
-        knowledge = _filter_knowledge_for_agent(db_name, task_data) or {}
-        knowledge_text = (
-            json.dumps(list(knowledge.values()), indent=2)
-            if knowledge
-            else "(no external knowledge available)"
-        )
-        return RAW_C_INTERACT.format(
+        return await build_raw_c_interact_prompt(
             budget=budget,
             db_name=db_name,
             user_query=user_query,
-            schema=schema,
-            knowledge=knowledge_text,
+            task_data=task_data,
         )
 
     if query_mode == "slayer" and eval_mode == "a-interact":
         return SLAYER_A_INTERACT.format(budget=budget, user_query=user_query)
 
     if query_mode == "slayer" and eval_mode == "c-interact":
-        # Inject SLayer help text + full models summary + filtered KB JSON.
-        # Mirrors raw c-interact's "everything injected up front" contract.
-        from slayer.help import render_help
-        from slayer.storage.yaml_storage import YAMLStorage
-
-        storage = YAMLStorage(base_dir=_ctx["slayer_storage_dir"])
-        names = await storage.list_models()
-        lines = []
-        for name in names:
-            m = await storage.get_model(name)
-            if m is None:
-                continue
-            dims = ", ".join(d.name for d in (m.dimensions or []))
-            meas = ", ".join(x.name for x in (m.measures or []))
-            lines.append(f"- {name}: dims=[{dims}] measures=[{meas}]")
-
-        knowledge = _filter_knowledge_for_agent(db_name, task_data) or {}
-        knowledge_text = (
-            json.dumps(list(knowledge.values()), indent=2)
-            if knowledge
-            else "(no external knowledge available)"
-        )
-        return SLAYER_C_INTERACT.format(
+        return await build_slayer_c_interact_prompt(
             budget=budget,
             user_query=user_query,
-            slayer_help=render_help(),
-            models_summary="\n".join(lines),
-            knowledge=knowledge_text,
+            slayer_storage_dir=_ctx["slayer_storage_dir"],
+            db_name=db_name,
+            task_data=task_data,
         )
 
     raise ValueError(f"Unknown mode combo: query_mode={query_mode} eval_mode={eval_mode}")

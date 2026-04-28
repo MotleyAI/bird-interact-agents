@@ -12,15 +12,16 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from bird_interact_agents.agents._prompt_builders import (
+    build_raw_c_interact_prompt,
+    build_slayer_c_interact_prompt,
+)
 from bird_interact_agents.agents.claude_sdk.prompts import (
     RAW_A_INTERACT,
-    RAW_C_INTERACT,
     SLAYER_A_INTERACT,
-    SLAYER_C_INTERACT,
 )
 from bird_interact_agents.harness import (
     SampleStatus,
-    _filter_knowledge_for_agent,
     _schema_cache,
     build_user_decoder_prompt,
     build_user_encoder_prompt,
@@ -217,34 +218,21 @@ async def _build_prompt(
             budget=budget, db_name=db_name, user_query=user_query
         )
     if query_mode == "raw" and eval_mode == "c-interact":
-        schema = _schema_cache.get(db_name, "")
-        knowledge = _filter_knowledge_for_agent(db_name, task_data)
-        knowledge_text = "\n".join(
-            f"- {k}: {v.get('description', '') or v.get('definition', '')}"
-            for k, v in (knowledge or {}).items()
-        )
-        return RAW_C_INTERACT.format(
-            budget=budget, db_name=db_name, user_query=user_query,
-            schema=schema, knowledge=knowledge_text or "(none)",
+        return await build_raw_c_interact_prompt(
+            budget=budget,
+            db_name=db_name,
+            user_query=user_query,
+            task_data=task_data,
         )
     if query_mode == "slayer" and eval_mode == "a-interact":
         return SLAYER_A_INTERACT.format(budget=budget, user_query=user_query)
     if query_mode == "slayer" and eval_mode == "c-interact":
-        from slayer.help import render_help
-        from slayer.storage.yaml_storage import YAMLStorage
-
-        storage = YAMLStorage(base_dir=state.slayer_storage_dir)
-        names = await storage.list_models()
-        lines = []
-        for name in names:
-            m = await storage.get_model(name)
-            dims = ", ".join(d.name for d in (m.dimensions or [])[:8]) if m else ""
-            meas = ", ".join(x.name for x in (m.measures or [])[:8]) if m else ""
-            lines.append(f"- {name}: dims=[{dims}] measures=[{meas}]")
-        return SLAYER_C_INTERACT.format(
-            budget=budget, user_query=user_query,
-            slayer_help=render_help(),
-            models_summary="\n".join(lines),
+        return await build_slayer_c_interact_prompt(
+            budget=budget,
+            user_query=user_query,
+            slayer_storage_dir=state.slayer_storage_dir,
+            db_name=db_name,
+            task_data=task_data,
         )
     raise ValueError(f"Unknown mode combo: {query_mode}/{eval_mode}")
 
