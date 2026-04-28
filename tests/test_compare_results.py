@@ -257,3 +257,163 @@ def test_orig_usage_costs_when_model_known(tmp_path):
     # updates — just assert it's > 0.
     assert orig_u["agent_cost_usd"] > 0
     assert orig_u["cost_usd"] == pytest.approx(orig_u["agent_cost_usd"])
+
+
+# ---------------------------------------------------------------------------
+# DB-backed loading + per-task SQL markdown
+# ---------------------------------------------------------------------------
+
+def _seed_db(
+    db_path: Path, *,
+    framework: str, query_mode: str,
+    instance_id: str = "alien_1",
+    submitted_sql: str | None = None,
+    submitted_query: str | None = None,
+    ground_truth_sql: str | None = None,
+    error: str | None = None,
+    duration_s: float = 0.0,
+    phase1_passed: bool = False,
+    phase2_passed: bool = False,
+    total_reward: float = 0.0,
+    usage_json: str = "{}",
+) -> None:
+    """Append a `task_results` row matching the schema from results_db.py."""
+    from bird_interact_agents.results_db import (
+        TaskResultRow, insert_task_result, open_db,
+    )
+    conn = open_db(db_path)
+    insert_task_result(conn, TaskResultRow(
+        run_id=db_path.parent.name,
+        framework=framework,
+        mode="a-interact",
+        query_mode=query_mode,
+        instance_id=instance_id,
+        database="alien",
+        started_at=0.0,
+        duration_s=duration_s,
+        phase1_passed=phase1_passed,
+        phase2_passed=phase2_passed,
+        total_reward=total_reward,
+        submitted_sql=submitted_sql,
+        submitted_query=submitted_query,
+        ground_truth_sql=ground_truth_sql,
+        error=error,
+        usage_json=usage_json,
+    ))
+    conn.close()
+
+
+def test_compare_results_reads_from_db_when_present(tmp_path):
+    """When `<leg>/results.db` exists alongside (or instead of)
+    `eval.json`, compare_results pulls the per-task rows from it."""
+    base = tmp_path / "3way"
+    raw_db = base / "raw" / "results.db"
+    raw_db.parent.mkdir(parents=True)
+    _seed_db(
+        raw_db, framework="pydantic_ai", query_mode="raw",
+        submitted_sql="SELECT * FROM telescopes",
+        ground_truth_sql="SELECT id FROM telescopes",
+        duration_s=12.0, total_reward=0.0,
+    )
+    slayer_db = base / "slayer" / "results.db"
+    slayer_db.parent.mkdir(parents=True)
+    _seed_db(
+        slayer_db, framework="pydantic_ai", query_mode="slayer",
+        submitted_query='{"models": ["telescopes"]}',
+        submitted_sql="SELECT * FROM telescopes_v",
+        ground_truth_sql="SELECT id FROM telescopes",
+        duration_s=18.0, total_reward=0.0,
+    )
+    orig_dir = base / "original"
+    orig_dir.mkdir(parents=True)
+    (orig_dir / "results.jsonl").write_text(
+        json.dumps({
+            "instance_id": "alien_1", "phase1_completed": False,
+            "task_finished": False, "last_reward": 0.0,
+        }) + "\n"
+    )
+
+    _run_compare(base)
+    blob = json.loads((base / "comparison.json").read_text())
+
+    raw_row = blob["per_task"]["alien_1"]["raw"]
+    assert raw_row["submitted_sql"] == "SELECT * FROM telescopes"
+    assert raw_row["ground_truth_sql"] == "SELECT id FROM telescopes"
+
+    slayer_row = blob["per_task"]["alien_1"]["slayer"]
+    assert slayer_row["submitted_query"] == '{"models": ["telescopes"]}'
+    assert slayer_row["submitted_sql"] == "SELECT * FROM telescopes_v"
+
+
+def test_compare_results_writes_per_task_sql_markdown(tmp_path):
+    """A `per_task_sql.md` file lands next to comparison.json with the
+    four SQL blobs side-by-side per instance_id."""
+    base = tmp_path / "3way"
+    raw_db = base / "raw" / "results.db"
+    raw_db.parent.mkdir(parents=True)
+    _seed_db(
+        raw_db, framework="pydantic_ai", query_mode="raw",
+        submitted_sql="SELECT * FROM raw_q",
+        ground_truth_sql="SELECT id FROM truth",
+    )
+    slayer_db = base / "slayer" / "results.db"
+    slayer_db.parent.mkdir(parents=True)
+    _seed_db(
+        slayer_db, framework="pydantic_ai", query_mode="slayer",
+        submitted_query='{"models": ["m"], "limit": 5}',
+        submitted_sql="SELECT * FROM slayer_q",
+        ground_truth_sql="SELECT id FROM truth",
+    )
+    orig_dir = base / "original"
+    orig_dir.mkdir(parents=True)
+    (orig_dir / "results.jsonl").write_text(
+        json.dumps({
+            "instance_id": "alien_1", "phase1_completed": False,
+            "task_finished": False, "last_reward": 0.0,
+            "successful_phase1_sql": "SELECT id FROM truth",
+        }) + "\n"
+    )
+
+    _run_compare(base)
+
+    md = (base / "per_task_sql.md").read_text()
+    # One section per instance_id.
+    assert "## alien_1" in md
+    # All four SQLs appear, each in a code fence.
+    assert "ground truth" in md.lower()
+    assert "SELECT id FROM truth" in md
+    assert "SELECT * FROM raw_q" in md
+    assert "SELECT * FROM slayer_q" in md
+    assert '{"models": ["m"], "limit": 5}' in md
+    # Original-leg SQL extracted from upstream's record.
+    assert md.count("SELECT id FROM truth") >= 2  # gt + original
+
+
+def test_compare_results_db_fallback_to_eval_json(tmp_path):
+    """When no `results.db` exists, compare_results still reads
+    `eval.json` (backwards compat)."""
+    base = tmp_path / "3way"
+    _write_eval_json(
+        base / "raw" / "eval.json",
+        agent_in=10, agent_out=2, user_sim_in=5, user_sim_out=1,
+    )
+    _write_eval_json(
+        base / "slayer" / "eval.json",
+        agent_in=8, agent_out=1, user_sim_in=4, user_sim_out=0,
+    )
+    orig_dir = base / "original"
+    orig_dir.mkdir(parents=True)
+    (orig_dir / "results.jsonl").write_text(
+        json.dumps({
+            "instance_id": "x_1", "phase1_completed": False,
+            "task_finished": False, "last_reward": 0.0,
+        }) + "\n"
+    )
+
+    out = _run_compare(base)
+    assert "Aggregate" in out
+    blob = json.loads((base / "comparison.json").read_text())
+    # eval.json doesn't carry submitted_sql, so the per-task row simply
+    # lacks it. Should not crash, should not emit an SQL md file with
+    # bogus content.
+    assert blob["per_task"]["x_1"]["raw"].get("submitted_sql") is None

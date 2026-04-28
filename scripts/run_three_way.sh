@@ -182,6 +182,19 @@ json.dump(
     --model "$AGENT_MODEL" \
     > "$out_dir/token_usage.log" 2>&1 || \
       echo "[original] analyze_tokens returned non-zero — see $out_dir/token_usage.log (compare_results.py will fall back to per-turn JSONLs)"
+
+  # Backfill `original/results.db` so the original leg sits in the same
+  # SQLite schema raw/slayer use after `run.py` writes their per-task
+  # rows. compare_results.py then has a uniform query surface across
+  # all three legs.
+  echo "[original] Ingesting upstream results.jsonl into results.db..."
+  uv run python -m bird_interact_agents.original_ingest \
+    --orig-dir "$out_dir" \
+    --db-path "$out_dir/results.db" \
+    --run-id "$(basename "$OUTPUT_DIR")" \
+    --mode "$MODE" \
+    > "$out_dir/ingest.log" 2>&1 || \
+      echo "[original] ingest returned non-zero — see $out_dir/ingest.log"
 }
 
 run_ours() {
