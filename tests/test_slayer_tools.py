@@ -75,16 +75,25 @@ async def test_submit_query_tool_with_invalid_json():
     assert "Invalid JSON" in text or "submission aborted" in text
 
 
-def test_slayer_a_tools_only_native():
-    """SLAYER_A_TOOLS contains only ask_user + submit_query (slayer MCP
-    handles discovery tools)."""
+def test_slayer_a_tools_include_knowledge_for_parity():
+    """SLAYER_A_TOOLS exposes the bird-interact knowledge tools so SLayer
+    agents have the same access to external domain knowledge that raw
+    agents do (slayer MCP handles SLayer schema discovery)."""
     from bird_interact_agents.agents.claude_sdk import agent as agent_mod
 
     names = {t.name for t in agent_mod.SLAYER_A_TOOLS}
-    assert names == {"ask_user", "submit_query"}
+    assert names == {
+        "ask_user",
+        "submit_query",
+        "get_all_external_knowledge_names",
+        "get_knowledge_definition",
+        "get_all_knowledge_definitions",
+    }
 
 
 def test_slayer_c_tools_only_native():
+    """SLAYER_C_TOOLS stays minimal — knowledge is injected upfront in the
+    c-interact prompt, no fetch tool needed."""
     from bird_interact_agents.agents.claude_sdk import agent as agent_mod
 
     names = {t.name for t in agent_mod.SLAYER_C_TOOLS}

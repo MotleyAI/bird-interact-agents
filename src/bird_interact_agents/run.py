@@ -61,9 +61,13 @@ async def run_evaluation(
     patience: int = 3,
     user_sim_model: str = "anthropic/claude-haiku-4-5-20251001",
     slayer_storage_root: str | None = None,
+    filter_ids: list[str] | None = None,
 ) -> dict:
     """Run full evaluation across all tasks."""
     tasks = load_tasks(data_path, limit)
+    if filter_ids:
+        wanted = set(filter_ids)
+        tasks = [t for t in tasks if t.get("instance_id") in wanted]
     logger.info(
         "%s/%s: Evaluating %d tasks (concurrency=%d)",
         mode, query_mode, len(tasks), concurrency,
@@ -79,7 +83,7 @@ async def run_evaluation(
         agent = ClaudeSDKAgent(slayer_storage_root=slayer_storage_root)
 
         async def run_one(td: dict) -> dict:
-            budget = calculate_budget(td, patience)
+            budget = calculate_budget(td, patience, mode=mode)
             return await agent.run_task(
                 td, data_dir, budget, query_mode,
                 eval_mode=mode,
@@ -94,7 +98,7 @@ async def run_evaluation(
         )
 
         async def run_one(td: dict) -> dict:
-            budget = calculate_budget(td, patience)
+            budget = calculate_budget(td, patience, mode=mode)
             return await agent_pa.run_task(
                 td, data_dir, budget, query_mode,
                 eval_mode=mode,
@@ -106,7 +110,7 @@ async def run_evaluation(
         agent_mcp = McpAgentAgent(slayer_storage_root=slayer_storage_root)
 
         async def run_one(td: dict) -> dict:
-            budget = calculate_budget(td, patience)
+            budget = calculate_budget(td, patience, mode=mode)
             return await agent_mcp.run_task(
                 td, data_dir, budget, query_mode,
                 eval_mode=mode,
@@ -118,7 +122,7 @@ async def run_evaluation(
         agent_agno = AgnoAgent(slayer_storage_root=slayer_storage_root)
 
         async def run_one(td: dict) -> dict:
-            budget = calculate_budget(td, patience)
+            budget = calculate_budget(td, patience, mode=mode)
             return await agent_agno.run_task(
                 td, data_dir, budget, query_mode,
                 eval_mode=mode,
@@ -130,7 +134,7 @@ async def run_evaluation(
         agent_sa = SmolagentsAgent(slayer_storage_root=slayer_storage_root)
 
         async def run_one(td: dict) -> dict:
-            budget = calculate_budget(td, patience)
+            budget = calculate_budget(td, patience, mode=mode)
             return await agent_sa.run_task(
                 td, data_dir, budget, query_mode,
                 eval_mode=mode,
@@ -247,7 +251,21 @@ def main() -> None:
         default="./slayer_storage",
         help="Root dir of per-DB SLayer model stores (only used in --query-mode slayer)",
     )
+    parser.add_argument(
+        "--filter-ids",
+        default=None,
+        help=(
+            "Path to a text file with one instance_id per line; only tasks "
+            "with these IDs are evaluated. Use to align with the original "
+            "harness in 3-way comparison runs."
+        ),
+    )
     args = parser.parse_args()
+
+    filter_ids: list[str] | None = None
+    if args.filter_ids:
+        with open(args.filter_ids) as f:
+            filter_ids = [line.strip() for line in f if line.strip()]
 
     asyncio.run(
         run_evaluation(
@@ -262,6 +280,7 @@ def main() -> None:
             patience=args.patience,
             user_sim_model=args.user_sim_model,
             slayer_storage_root=args.slayer_storage_root,
+            filter_ids=filter_ids,
         )
     )
 

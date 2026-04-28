@@ -18,7 +18,10 @@ async def test_get_schema_tool():
     }
     load_db_data_if_needed("alien", settings.db_path)
     agent_mod._ctx_var.set({
-        "status": SampleStatus(idx=0, original_data=task_data),
+        "status": SampleStatus(
+            idx=0, original_data=task_data,
+            remaining_budget=20.0, total_budget=20.0,
+        ),
         "data_path_base": settings.db_path,
         "slayer_storage_dir": "",
         "_slayer_client": None,
@@ -44,7 +47,10 @@ async def test_execute_sql_tool():
     }
     load_db_data_if_needed("alien", settings.db_path)
     agent_mod._ctx_var.set({
-        "status": SampleStatus(idx=0, original_data=task_data),
+        "status": SampleStatus(
+            idx=0, original_data=task_data,
+            remaining_budget=20.0, total_budget=20.0,
+        ),
         "data_path_base": settings.db_path,
         "slayer_storage_dir": "",
         "_slayer_client": None,

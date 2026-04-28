@@ -4,6 +4,12 @@ For each subdirectory of the mini-interact data dir that contains a
 `<name>.sqlite` file, create a per-DB SLayer YAML store at
 `slayer_storage/<name>/` with one datasource and auto-generated models.
 
+After auto-ingestion, this script also overlays bird-interact's
+`<db>_column_meaning_base.json` onto the generated YAML so dimensions
+and measures carry their semantic descriptions — without this step,
+SLayer-mode agents see only column names while raw-mode agents see
+full descriptions, breaking information parity.
+
 Usage:
     python scripts/ingest_slayer_models.py \
         --db-path /path/to/mini-interact \
@@ -11,10 +17,13 @@ Usage:
 """
 
 import argparse
+import json
 import os
 import subprocess
 import sys
 from pathlib import Path
+
+import yaml
 
 
 def ingest_one(db_name: str, sqlite_path: Path, storage_dir: Path) -> bool:
@@ -59,6 +68,50 @@ def ingest_one(db_name: str, sqlite_path: Path, storage_dir: Path) -> bool:
     return True
 
 
+def overlay_column_meanings(
+    db_name: str, db_dir: Path, storage_dir: Path
+) -> int:
+    """Set `description` on dimensions/measures from `<db>_column_meaning_base.json`.
+
+    Keys in the meanings JSON are `<db>|<table>|<column>`. For every
+    matching dim/measure in `<storage>/<db>/models/<table>.yaml`, we
+    write the meaning into the `description` field. Returns the number
+    of fields updated (for logging).
+    """
+    meanings_file = db_dir / f"{db_name}_column_meaning_base.json"
+    models_dir = storage_dir / "models"
+    if not meanings_file.is_file() or not models_dir.is_dir():
+        return 0
+
+    meanings: dict = json.loads(meanings_file.read_text())
+    # Mini-interact mixes PascalCase (Observatories.ObservStation) with the
+    # lowercased identifiers SLayer ingests, so we index on lowercase keys.
+    by_table: dict[str, dict[str, str]] = {}
+    for key, meaning in meanings.items():
+        parts = key.split("|")
+        if len(parts) != 3:
+            continue
+        _db, table, col = parts
+        by_table.setdefault(table.lower(), {})[col.lower()] = meaning
+
+    updated = 0
+    for yaml_file in models_dir.glob("*.yaml"):
+        model = yaml.safe_load(yaml_file.read_text()) or {}
+        table = (model.get("sql_table") or yaml_file.stem).lower()
+        col_to_meaning = by_table.get(table, {})
+        if not col_to_meaning:
+            continue
+        for field_kind in ("dimensions", "measures"):
+            for entry in model.get(field_kind) or []:
+                col = (entry.get("sql") or entry.get("name") or "").lower()
+                meaning = col_to_meaning.get(col)
+                if meaning and not entry.get("description"):
+                    entry["description"] = meaning
+                    updated += 1
+        yaml_file.write_text(yaml.safe_dump(model, sort_keys=False))
+    return updated
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db-path", required=True, help="Path to mini-interact/")
@@ -87,6 +140,9 @@ def main() -> None:
         ok = ingest_one(sub.name, sqlite_file, storage_root / sub.name)
         if not ok:
             failed.append(sub.name)
+            continue
+        updated = overlay_column_meanings(sub.name, sub, storage_root / sub.name)
+        print(f"  attached {updated} column meanings")
 
     if failed:
         print(f"\nFAILED: {failed}", file=sys.stderr)

@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "bird-interact-agents"
 version = "0.1.0"
 description = "Pluggable agent benchmarks for BIRD-Interact (SLayer + raw SQL modes)"
-requires-python = ">=3.10"
+requires-python = ">=3.11,<4.0"
 license = "MIT"
 dependencies = [
     "pydantic>=2.7",
@@ -16,10 +16,30 @@ dependencies = [
 
 [project.optional-dependencies]
 claude-sdk = ["claude-agent-sdk>=0.1.68"]
-pydantic-ai = ["pydantic-ai>=1.0"]
+pydantic-ai = [
+    "pydantic-ai>=1.0",
+    "httpx[socks]",
+]
+smolagents = ["smolagents>=1.0"]
+agno = ["agno>=2.0"]
+mcp-agent = ["mcp-agent>=0.0.16"]
 slayer = ["motley-slayer"]
-all = ["claude-agent-sdk>=0.1.68", "pydantic-ai>=1.0", "motley-slayer"]
+# `original` brings in the upstream BIRD-Interact mini_interact_agent harness
+# so we can call its main.py directly via `uv run python -m batch_run_bird_interact.main`.
+original = ["mini-interact-agent"]
+all = [
+    "claude-agent-sdk>=0.1.68",
+    "pydantic-ai>=1.0",
+    "smolagents>=1.0",
+    "agno>=2.0",
+    "mcp-agent>=0.0.16",
+    "motley-slayer",
+    "mini-interact-agent",
+]
 dev = ["pytest", "pytest-asyncio"]
+
+[tool.uv.sources]
+mini-interact-agent = { path = "../BIRD-Interact/mini_interact/knowledge_based/mini_interact_agent", editable = true }
 
 [project.scripts]
 bird-interact = "bird_interact_agents.run:main"

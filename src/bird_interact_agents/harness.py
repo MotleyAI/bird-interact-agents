@@ -79,20 +79,47 @@ ACTION_COSTS = {
 }
 
 
-def calculate_budget(task_data: dict, patience: int = 3) -> float:
-    """Calculate bird-coin budget for a task.
-
-    Formula: 6 + 2 * num_ambiguities + 2 * patience
-    (matches BIRD-Interact ADK and non-ADK implementations).
-    """
-    amb_count = 0
+def _ambiguity_count(task_data: dict) -> int:
+    n = 0
     user_query_ambiguity = task_data.get("user_query_ambiguity", {})
     if "critical_ambiguity" in user_query_ambiguity:
-        amb_count += len(user_query_ambiguity["critical_ambiguity"])
+        n += len(user_query_ambiguity["critical_ambiguity"])
     if "knowledge_ambiguity" in task_data:
-        amb_count += len(task_data["knowledge_ambiguity"])
+        n += len(task_data["knowledge_ambiguity"])
+    return n
 
-    return 6 + 2 * amb_count + 2 * patience
+
+def calculate_budget(
+    task_data: dict, patience: int = 3, mode: str = "a-interact"
+) -> float:
+    """Calculate bird-coin budget for a task.
+
+    a-interact: ENV_INTERACT(3) + SUBMIT(3) + 2*amb + 2*patience.
+        Default patience=3 reproduces the original mini_interact_agent
+        result with user_patience_budget=6 (= 12 + 2*amb).
+    c-interact: ask_cost*(amb + patience) + submit_cost.
+        Reproduces ADK's discrete turn budget (n_amb+patience clarification
+        turns + 1 submit) using the existing coin plumbing.
+    """
+    amb = _ambiguity_count(task_data)
+    if mode == "c-interact":
+        return ACTION_COSTS["ask_user"] * (amb + patience) + ACTION_COSTS["submit_sql"]
+    return 6 + 2 * amb + 2 * patience
+
+
+def update_budget(status: "SampleStatus", action_name: str) -> tuple[float, bool]:
+    """Decrement remaining_budget by the cost of action_name.
+
+    Mirrors the bookkeeping in the original mini_interact_agent's
+    `update_budget` (see batch_run_bird_interact/main.py): subtract the cost,
+    set force_submit when at-or-below cost. Returns the new remaining budget
+    and the force_submit flag.
+    """
+    cost = ACTION_COSTS.get(action_name, 0)
+    status.remaining_budget = max(0.0, status.remaining_budget - cost)
+    if status.remaining_budget < ACTION_COSTS["submit_sql"]:
+        status.force_submit = True
+    return status.remaining_budget, status.force_submit
 
 
 def load_tasks(jsonl_path: str, limit: int | None = None) -> list[dict]:

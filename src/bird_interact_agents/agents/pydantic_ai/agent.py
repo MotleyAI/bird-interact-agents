@@ -12,6 +12,9 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStdio
+from pydantic_ai.usage import UsageLimits
+
+from bird_interact_agents.agents.claude_sdk.agent import MAX_MODEL_TURNS
 
 from bird_interact_agents.agents.claude_sdk.prompts import (
     RAW_A_INTERACT,
@@ -373,10 +376,17 @@ class PydanticAIAgent:
         prompt = await self._build_prompt(query_mode, eval_mode, task_data, budget, deps)
 
         try:
+            # Lift PydanticAI's default request_limit (50) above our
+            # MAX_MODEL_TURNS cap so long-tail tasks don't get killed
+            # mid-flight before they can submit. Multiply by 2 because
+            # one of our "turns" can map to multiple HTTP requests when
+            # the model issues a tool call followed by its consumption
+            # of the tool result in the same step.
             agent_run = await agent.run(
                 user_prompt=task_data["amb_user_query"],
                 instructions=prompt,
                 deps=deps,
+                usage_limits=UsageLimits(request_limit=MAX_MODEL_TURNS * 2),
             )
             output_text = str(agent_run.output)
         except Exception as e:
