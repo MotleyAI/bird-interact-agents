@@ -24,8 +24,22 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import Any
 
 VERSIONS = ("original", "raw", "slayer")
+
+
+def _first_present(row: dict, *keys: str, default: Any = None) -> Any:
+    """Return the first key whose value is not None.
+
+    Unlike `a or b`, this preserves explicit `False` and `0` — important for
+    `phase1_passed=False` / `total_reward=0` not getting flipped to the next
+    fallback's value.
+    """
+    for k in keys:
+        if k in row and row[k] is not None:
+            return row[k]
+    return default
 
 
 def _norm_orig(row: dict) -> dict:
@@ -45,17 +59,13 @@ def _norm_orig(row: dict) -> dict:
             or ""
         ),
         "phase1_passed": bool(
-            row.get("phase1_passed")
-            or row.get("phase1_completed")
+            _first_present(row, "phase1_passed", "phase1_completed", default=False)
         ),
         "phase2_passed": bool(
-            row.get("phase2_passed")
-            or row.get("task_finished")
+            _first_present(row, "phase2_passed", "task_finished", default=False)
         ),
         "total_reward": float(
-            row.get("total_reward")
-            or row.get("last_reward")
-            or 0.0
+            _first_present(row, "total_reward", "last_reward", default=0.0)
         ),
         "error": row.get("error"),
     }

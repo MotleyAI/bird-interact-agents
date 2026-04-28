@@ -105,9 +105,16 @@ DATA_PATH="${BIRD_DATA_PATH:?Set BIRD_DATA_PATH to mini_interact.jsonl}"
 DB_PATH="${BIRD_DB_PATH:?Set BIRD_DB_PATH to mini-interact dir with SQLite DBs}"
 
 # ---- Step 1: lock task subset ------------------------------------------------
+# Emit both an IDs file (consumed by `bird_interact_agents.run --filter-ids`)
+# and a filtered JSONL containing exactly the selected rows. The upstream
+# `batch_run_bird_interact.main` has no --filter-ids flag, so we feed it the
+# pre-filtered JSONL via --data_path to keep all three runners on the same
+# row set even if select_tasks.py later picks a non-prefix slice.
 IDS_FILE="$OUTPUT_DIR/instance_ids.txt"
+FILTERED_DATA="$OUTPUT_DIR/tasks.jsonl"
 uv run python scripts/select_tasks.py \
-  --data "$DATA_PATH" --limit "$LIMIT" --out "$IDS_FILE"
+  --data "$DATA_PATH" --limit "$LIMIT" \
+  --out "$IDS_FILE" --out-jsonl "$FILTERED_DATA"
 echo "Selected $(wc -l < "$IDS_FILE") tasks (logged in $IDS_FILE)"
 
 # ---- Step 2: ensure SLayer storage exists ------------------------------------
@@ -129,7 +136,7 @@ run_original() {
   local started ended total
   started=$(date +%s)
   uv run python -m batch_run_bird_interact.main \
-    --data_path "$DATA_PATH" \
+    --data_path "$FILTERED_DATA" \
     --output_path "$out_dir/results.jsonl" \
     --agent_model "$AGENT_MODEL" \
     --user_model "$USER_SIM_MODEL" \
@@ -138,11 +145,13 @@ run_original() {
     --user_patience_budget 6 \
     --max_turns 60 \
     --num_threads "$CONCURRENCY" \
-    --limit "$LIMIT" \
     --mini_interact \
     --log_file "$out_dir/experiment.log" \
     --log_level WARNING \
-    > "$out_dir/run.log" 2>&1 || echo "[original] returned non-zero — see $out_dir/run.log"
+    > "$out_dir/run.log" 2>&1 || {
+      echo "[original] returned non-zero — see $out_dir/run.log" >&2
+      return 1
+    }
   ended=$(date +%s)
   total=$((ended - started))
   # Per-task duration is not directly available from the upstream output;
@@ -180,6 +189,12 @@ run_ours() {
   local out_dir="$OUTPUT_DIR/$query_mode"
   mkdir -p "$out_dir"
   echo "[$query_mode] Running bird-interact (--framework $FRAMEWORK --query-mode $query_mode --mode $MODE)..."
+  local strict_flag
+  if $STRICT; then
+    strict_flag="--strict"
+  else
+    strict_flag="--no-strict"
+  fi
   uv run python -m bird_interact_agents.run \
     --framework "$FRAMEWORK" \
     --mode "$MODE" \
@@ -191,15 +206,26 @@ run_ours() {
     --filter-ids "$IDS_FILE" \
     --agent-model "$AGENT_MODEL" \
     --user-sim-model "$USER_SIM_MODEL" \
-    $($STRICT && echo "--strict" || echo "--no-strict") \
-    > "$out_dir/run.log" 2>&1 || echo "[$query_mode] returned non-zero — see $out_dir/run.log"
+    "$strict_flag" \
+    > "$out_dir/run.log" 2>&1 || {
+      echo "[$query_mode] returned non-zero — see $out_dir/run.log" >&2
+      return 1
+    }
 }
 
 if $PARALLEL; then
-  run_original &
-  run_ours raw &
-  run_ours slayer &
-  wait
+  pids=()
+  run_original & pids+=("$!")
+  run_ours raw & pids+=("$!")
+  run_ours slayer & pids+=("$!")
+  rc=0
+  for pid in "${pids[@]}"; do
+    wait "$pid" || rc=1
+  done
+  if (( rc != 0 )); then
+    echo "One or more variants failed; aborting before comparison." >&2
+    exit "$rc"
+  fi
 else
   run_original
   run_ours raw

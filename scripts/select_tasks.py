@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Pick a stable instance_id slice from mini_interact.jsonl.
 
 Used to lock the same set of tasks across all three runners (original,
@@ -7,7 +8,8 @@ Usage:
     python scripts/select_tasks.py \
         --data /path/to/mini_interact.jsonl \
         --limit 30 \
-        --out instance_ids.txt
+        --out instance_ids.txt \
+        --out-jsonl tasks.jsonl
 """
 
 from __future__ import annotations
@@ -22,27 +24,46 @@ def main() -> None:
     parser.add_argument("--data", required=True, help="Path to mini_interact.jsonl")
     parser.add_argument("--limit", type=int, default=30, help="Number of tasks to take")
     parser.add_argument(
-        "--start", type=int, default=0, help="Start offset (0-based)"
+        "--start", type=int, default=0, help="Start offset (0-based, in records)"
     )
     parser.add_argument("--out", required=True, help="Where to write instance_ids.txt")
+    parser.add_argument(
+        "--out-jsonl",
+        default=None,
+        help="Optional: also write the selected rows as a filtered JSONL "
+        "(used by run_three_way.sh to lock the upstream runner to the "
+        "same slice).",
+    )
     args = parser.parse_args()
 
     ids: list[str] = []
+    selected_lines: list[str] = []
+    record_idx = 0
     with open(args.data) as f:
-        for i, line in enumerate(f):
-            line = line.strip()
-            if not line:
+        for raw_line in f:
+            stripped = raw_line.strip()
+            if not stripped:
                 continue
-            if i < args.start:
+            if record_idx < args.start:
+                record_idx += 1
                 continue
             if len(ids) >= args.limit:
                 break
-            row = json.loads(line)
+            row = json.loads(stripped)
             ids.append(row["instance_id"])
+            selected_lines.append(stripped)
+            record_idx += 1
 
-    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(args.out).write_text("\n".join(ids) + "\n")
+    out_path = Path(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text("\n".join(ids) + "\n")
     print(f"Wrote {len(ids)} instance_ids to {args.out}")
+
+    if args.out_jsonl:
+        jsonl_path = Path(args.out_jsonl)
+        jsonl_path.parent.mkdir(parents=True, exist_ok=True)
+        jsonl_path.write_text("\n".join(selected_lines) + ("\n" if selected_lines else ""))
+        print(f"Wrote {len(selected_lines)} rows to {args.out_jsonl}")
 
 
 if __name__ == "__main__":
