@@ -273,6 +273,27 @@ async def _build_prompt(
     raise ValueError(f"Unknown mode combo: {query_mode}/{eval_mode}")
 
 
+def _build_strict_litellm_class():
+    """Subclass `agno.models.litellm.LiteLLM` so we can mutate the outgoing
+    `tools` payload in `get_request_params`. agno's stock LiteLLM never
+    writes `strict`; this is the surgical place to inject a uniform value.
+    """
+    from agno.models.litellm import LiteLLM
+
+    class _StrictLiteLLM(LiteLLM):
+        def __init__(self, *a, _strict_value: bool, **kw):
+            super().__init__(*a, **kw)
+            self._strict_value = _strict_value
+
+        def get_request_params(self, tools=None):
+            params = super().get_request_params(tools=tools)
+            for t in params.get("tools") or []:
+                t.setdefault("function", {})["strict"] = self._strict_value
+            return params
+
+    return _StrictLiteLLM
+
+
 class AgnoAgent:
     """SystemAgent implementation using Agno."""
 
@@ -311,25 +332,8 @@ class AgnoAgent:
             # is silently a no-op for the anthropic/* path.
             agno_model = Claude(id=native_model_id(self.model_id))
         else:
-            from agno.models.litellm import LiteLLM
-
-            class _StrictLiteLLM(LiteLLM):
-                """Force a uniform `strict` value on every tool dict in the
-                outgoing litellm.completion request. agno's stock LiteLLM
-                doesn't write strict; subclassing get_request_params is the
-                surgical place to inject it."""
-
-                def __init__(self, *a, _strict_value: bool, **kw):
-                    super().__init__(*a, **kw)
-                    self._strict_value = _strict_value
-
-                def get_request_params(self, tools=None):
-                    params = super().get_request_params(tools=tools)
-                    for t in params.get("tools") or []:
-                        t.setdefault("function", {})["strict"] = self._strict_value
-                    return params
-
-            agno_model = _StrictLiteLLM(id=self.model_id, _strict_value=self.strict)
+            StrictLiteLLM = _build_strict_litellm_class()
+            agno_model = StrictLiteLLM(id=self.model_id, _strict_value=self.strict)
 
         db_name = task_data["selected_database"]
         instance_id = task_data["instance_id"]
