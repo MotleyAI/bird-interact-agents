@@ -30,6 +30,7 @@ from bird_interact_agents.agents.claude_sdk.prompts import (
 )
 from bird_interact_agents.harness import (
     ACTION_COSTS,
+    MAX_MODEL_TURNS,
     SampleStatus,
     execute_env_action,
     load_db_data_if_needed,
@@ -40,8 +41,6 @@ from bird_interact_agents.usage import TokenUsage
 
 
 _BY_NAME = {t.name: t for t in BIRD_INTERACT_TOOLS}
-
-MAX_MODEL_TURNS = 60
 
 logger = logging.getLogger(__name__)
 

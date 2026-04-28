@@ -2,6 +2,8 @@
 
 import subprocess
 
+import pytest
+
 from bird_interact_agents.config import settings
 
 
@@ -34,6 +36,15 @@ def test_slayer_mcp_command_is_executable():
     )
     assert result.returncode == 0
     assert "slayer" in result.stdout.lower()
+
+
+def test_slayer_mcp_config_rejects_empty_storage_dir():
+    """Empty storage_dir must raise — Path('').resolve() silently aliases to
+    CWD, so any unset slayer_storage_root would otherwise corrupt SLAYER_STORAGE."""
+    from bird_interact_agents.harness import slayer_mcp_stdio_config
+
+    with pytest.raises(ValueError, match="non-empty storage_dir"):
+        slayer_mcp_stdio_config("")
 
 
 def test_slayer_mcp_storage_per_task(tmp_path):

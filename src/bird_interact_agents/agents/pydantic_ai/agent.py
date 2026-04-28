@@ -30,12 +30,12 @@ from bird_interact_agents.agents._submit import (
     submit_slayer_query,
 )
 from bird_interact_agents.agents._tool_specs import BIRD_INTERACT_TOOLS
-from bird_interact_agents.agents.claude_sdk.agent import MAX_MODEL_TURNS
 from bird_interact_agents.agents.claude_sdk.prompts import (
     RAW_A_INTERACT,
     SLAYER_A_INTERACT,
 )
 from bird_interact_agents.harness import (
+    MAX_MODEL_TURNS,
     SampleStatus,
     load_db_data_if_needed,
     slayer_mcp_stdio_config,
