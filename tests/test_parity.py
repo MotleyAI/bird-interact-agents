@@ -81,14 +81,14 @@ def test_a_and_c_interact_budgets_diverge_for_amb_zero():
 
 def test_update_budget_decrements_and_sets_force_submit():
     status = SampleStatus(
-        idx=0, original_data={}, remaining_budget=4.0, total_budget=4.0,
+        idx=0, original_data={}, remaining_budget=5.0, total_budget=5.0,
     )
-    # Below submit cost (3) -> force_submit fires
-    update_budget(status, "execute_sql")  # cost 1
-    assert status.remaining_budget == 3.0
+    # At-or-below submit cost (3) -> force_submit fires (<= boundary).
+    update_budget(status, "execute_sql")  # cost 1; remaining 4.0
+    assert status.remaining_budget == 4.0
     assert status.force_submit is False
-    update_budget(status, "execute_sql")  # cost 1; remaining 2.0 < 3
-    assert status.remaining_budget == 2.0
+    update_budget(status, "execute_sql")  # cost 1; remaining 3.0 == submit_cost
+    assert status.remaining_budget == 3.0
     assert status.force_submit is True
 
 
