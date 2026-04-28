@@ -458,10 +458,21 @@ async def _build_prompt(
 
 
 class ClaudeSDKAgent:
-    """SystemAgent implementation using the Claude Agent SDK."""
+    """SystemAgent implementation using the Claude Agent SDK.
 
-    def __init__(self, slayer_storage_root: str | None = None) -> None:
+    The SDK is locked to Anthropic models — passing a non-Anthropic
+    `model` causes `run_task` to short-circuit with a skip-shaped row so
+    the 3-way comparison still renders cleanly. Use a different
+    framework (`pydantic_ai`, `smolagents`, ...) for non-Anthropic models.
+    """
+
+    def __init__(
+        self,
+        slayer_storage_root: str | None = None,
+        model: str = "anthropic/claude-sonnet-4-5",
+    ) -> None:
         self.slayer_storage_root = slayer_storage_root
+        self.model = model
 
     async def run_task(
         self,
@@ -473,8 +484,27 @@ class ClaudeSDKAgent:
         user_sim_model: str = "anthropic/claude-haiku-4-5-20251001",
         user_sim_prompt_version: str = "v2",
     ) -> dict:
-        db_name = task_data["selected_database"]
+        from bird_interact_agents.model_string import is_anthropic
+
         instance_id = task_data["instance_id"]
+        db_name = task_data["selected_database"]
+        if not is_anthropic(self.model):
+            msg = (
+                f"claude_sdk requires an Anthropic model; got {self.model!r}. "
+                "Skipped — use --framework pydantic_ai for non-Anthropic models."
+            )
+            logger.warning("[%s] %s", instance_id, msg)
+            return {
+                "task_id": instance_id,
+                "instance_id": instance_id,
+                "database": db_name,
+                "phase1_passed": False,
+                "phase2_passed": False,
+                "total_reward": 0.0,
+                "trajectory": [],
+                "error": msg,
+            }
+
 
         status = SampleStatus(
             idx=0,

@@ -250,9 +250,21 @@ async def _build_prompt(
     raise ValueError(f"Unknown mode combo: {query_mode}/{eval_mode}")
 
 
-def _build_settings(query_mode: str, slayer_storage_dir: str):
-    """Build mcp-agent Settings, registering the slayer MCP server in slayer mode."""
-    from mcp_agent.config import MCPServerSettings, MCPSettings, Settings
+def _build_settings(query_mode: str, slayer_storage_dir: str, model: str):
+    """Build mcp-agent Settings, registering the slayer MCP server in slayer mode.
+
+    For non-Anthropic models we point mcp-agent's OpenAI-compatible client
+    at the appropriate provider's base URL + key. mcp-agent ships only
+    AnthropicAugmentedLLM and OpenAIAugmentedLLM (no LiteLLM shim), so we
+    route every non-Anthropic provider through OpenAIAugmentedLLM with a
+    custom base URL.
+    """
+    import os
+    from mcp_agent.config import (
+        MCPServerSettings, MCPSettings, OpenAISettings, Settings,
+    )
+
+    from bird_interact_agents.model_string import is_anthropic, native_model_id
 
     servers: dict = {}
     if query_mode == "slayer":
@@ -264,7 +276,28 @@ def _build_settings(query_mode: str, slayer_storage_dir: str):
             args=cfg["args"],
             env=cfg["env"],
         )
-    return Settings(mcp=MCPSettings(servers=servers))
+
+    settings_kwargs: dict = {"mcp": MCPSettings(servers=servers)}
+    if not is_anthropic(model):
+        provider = model.split("/", 1)[0]
+        # Map LiteLLM provider name -> OpenAI-compat base URL + env var.
+        # Add entries here as needed; the table is intentionally short
+        # because most experiments will go through cerebras/openrouter.
+        endpoints = {
+            "cerebras":    ("https://api.cerebras.ai/v1",            "CEREBRAS_API_KEY"),
+            "openrouter":  ("https://openrouter.ai/api/v1",          "OPENROUTER_API_KEY"),
+            "zhipu":       ("https://api.z.ai/api/paas/v4",          "ZHIPU_API_KEY"),
+            "fireworks_ai":("https://api.fireworks.ai/inference/v1", "FIREWORKS_API_KEY"),
+        }
+        base_url, env_key = endpoints.get(
+            provider, ("https://api.openai.com/v1", "OPENAI_API_KEY")
+        )
+        settings_kwargs["openai"] = OpenAISettings(
+            base_url=base_url,
+            api_key=os.environ.get(env_key),
+            default_model=native_model_id(model),
+        )
+    return Settings(**settings_kwargs)
 
 
 class McpAgentAgent:
@@ -273,10 +306,25 @@ class McpAgentAgent:
     def __init__(
         self,
         slayer_storage_root: str | None = None,
-        model: str = "claude-sonnet-4-5-20250929",
+        model: str = "anthropic/claude-sonnet-4-5",
+        strict: bool = False,
     ) -> None:
         self.slayer_storage_root = slayer_storage_root
+        # Canonical LiteLLM-style "provider/model_id". For Anthropic, mcp-agent
+        # uses AnthropicAugmentedLLM and the bare model id; for everything
+        # else we use OpenAIAugmentedLLM pointed at the provider's base URL
+        # (configured in _build_settings).
         self.model = model
+        # mcp-agent's OpenAIAugmentedLLM builds tool definitions inline
+        # inside its `generate` method (no override hook for individual
+        # tools). There's a TODO in the upstream source about exposing a
+        # `strict` knob; until that lands, --strict True isn't honourable
+        # for this framework, so fail fast at construction.
+        if strict:
+            from bird_interact_agents.strict import warn_unsupported
+
+            warn_unsupported("mcp_agent")
+        self.strict = strict
 
     async def run_task(
         self,
@@ -291,7 +339,21 @@ class McpAgentAgent:
         from mcp_agent.agents.agent import Agent
         from mcp_agent.app import MCPApp
         from mcp_agent.workflows.llm.augmented_llm import RequestParams
-        from mcp_agent.workflows.llm.augmented_llm_anthropic import AnthropicAugmentedLLM
+
+        from bird_interact_agents.model_string import (
+            is_anthropic, native_model_id,
+        )
+
+        if is_anthropic(self.model):
+            from mcp_agent.workflows.llm.augmented_llm_anthropic import (
+                AnthropicAugmentedLLM as _LLM,
+            )
+            request_model = native_model_id(self.model)
+        else:
+            from mcp_agent.workflows.llm.augmented_llm_openai import (
+                OpenAIAugmentedLLM as _LLM,
+            )
+            request_model = native_model_id(self.model)
 
         db_name = task_data["selected_database"]
         instance_id = task_data["instance_id"]
@@ -315,7 +377,7 @@ class McpAgentAgent:
         prompt = await _build_prompt(query_mode, eval_mode, task_data, budget, state)
         server_names = ["slayer"] if query_mode == "slayer" else []
 
-        settings = _build_settings(query_mode, slayer_storage_dir)
+        settings = _build_settings(query_mode, slayer_storage_dir, self.model)
         app = MCPApp(name="bird-interact-mcp-agent", settings=settings)
 
         try:
@@ -327,10 +389,10 @@ class McpAgentAgent:
                     functions=functions,
                 )
                 async with agent:
-                    llm = await agent.attach_llm(AnthropicAugmentedLLM)
+                    llm = await agent.attach_llm(_LLM)
                     output = await llm.generate_str(
                         message=task_data["amb_user_query"],
-                        request_params=RequestParams(model=self.model),
+                        request_params=RequestParams(model=request_model),
                     )
         except Exception as e:
             logger.error("Agent error on %s: %s", instance_id, e)

@@ -80,7 +80,9 @@ def test_settings_includes_slayer_in_slayer_mode(tmp_path):
     """In slayer mode, _build_settings registers a slayer MCP server."""
     from bird_interact_agents.agents.mcp_agent.agent import _build_settings
 
-    s = _build_settings("slayer", str(tmp_path / "alien"))
+    s = _build_settings(
+        "slayer", str(tmp_path / "alien"), "anthropic/claude-sonnet-4-5",
+    )
     assert "slayer" in s.mcp.servers
     server = s.mcp.servers["slayer"]
     assert server.transport == "stdio"
@@ -92,8 +94,23 @@ def test_settings_empty_in_raw_mode(tmp_path):
     """In raw mode, _build_settings has no MCP servers (no slayer)."""
     from bird_interact_agents.agents.mcp_agent.agent import _build_settings
 
-    s = _build_settings("raw", str(tmp_path / "alien"))
+    s = _build_settings(
+        "raw", str(tmp_path / "alien"), "anthropic/claude-sonnet-4-5",
+    )
     assert "slayer" not in s.mcp.servers
+
+
+def test_settings_routes_non_anthropic_through_openai_compat(tmp_path, monkeypatch):
+    """For a non-Anthropic model, _build_settings populates Settings.openai
+    with the matching provider's base_url + key (here: Cerebras)."""
+    monkeypatch.setenv("CEREBRAS_API_KEY", "test-key")
+    from bird_interact_agents.agents.mcp_agent.agent import _build_settings
+
+    s = _build_settings("raw", str(tmp_path / "alien"), "cerebras/zai-glm-4.7")
+    assert s.openai is not None
+    assert s.openai.base_url == "https://api.cerebras.ai/v1"
+    assert s.openai.api_key == "test-key"
+    assert s.openai.default_model == "zai-glm-4.7"
 
 
 @pytest.mark.asyncio

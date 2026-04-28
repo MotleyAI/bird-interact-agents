@@ -247,6 +247,36 @@ def test_compare_results_handles_ours_shape_unchanged():
     assert out["phase1_passed"] is False
 
 
+@pytest.mark.asyncio
+async def test_claude_sdk_skips_non_anthropic_model_with_clear_error():
+    """claude_sdk is locked to Anthropic by SDK design. When --agent-model
+    is non-Anthropic, run_task must return a skip-shaped row (not crash) so
+    the 3-way comparison still renders cleanly."""
+    from bird_interact_agents.agents.claude_sdk import agent as agent_mod
+    from bird_interact_agents.harness import load_db_data_if_needed
+
+    task_data = {
+        "selected_database": "alien",
+        "knowledge_ambiguity": [],
+        "instance_id": "alien_1",
+        "amb_user_query": "any",
+    }
+    load_db_data_if_needed("alien", settings.db_path)
+
+    agent = agent_mod.ClaudeSDKAgent(
+        slayer_storage_root=None, model="cerebras/zai-glm-4.7"
+    )
+    result = await agent.run_task(
+        task_data, settings.db_path, budget=12.0, query_mode="raw",
+        eval_mode="a-interact",
+    )
+    assert result["phase1_passed"] is False
+    assert result["phase2_passed"] is False
+    assert result["error"] is not None
+    err = result["error"].lower()
+    assert "claude_sdk" in err and "anthropic" in err
+
+
 def test_overlay_helper_writes_descriptions(tmp_path: Path):
     """Unit-test the overlay function directly with a synthetic store +
     meanings file — guards the YAML round-trip independent of slayer."""

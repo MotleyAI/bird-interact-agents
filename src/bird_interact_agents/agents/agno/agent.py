@@ -255,10 +255,16 @@ class AgnoAgent:
     def __init__(
         self,
         slayer_storage_root: str | None = None,
-        model_id: str = "claude-sonnet-4-5-20250929",
+        model_id: str = "anthropic/claude-sonnet-4-5",
+        strict: bool = False,
     ) -> None:
         self.slayer_storage_root = slayer_storage_root
+        # Canonical LiteLLM-style "provider/model_id". For Anthropic we
+        # construct an `agno.models.anthropic.Claude(id=...)` with the
+        # bare model id; for everything else we use Agno's LiteLLM shim
+        # which accepts the prefixed string verbatim.
         self.model_id = model_id
+        self.strict = strict
 
     async def run_task(
         self,
@@ -271,8 +277,35 @@ class AgnoAgent:
         user_sim_prompt_version: str = "v2",
     ) -> dict:
         from agno.agent import Agent
-        from agno.models.anthropic import Claude
         from agno.tools.mcp import MCPTools
+
+        from bird_interact_agents.model_string import is_anthropic, native_model_id
+
+        if is_anthropic(self.model_id):
+            from agno.models.anthropic import Claude
+            # Anthropic doesn't have a tool-level strict concept; --strict
+            # is silently a no-op for the anthropic/* path.
+            agno_model = Claude(id=native_model_id(self.model_id))
+        else:
+            from agno.models.litellm import LiteLLM
+
+            class _StrictLiteLLM(LiteLLM):
+                """Force a uniform `strict` value on every tool dict in the
+                outgoing litellm.completion request. agno's stock LiteLLM
+                doesn't write strict; subclassing get_request_params is the
+                surgical place to inject it."""
+
+                def __init__(self, *a, _strict_value: bool, **kw):
+                    super().__init__(*a, **kw)
+                    self._strict_value = _strict_value
+
+                def get_request_params(self, tools=None):
+                    params = super().get_request_params(tools=tools)
+                    for t in params.get("tools") or []:
+                        t.setdefault("function", {})["strict"] = self._strict_value
+                    return params
+
+            agno_model = _StrictLiteLLM(id=self.model_id, _strict_value=self.strict)
 
         db_name = task_data["selected_database"]
         instance_id = task_data["instance_id"]
@@ -297,7 +330,7 @@ class AgnoAgent:
 
         async def _run_with_tools(tools_list: list) -> str:
             agent = Agent(
-                model=Claude(id=self.model_id),
+                model=agno_model,
                 tools=tools_list,
                 instructions=prompt,
             )

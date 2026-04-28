@@ -9,12 +9,35 @@ import logging
 import re
 from typing import Any
 
+from dataclasses import replace
+
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStdio
+from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.usage import UsageLimits
 
 from bird_interact_agents.agents.claude_sdk.agent import MAX_MODEL_TURNS
+
+
+def _make_prepare_tools(strict_value: bool):
+    """Return a `prepare_tools` callback that forces a uniform `strict` on
+    every tool definition right before each model request.
+
+    Cerebras's OpenAI-compatible API rejects requests with inconsistent
+    `strict` values across entries — PydanticAI's native @agent.tool
+    defaults to None and MCP-server tools also come in as None, so the
+    merged list violates the constraint. This callback is PydanticAI's
+    documented mechanism for cross-source uniformity (see the example
+    `turn_on_strict_if_openai` in pydantic_ai.tools).
+    """
+
+    async def _force_strict(
+        ctx: RunContext, tool_defs: list[ToolDefinition]
+    ) -> list[ToolDefinition]:
+        return [replace(td, strict=strict_value) for td in tool_defs]
+
+    return _force_strict
 
 from bird_interact_agents.agents.claude_sdk.prompts import (
     RAW_A_INTERACT,
@@ -106,8 +129,11 @@ async def _ask_user_impl(deps: TaskDeps, question: str) -> str:
 # PydanticAI agents register tools at construction time.
 # ---------------------------------------------------------------------------
 
-def _build_raw_a_agent(model: str) -> Agent:
-    agent = Agent(model=model, deps_type=TaskDeps, retries=2)
+def _build_raw_a_agent(model: str, strict_value: bool = False) -> Agent:
+    agent = Agent(
+        model=model, deps_type=TaskDeps, retries=2,
+        prepare_tools=_make_prepare_tools(strict_value),
+    )
 
     @agent.tool
     async def execute_sql(ctx: RunContext[TaskDeps], sql: str) -> str:
@@ -193,8 +219,11 @@ def _build_raw_a_agent(model: str) -> Agent:
     return agent
 
 
-def _build_raw_c_agent(model: str) -> Agent:
-    agent = Agent(model=model, deps_type=TaskDeps, retries=2)
+def _build_raw_c_agent(model: str, strict_value: bool = False) -> Agent:
+    agent = Agent(
+        model=model, deps_type=TaskDeps, retries=2,
+        prepare_tools=_make_prepare_tools(strict_value),
+    )
 
     @agent.tool
     async def ask_user(ctx: RunContext[TaskDeps], question: str) -> str:
@@ -218,7 +247,9 @@ def _build_raw_c_agent(model: str) -> Agent:
     return agent
 
 
-def _build_slayer_agent(model: str, slayer_storage_dir: str) -> Agent:
+def _build_slayer_agent(
+    model: str, slayer_storage_dir: str, strict_value: bool = False,
+) -> Agent:
     """Build a SLayer-mode agent (shared between a- and c-interact variants).
 
     Discovery tools come from the actual `slayer mcp` server attached as a
@@ -229,7 +260,8 @@ def _build_slayer_agent(model: str, slayer_storage_dir: str) -> Agent:
         command=cfg["command"], args=cfg["args"], env=cfg["env"]
     )
     agent = Agent(
-        model=model, deps_type=TaskDeps, retries=2, toolsets=[slayer_server]
+        model=model, deps_type=TaskDeps, retries=2, toolsets=[slayer_server],
+        prepare_tools=_make_prepare_tools(strict_value),
     )
 
     @agent.tool
@@ -279,10 +311,18 @@ class PydanticAIAgent:
     def __init__(
         self,
         slayer_storage_root: str | None = None,
-        model: str = "anthropic:claude-sonnet-4-5",
+        model: str = "anthropic/claude-sonnet-4-5",
+        strict: bool = False,
     ) -> None:
+        from bird_interact_agents.model_string import to_pydantic_ai
+
         self.slayer_storage_root = slayer_storage_root
-        self.model = model
+        # Accept the canonical LiteLLM-style `provider/model_id` and convert
+        # to PydanticAI's `provider:model_id`. PydanticAI also accepts the
+        # colon form natively, so this is idempotent for callers that
+        # already pass that shape.
+        self.model = to_pydantic_ai(model) if "/" in model else model
+        self.strict = strict
 
     def _select_agent(
         self,
@@ -291,13 +331,15 @@ class PydanticAIAgent:
         slayer_storage_dir: str = "",
     ) -> Agent:
         if query_mode == "raw" and eval_mode == "a-interact":
-            return _build_raw_a_agent(self.model)
+            return _build_raw_a_agent(self.model, self.strict)
         if query_mode == "raw" and eval_mode == "c-interact":
-            return _build_raw_c_agent(self.model)
+            return _build_raw_c_agent(self.model, self.strict)
         if query_mode == "slayer":
             # Same agent shape for a- and c-interact; the system prompt
             # differs in the runner.
-            return _build_slayer_agent(self.model, slayer_storage_dir)
+            return _build_slayer_agent(
+                self.model, slayer_storage_dir, self.strict,
+            )
         raise ValueError(f"Unknown mode combo: {query_mode}/{eval_mode}")
 
     async def _build_prompt(
