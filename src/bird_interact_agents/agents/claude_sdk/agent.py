@@ -1,9 +1,8 @@
 """Claude Agent SDK implementation for BIRD-Interact."""
 
 import contextvars
-import json
 import logging
-import re
+from types import SimpleNamespace
 
 from claude_agent_sdk import (
     ClaudeAgentOptions,
@@ -16,6 +15,15 @@ from bird_interact_agents.agents._prompt_builders import (
     build_raw_c_interact_prompt,
     build_slayer_c_interact_prompt,
 )
+from bird_interact_agents.agents._submit import (
+    ask_user_impl,
+    submit_raw_sql,
+    submit_slayer_query,
+)
+from bird_interact_agents.agents._tool_specs import (
+    BIRD_INTERACT_TOOLS,
+    render_action,
+)
 from bird_interact_agents.agents.claude_sdk.prompts import (
     RAW_A_INTERACT,
     SLAYER_A_INTERACT,
@@ -24,16 +32,15 @@ from bird_interact_agents.harness import (
     ACTION_COSTS,
     MAX_MODEL_TURNS,
     SampleStatus,
-    _schema_cache,
-    build_user_decoder_prompt,
-    build_user_encoder_prompt,
     execute_env_action,
-    execute_submit_action,
     load_db_data_if_needed,
-    parse_encoder_response,
     slayer_mcp_stdio_config,
     update_budget,
 )
+from bird_interact_agents.usage import TokenUsage
+
+
+_BY_NAME = {t.name: t for t in BIRD_INTERACT_TOOLS}
 
 logger = logging.getLogger(__name__)
 
@@ -126,68 +133,115 @@ async def _run_env(action_name: str, action_str: str) -> dict:
     return _text(str(observation) + _budget_note(status))
 
 
+def _state_view() -> SimpleNamespace:
+    """Return a SimpleNamespace adapter onto the current contextvar dict.
+
+    The shared `_submit` helpers expect a state object exposing
+    `status`/`data_path_base`/`user_sim_model`/`user_sim_prompt_version`/
+    `usage`/`result`/`slayer_storage_dir` as attributes. claude_sdk
+    keeps everything in a contextvar dict for legacy reasons; this thin
+    view bridges the two.
+
+    Note: only `result` is mutated by the helpers (via submit_*), and a
+    SimpleNamespace assignment to `result` won't write back to the dict.
+    Helpers that mutate state must use the explicit ctx-writing helpers
+    below.
+    """
+    d = _ctx_var.get()
+    return SimpleNamespace(
+        status=d.get("status"),
+        data_path_base=d.get("data_path_base"),
+        user_sim_model=d.get("user_sim_model", "anthropic/claude-haiku-4-5-20251001"),
+        user_sim_prompt_version=d.get("user_sim_prompt_version", "v2"),
+        slayer_storage_dir=d.get("slayer_storage_dir", ""),
+        usage=d.get("usage") or TokenUsage(),
+        result=None,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Raw-mode tools — direct DB exploration + SQL execution
+#
+# Each wrapper looks up its action template from BIRD_INTERACT_TOOLS, renders
+# it with the model-supplied args, then routes through `_run_env` which
+# applies budget gating and bookkeeping.
 # ---------------------------------------------------------------------------
 
-@tool("execute_sql", "Execute a SQL query against the database and return results", {"sql": str})
+@tool("execute_sql", _BY_NAME["execute_sql"].description, {"sql": str})
 async def execute_sql(args: dict) -> dict:
-    return await _run_env("execute_sql", f"execute({args['sql']})")
+    return await _run_env(
+        "execute_sql", render_action(_BY_NAME["execute_sql"], sql=args["sql"]),
+    )
 
 
-@tool("get_schema", "Get the database schema (CREATE TABLE statements with sample data)", {})
+@tool("get_schema", _BY_NAME["get_schema"].description, {})
 async def get_schema(args: dict) -> dict:
-    return await _run_env("get_schema", "get_schema()")
+    return await _run_env("get_schema", render_action(_BY_NAME["get_schema"]))
 
 
 @tool(
     "get_all_column_meanings",
-    "Get the meanings/descriptions of all columns in the database",
+    _BY_NAME["get_all_column_meanings"].description,
     {},
 )
 async def get_all_column_meanings(args: dict) -> dict:
-    return await _run_env("get_all_column_meanings", "get_all_column_meanings()")
+    return await _run_env(
+        "get_all_column_meanings",
+        render_action(_BY_NAME["get_all_column_meanings"]),
+    )
 
 
 @tool(
     "get_column_meaning",
-    "Get the meaning of a specific column in a table",
+    _BY_NAME["get_column_meaning"].description,
     {"table_name": str, "column_name": str},
 )
 async def get_column_meaning(args: dict) -> dict:
-    action = f"get_column_meaning('{args['table_name']}', '{args['column_name']}')"
-    return await _run_env("get_column_meaning", action)
+    return await _run_env(
+        "get_column_meaning",
+        render_action(
+            _BY_NAME["get_column_meaning"],
+            table_name=args["table_name"], column_name=args["column_name"],
+        ),
+    )
 
 
 @tool(
     "get_all_external_knowledge_names",
-    "List all available external knowledge entry names for this database",
+    _BY_NAME["get_all_external_knowledge_names"].description,
     {},
 )
 async def get_all_external_knowledge_names(args: dict) -> dict:
     return await _run_env(
-        "get_all_external_knowledge_names", "get_all_external_knowledge_names()"
+        "get_all_external_knowledge_names",
+        render_action(_BY_NAME["get_all_external_knowledge_names"]),
     )
 
 
 @tool(
     "get_knowledge_definition",
-    "Get the definition of a specific external knowledge entry",
+    _BY_NAME["get_knowledge_definition"].description,
     {"knowledge_name": str},
 )
 async def get_knowledge_definition(args: dict) -> dict:
-    action = f"get_knowledge_definition('{args['knowledge_name']}')"
-    return await _run_env("get_knowledge_definition", action)
+    return await _run_env(
+        "get_knowledge_definition",
+        render_action(
+            _BY_NAME["get_knowledge_definition"],
+            knowledge_name=args["knowledge_name"],
+        ),
+    )
 
 
 @tool(
     "get_all_knowledge_definitions",
-    "Get all external knowledge definitions for this database",
+    _BY_NAME["get_all_knowledge_definitions"].description,
     {},
 )
 async def get_all_knowledge_definitions(args: dict) -> dict:
     return await _run_env(
-        "get_all_knowledge_definitions", "get_all_knowledge_definitions()"
+        "get_all_knowledge_definitions",
+        render_action(_BY_NAME["get_all_knowledge_definitions"]),
     )
 
 
@@ -196,35 +250,8 @@ async def get_all_knowledge_definitions(args: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 async def _ask_user_impl(question: str) -> str:
-    """Encoder/decoder user simulator using LiteLLM."""
-    status: SampleStatus = _ctx["status"]
-    db_name = status.original_data["selected_database"]
-    schema = _schema_cache.get(db_name, "")
-    model = _ctx.get("user_sim_model", "anthropic/claude-haiku-4-5-20251001")
-    prompt_version = _ctx.get("user_sim_prompt_version", "v2")
-
-    import litellm
-
-    encoder_prompt = build_user_encoder_prompt(question, status, schema, prompt_version)
-    encoder_resp = await litellm.acompletion(
-        model=model,
-        messages=[{"role": "user", "content": encoder_prompt}],
-    )
-    encoder_action = parse_encoder_response(
-        encoder_resp.choices[0].message.content or ""
-    )
-
-    decoder_prompt = build_user_decoder_prompt(
-        question, encoder_action, status, schema, prompt_version
-    )
-    decoder_resp = await litellm.acompletion(
-        model=model,
-        messages=[{"role": "user", "content": decoder_prompt}],
-    )
-    raw_response = decoder_resp.choices[0].message.content or ""
-
-    match = re.search(r"<s>(.*?)</s>", raw_response, re.DOTALL)
-    return match.group(1).strip() if match else raw_response.strip()
+    """Thin shim that delegates to the shared user-sim helper."""
+    return await ask_user_impl(_state_view(), question)
 
 
 @tool(
@@ -259,19 +286,13 @@ async def ask_user(args: dict) -> dict:
     {"sql": str},
 )
 async def submit_sql(args: dict) -> dict:
-    status: SampleStatus = _ctx["status"]
-    observation, reward, p1, p2, finished = execute_submit_action(
-        args["sql"], status, _ctx["data_path_base"]
-    )
-    update_budget(status, "submit_sql")
-    _ctx["result"] = {
-        "phase1_passed": p1,
-        "phase2_passed": p2,
-        "total_reward": reward if reward is not None else 0.0,
-        "finished": finished,
-        "observation": observation,
-    }
-    return _text(str(observation) + _budget_note(status))
+    state = _state_view()
+    observation = submit_raw_sql(state, args["sql"])
+    # `state` is a SimpleNamespace view — `state.result` doesn't write back
+    # to the contextvar dict, so persist it explicitly.
+    _ctx["result"] = {**state.result, "observation": observation}
+    update_budget(_ctx["status"], "submit_sql")
+    return _text(observation + _budget_note(_ctx["status"]))
 
 
 # ---------------------------------------------------------------------------
@@ -306,33 +327,17 @@ def _slayer_client():
     {"query_json": str},
 )
 async def submit_query(args: dict) -> dict:
-    try:
-        query_dict = json.loads(args["query_json"])
-    except json.JSONDecodeError as e:
-        return _text(f"Invalid JSON — submission aborted: {e}")
-
-    client = _slayer_client()
-    try:
-        sql = client.sql_sync(query_dict)
-    except Exception as e:
-        return _text(f"Could not generate SQL — submission aborted: {e}")
-
-    status: SampleStatus = _ctx["status"]
-    observation, reward, p1, p2, finished = execute_submit_action(
-        sql, status, _ctx["data_path_base"]
+    state = _state_view()
+    observation = submit_slayer_query(
+        state, args["query_json"], lambda _s: _slayer_client(),
     )
-    update_budget(status, "submit_query")
-    _ctx["result"] = {
-        "phase1_passed": p1,
-        "phase2_passed": p2,
-        "total_reward": reward if reward is not None else 0.0,
-        "finished": finished,
-        "observation": observation,
-        "submitted_sql": sql,
-    }
-    return _text(
-        f"Generated SQL:\n{sql}\n\nResult: {observation}{_budget_note(status)}"
-    )
+    if state.result is None:
+        # JSON-decode or sql_sync failure — propagate the helper's message
+        # without touching budget.
+        return _text(observation)
+    _ctx["result"] = {**state.result, "observation": observation}
+    update_budget(_ctx["status"], "submit_query")
+    return _text(observation + _budget_note(_ctx["status"]))
 
 
 # ---------------------------------------------------------------------------
@@ -497,6 +502,7 @@ class ClaudeSDKAgent:
 
         # Set the per-task context dict via contextvars — concurrent task
         # runs each get their own dict instance.
+        accum = TokenUsage()
         _ctx_var.set({
             "status": status,
             "data_path_base": data_path_base,
@@ -510,6 +516,7 @@ class ClaudeSDKAgent:
             "query_mode": query_mode,
             "max_asks": max_asks,
             "asks_used": 0,
+            "usage": accum,
         })
 
         tools = _select_tools(query_mode, eval_mode)
@@ -548,6 +555,20 @@ class ClaudeSDKAgent:
                     trajectory.append(
                         {"type": str(type(msg).__name__), "data": str(msg)[:500]}
                     )
+                    # Each assistant turn carries a `usage` block; capture
+                    # incrementally so we still record partial usage on
+                    # exception or early break.
+                    msg_usage = getattr(msg, "usage", None)
+                    if msg_usage is not None:
+                        accum.add_call(
+                            scope="agent",
+                            model=self.model,
+                            prompt=getattr(msg_usage, "input_tokens", 0) or 0,
+                            completion=getattr(msg_usage, "output_tokens", 0) or 0,
+                            cache_read=(
+                                getattr(msg_usage, "cache_read_input_tokens", 0) or 0
+                            ),
+                        )
                     # Count assistant model turns; cap at MAX_MODEL_TURNS to
                     # match the original mini_interact_agent (--max_turns=60)
                     # and ADK before_model_callback.
@@ -570,6 +591,7 @@ class ClaudeSDKAgent:
                 "total_reward": 0.0,
                 "trajectory": trajectory,
                 "error": str(e),
+                "usage": accum.model_dump(),
             }
 
         result = _ctx.get("result") or {}
@@ -580,6 +602,9 @@ class ClaudeSDKAgent:
             "phase1_passed": result.get("phase1_passed", False),
             "phase2_passed": result.get("phase2_passed", False),
             "total_reward": result.get("total_reward", 0.0),
+            "submitted_sql": result.get("submitted_sql"),
+            "submitted_query": result.get("submitted_query"),
             "trajectory": trajectory,
             "error": None,
+            "usage": accum.model_dump(),
         }

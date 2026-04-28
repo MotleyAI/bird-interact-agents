@@ -139,17 +139,25 @@ def _set_force_submit(state_or_deps):
     state_or_deps.status.force_submit = True
 
 
+def _patch_executor(monkeypatch) -> dict:
+    """Patch the shared `_submit.execute_env_action` used by every adapter
+    after the dedup pass. Returns a dict whose `"n"` key counts calls."""
+    from bird_interact_agents.agents import _submit
+    called = {"n": 0}
+    monkeypatch.setattr(
+        _submit, "execute_env_action",
+        lambda *a, **kw: (called.__setitem__("n", called["n"] + 1), ("ran", 0))[1],
+    )
+    return called
+
+
 @pytest.mark.asyncio
 async def test_agno_execute_sql_blocked_when_force_submit(monkeypatch):
     from bird_interact_agents.agents.agno import agent as mod
 
     state = _make_state_for("bird_interact_agents.agents.agno.agent")
     _set_force_submit(state)
-
-    called = {"n": 0}
-    monkeypatch.setattr(
-        mod, "execute_env_action", lambda *a, **kw: (called.__setitem__("n", called["n"] + 1), ("ran", 0))[1]
-    )
+    called = _patch_executor(monkeypatch)
 
     tools = mod._build_native_tools(state, "raw", "a-interact")
     execute_sql = next(f for f in tools if f.__name__ == "execute_sql")
@@ -164,12 +172,7 @@ async def test_mcp_agent_execute_sql_blocked_when_force_submit(monkeypatch):
 
     state = _make_state_for("bird_interact_agents.agents.mcp_agent.agent")
     _set_force_submit(state)
-
-    called = {"n": 0}
-    monkeypatch.setattr(
-        mod, "execute_env_action",
-        lambda *a, **kw: (called.__setitem__("n", called["n"] + 1), ("ran", 0))[1],
-    )
+    called = _patch_executor(monkeypatch)
 
     fns = mod._build_native_functions(state, "raw", "a-interact")
     execute_sql = next(f for f in fns if f.__name__ == "execute_sql")
@@ -183,12 +186,7 @@ def test_smolagents_execute_sql_blocked_when_force_submit(monkeypatch):
 
     state = _make_state_for("bird_interact_agents.agents.smolagents.agent")
     _set_force_submit(state)
-
-    called = {"n": 0}
-    monkeypatch.setattr(
-        mod, "execute_env_action",
-        lambda *a, **kw: (called.__setitem__("n", called["n"] + 1), ("ran", 0))[1],
-    )
+    called = _patch_executor(monkeypatch)
 
     tools = mod._build_native_tools(state, "raw", "a-interact")
     execute_sql = next(t for t in tools if t.name == "execute_sql")
@@ -197,20 +195,17 @@ def test_smolagents_execute_sql_blocked_when_force_submit(monkeypatch):
     assert called["n"] == 0
 
 
-@pytest.mark.asyncio
-async def test_pydantic_ai_run_env_blocked_when_force_submit(monkeypatch):
-    """pydantic_ai uses a sync `_run_env_sync` helper; verify it gates."""
-    from bird_interact_agents.agents.pydantic_ai import agent as mod
+def test_pydantic_ai_run_env_blocked_when_force_submit(monkeypatch):
+    """pydantic_ai uses the shared `_submit.run_env_action`; verify the
+    same gate runs from a TaskDeps-shaped state."""
+    from bird_interact_agents.agents import _submit
+    from bird_interact_agents.agents._tool_specs import BIRD_INTERACT_TOOLS
 
     deps = _make_state_for("bird_interact_agents.agents.pydantic_ai.agent")
     _set_force_submit(deps)
+    called = _patch_executor(monkeypatch)
 
-    called = {"n": 0}
-    monkeypatch.setattr(
-        mod, "execute_env_action",
-        lambda *a, **kw: (called.__setitem__("n", called["n"] + 1), ("ran", 0))[1],
-    )
-
-    out = mod._run_env_sync(deps, "execute_sql", "execute(SELECT 1)", "raw")
+    spec = next(t for t in BIRD_INTERACT_TOOLS if t.name == "execute_sql")
+    out = _submit.run_env_action(deps, spec, "raw", sql="SELECT 1")
     assert "submit_sql" in out
     assert called["n"] == 0

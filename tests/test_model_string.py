@@ -62,3 +62,43 @@ def test_native_model_id_strips_prefix():
     assert native_model_id("openrouter/z-ai/glm-4.7-flash") == "z-ai/glm-4.7-flash"
     # Bare id, no prefix -> unchanged
     assert native_model_id("claude-sonnet-4-5") == "claude-sonnet-4-5"
+
+
+def test_build_pydantic_ai_model_returns_string_for_native_providers():
+    """Cerebras / Anthropic / OpenRouter are pydantic_ai-native — a string
+    is enough."""
+    from bird_interact_agents.model_string import build_pydantic_ai_model
+
+    assert build_pydantic_ai_model("cerebras/zai-glm-4.7") == "cerebras:zai-glm-4.7"
+    assert (
+        build_pydantic_ai_model("anthropic/claude-sonnet-4-5")
+        == "anthropic:claude-sonnet-4-5"
+    )
+    assert (
+        build_pydantic_ai_model("openrouter/z-ai/glm-4.7-flash")
+        == "openrouter:z-ai/glm-4.7-flash"
+    )
+
+
+def test_build_pydantic_ai_model_returns_openai_compat_for_deepinfra(monkeypatch):
+    """DeepInfra has no native pydantic_ai provider — wrap as
+    OpenAIChatModel pointing at DeepInfra's OpenAI-compatible endpoint."""
+    from bird_interact_agents.model_string import build_pydantic_ai_model
+
+    monkeypatch.setenv("DEEPINFRA_API_KEY", "test-key")
+    m = build_pydantic_ai_model("deepinfra/moonshotai/Kimi-K2-Instruct")
+
+    # The bare model name (no provider prefix) is what DeepInfra expects
+    # on its OpenAI-compatible endpoint.
+    assert m.model_name == "moonshotai/Kimi-K2-Instruct"
+    base = str(m.client.base_url)
+    assert "deepinfra.com" in base
+
+
+def test_build_pydantic_ai_model_deepinfra_missing_key_errors(monkeypatch):
+    from bird_interact_agents.model_string import build_pydantic_ai_model
+
+    monkeypatch.delenv("DEEPINFRA_API_KEY", raising=False)
+    import pytest
+    with pytest.raises((KeyError, RuntimeError, ValueError)):
+        build_pydantic_ai_model("deepinfra/moonshotai/Kimi-K2-Instruct")

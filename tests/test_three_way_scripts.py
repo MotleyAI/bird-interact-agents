@@ -117,6 +117,7 @@ def test_load_ours_allows_missing_with_flag(tmp_path: Path):
     assert compare_results._load_ours(tmp_path / "x.json", allow_missing=True) == []
 
 
+
 # ── select_tasks: record-based pagination + --out-jsonl ─────────────────
 
 
@@ -213,6 +214,7 @@ def test_select_tasks_rejects_negative_start(tmp_path: Path):
     )
     assert proc.returncode != 0
     assert "non-negative" in proc.stderr
+
 
 
 def test_select_tasks_no_jsonl_when_flag_omitted(tmp_path: Path):

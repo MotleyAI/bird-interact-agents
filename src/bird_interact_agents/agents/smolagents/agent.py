@@ -7,38 +7,44 @@ holder, making concurrent task runs safe (each task gets its own state).
 
 In SLayer mode the slayer MCP server is attached via smolagents' MCPClient,
 which exposes the server's tools as native smolagents Tool instances.
+
+Tool *bodies* live in `bird_interact_agents.agents._submit`; this
+module supplies the smolagents-specific @tool wrappers + a per-call
+`_ensure_thread_safe` shim that scrubs the harness's thread-bound
+sqlite3 connection cache before any tool that touches the DB.
 """
 
 import asyncio
-import json
 import logging
-import re
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from bird_interact_agents.agents._prompt_builders import (
     build_raw_c_interact_prompt,
     build_slayer_c_interact_prompt,
 )
+from bird_interact_agents.agents._submit import (
+    ask_user_impl,
+    run_env_action,
+    submit_raw_sql,
+    submit_slayer_query,
+)
+from bird_interact_agents.agents._tool_specs import BIRD_INTERACT_TOOLS
 from bird_interact_agents.agents.claude_sdk.prompts import (
     RAW_A_INTERACT,
     SLAYER_A_INTERACT,
 )
 from bird_interact_agents.harness import (
-    ACTION_COSTS,
     SampleStatus,
-    _schema_cache,
-    build_user_decoder_prompt,
-    build_user_encoder_prompt,
     close_db_connection,
-    execute_env_action,
-    execute_submit_action,
     load_db_data_if_needed,
-    parse_encoder_response,
     slayer_mcp_stdio_config,
-    update_budget,
 )
+from bird_interact_agents.usage import TokenUsage
+
+
+_BY_NAME = {t.name: t for t in BIRD_INTERACT_TOOLS}
 
 
 def _ensure_thread_safe(db_name: str, data_path_base: str) -> None:
@@ -82,6 +88,7 @@ class TaskState(BaseModel):
     user_sim_prompt_version: str
     slayer_storage_dir: str = ""
     result: dict | None = None
+    usage: TokenUsage = Field(default_factory=TokenUsage)
     _slayer_client: Any = None
     _slayer_storage: Any = None
 
@@ -97,85 +104,21 @@ def _slayer_client(state: TaskState):
     return state._slayer_client
 
 
-async def _ask_user_impl(state: TaskState, question: str) -> str:
-    import litellm
-
-    db_name = state.status.original_data["selected_database"]
-    schema = _schema_cache.get(db_name, "")
-
-    encoder_prompt = build_user_encoder_prompt(
-        question, state.status, schema, state.user_sim_prompt_version
-    )
-    encoder_resp = await litellm.acompletion(
-        model=state.user_sim_model,
-        messages=[{"role": "user", "content": encoder_prompt}],
-    )
-    encoder_action = parse_encoder_response(
-        encoder_resp.choices[0].message.content or ""
-    )
-
-    decoder_prompt = build_user_decoder_prompt(
-        question, encoder_action, state.status, schema, state.user_sim_prompt_version
-    )
-    decoder_resp = await litellm.acompletion(
-        model=state.user_sim_model,
-        messages=[{"role": "user", "content": decoder_prompt}],
-    )
-    raw_response = decoder_resp.choices[0].message.content or ""
-
-    match = re.search(r"<s>(.*?)</s>", raw_response, re.DOTALL)
-    return match.group(1).strip() if match else raw_response.strip()
-
-
-def _budget_note(status: SampleStatus) -> str:
-    return (
-        f"\n\n[Remaining budget: {status.remaining_budget:.1f}"
-        f" / {status.total_budget:.1f}]"
-    )
-
-
-def _gate(action_name: str, status: SampleStatus, query_mode: str) -> str | None:
-    """Reject a non-submit tool call when budget would go below submit cost.
-
-    Mirrors `claude_sdk.agent._gate`. Honors `status.force_submit`.
-    """
-    if action_name.startswith("submit_"):
-        return None
-    submit_tool = "submit_query" if query_mode == "slayer" else "submit_sql"
-    submit_cost = ACTION_COSTS[submit_tool]
-    cost = ACTION_COSTS.get(action_name, 0)
-    if status.force_submit or status.remaining_budget < cost + submit_cost:
-        return (
-            f"Budget exhausted ({status.remaining_budget:.1f} remaining, "
-            f"{action_name} costs {cost}). You MUST call {submit_tool} now "
-            "with your best answer."
-        )
-    return None
-
-
 def _build_native_tools(
-    state: TaskState, query_mode: str, eval_mode: str = "a-interact"
+    state: TaskState, query_mode: str, eval_mode: str = "a-interact",
 ) -> list:
     """Construct the native smolagents tools, closing over per-task state.
 
     smolagents' @tool decorator wraps a regular sync function. We use
-    asyncio.run() inside the bodies that need our async helpers (ask_user
-    via litellm). This is safe because the smolagents agent loop runs in
-    a worker thread that has no active event loop.
+    asyncio.run() inside ask_user because the smolagents agent loop runs
+    in a worker thread that has no active event loop. Tools that touch
+    the SQLite DB also call `_ensure_thread_safe` first so the harness's
+    thread-bound connection cache is scrubbed. Bodies route through
+    `_submit` which applies budget gating + bookkeeping.
     """
     from smolagents import tool
 
     db_name = state.status.original_data["selected_database"]
-
-    def _run_env(action_name: str, action_str: str) -> str:
-        err = _gate(action_name, state.status, query_mode)
-        if err is not None:
-            return err
-        observation, _ = execute_env_action(
-            action_str, state.status, state.data_path_base
-        )
-        update_budget(state.status, action_name)
-        return str(observation) + _budget_note(state.status)
 
     @tool
     def ask_user(question: str) -> str:
@@ -184,12 +127,7 @@ def _build_native_tools(
         Args:
             question: The clarification question to ask.
         """
-        err = _gate("ask_user", state.status, query_mode)
-        if err is not None:
-            return err
-        answer = asyncio.run(_ask_user_impl(state, question))
-        update_budget(state.status, "ask_user")
-        return answer + _budget_note(state.status)
+        return asyncio.run(ask_user_impl(state, question, query_mode))
 
     @tool
     def execute_sql(sql: str) -> str:
@@ -199,17 +137,17 @@ def _build_native_tools(
             sql: The SQL query to execute.
         """
         _ensure_thread_safe(db_name, state.data_path_base)
-        return _run_env("execute_sql", f"execute({sql})")
+        return run_env_action(state, _BY_NAME["execute_sql"], query_mode, sql=sql)
 
     @tool
     def get_schema() -> str:
         """Get the database schema (CREATE TABLE statements with sample data)."""
-        return _run_env("get_schema", "get_schema()")
+        return run_env_action(state, _BY_NAME["get_schema"], query_mode)
 
     @tool
     def get_all_column_meanings() -> str:
         """Get the meanings/descriptions of all columns in the database."""
-        return _run_env("get_all_column_meanings", "get_all_column_meanings()")
+        return run_env_action(state, _BY_NAME["get_all_column_meanings"], query_mode)
 
     @tool
     def get_column_meaning(table_name: str, column_name: str) -> str:
@@ -219,15 +157,16 @@ def _build_native_tools(
             table_name: The table containing the column.
             column_name: The column name.
         """
-        action = f"get_column_meaning('{table_name}', '{column_name}')"
-        return _run_env("get_column_meaning", action)
+        return run_env_action(
+            state, _BY_NAME["get_column_meaning"], query_mode,
+            table_name=table_name, column_name=column_name,
+        )
 
     @tool
     def get_all_external_knowledge_names() -> str:
         """List all available external knowledge entry names for this database."""
-        return _run_env(
-            "get_all_external_knowledge_names",
-            "get_all_external_knowledge_names()",
+        return run_env_action(
+            state, _BY_NAME["get_all_external_knowledge_names"], query_mode,
         )
 
     @tool
@@ -237,14 +176,16 @@ def _build_native_tools(
         Args:
             knowledge_name: The knowledge entry name.
         """
-        action = f"get_knowledge_definition('{knowledge_name}')"
-        return _run_env("get_knowledge_definition", action)
+        return run_env_action(
+            state, _BY_NAME["get_knowledge_definition"], query_mode,
+            knowledge_name=knowledge_name,
+        )
 
     @tool
     def get_all_knowledge_definitions() -> str:
         """Get all external knowledge definitions for this database."""
-        return _run_env(
-            "get_all_knowledge_definitions", "get_all_knowledge_definitions()"
+        return run_env_action(
+            state, _BY_NAME["get_all_knowledge_definitions"], query_mode,
         )
 
     @tool
@@ -255,17 +196,7 @@ def _build_native_tools(
             sql: The final SQL query to submit.
         """
         _ensure_thread_safe(db_name, state.data_path_base)
-        observation, reward, p1, p2, finished = execute_submit_action(
-            sql, state.status, state.data_path_base
-        )
-        update_budget(state.status, "submit_sql")
-        state.result = {
-            "phase1_passed": p1,
-            "phase2_passed": p2,
-            "total_reward": reward if reward is not None else 0.0,
-            "finished": finished,
-        }
-        return str(observation) + _budget_note(state.status)
+        return submit_raw_sql(state, sql)
 
     @tool
     def submit_query(query_json: str) -> str:
@@ -276,28 +207,8 @@ def _build_native_tools(
                 '{"source_model": "orders", "dimensions": ["status"],
                 "measures": ["amount:sum"], "limit": 10}'.
         """
-        try:
-            query_dict = json.loads(query_json)
-        except json.JSONDecodeError as e:
-            return f"Invalid JSON — submission aborted: {e}"
-        client = _slayer_client(state)
-        try:
-            sql = client.sql_sync(query_dict)
-        except Exception as e:
-            return f"Could not generate SQL — submission aborted: {e}"
         _ensure_thread_safe(db_name, state.data_path_base)
-        observation, reward, p1, p2, finished = execute_submit_action(
-            sql, state.status, state.data_path_base
-        )
-        update_budget(state.status, "submit_query")
-        state.result = {
-            "phase1_passed": p1,
-            "phase2_passed": p2,
-            "total_reward": reward if reward is not None else 0.0,
-            "finished": finished,
-            "submitted_sql": sql,
-        }
-        return f"Generated SQL:\n{sql}\n\nResult: {observation}" + _budget_note(state.status)
+        return submit_slayer_query(state, query_json, _slayer_client)
 
     if query_mode == "raw" and eval_mode == "c-interact":
         return [ask_user, submit_sql]
@@ -379,7 +290,8 @@ def _run_smolagents_sync(
     query_mode: str,
     slayer_storage_dir: str,
     model_id: str,
-    strict: bool = False,
+    strict: bool,
+    state: TaskState,
 ) -> str:
     """Synchronous helper that runs the smolagents loop. Called via to_thread."""
     from smolagents import ToolCallingAgent
@@ -413,6 +325,16 @@ def _run_smolagents_sync(
             max_tool_threads=1,
         )
         result = agent.run(user_query)
+
+    # smolagents accumulates token counts on agent.monitor across the run.
+    monitor = getattr(agent, "monitor", None)
+    if monitor is not None:
+        state.usage.add_call(
+            scope="agent",
+            model=model_id,
+            prompt=getattr(monitor, "total_input_token_count", 0) or 0,
+            completion=getattr(monitor, "total_output_token_count", 0) or 0,
+        )
     return str(result)
 
 
@@ -470,6 +392,7 @@ class SmolagentsAgent:
                 slayer_storage_dir,
                 self.model_id,
                 self.strict,
+                state,
             )
         except Exception as e:
             logger.error("Agent error on %s: %s", instance_id, e)
@@ -479,6 +402,7 @@ class SmolagentsAgent:
                 "phase1_passed": False, "phase2_passed": False,
                 "total_reward": 0.0, "trajectory": [],
                 "error": str(e),
+                "usage": state.usage.model_dump(),
             }
 
         result = state.result or {}
@@ -489,6 +413,9 @@ class SmolagentsAgent:
             "phase1_passed": result.get("phase1_passed", False),
             "phase2_passed": result.get("phase2_passed", False),
             "total_reward": result.get("total_reward", 0.0),
+            "submitted_sql": result.get("submitted_sql"),
+            "submitted_query": result.get("submitted_query"),
             "trajectory": [{"final_output": output[:500]}],
             "error": None,
+            "usage": state.usage.model_dump(),
         }
