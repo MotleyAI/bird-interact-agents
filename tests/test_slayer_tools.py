@@ -18,8 +18,14 @@ async def test_submit_query_tool_with_valid_slayer_query():
         load_tasks,
     )
 
-    tasks = load_tasks(settings.data_path, limit=1)
-    task = tasks[0]
+    # Pick a task whose database actually exposes the SLayer model the
+    # hard-coded query below uses. Don't rely on `tasks[0]` — fixture order
+    # is not part of the contract and the test would otherwise fail for
+    # unrelated reasons if `mini_interact.jsonl` is reshuffled.
+    target_db = "alien"  # has the `observatories` SLayer model in slayer_storage
+    all_tasks = load_tasks(settings.data_path)
+    task = next((t for t in all_tasks if t["selected_database"] == target_db), None)
+    assert task is not None, f"No task found for db={target_db}"
     db_name = task["selected_database"]
     load_db_data_if_needed(db_name, settings.db_path)
 
@@ -75,16 +81,25 @@ async def test_submit_query_tool_with_invalid_json():
     assert "Invalid JSON" in text or "submission aborted" in text
 
 
-def test_slayer_a_tools_only_native():
-    """SLAYER_A_TOOLS contains only ask_user + submit_query (slayer MCP
-    handles discovery tools)."""
+def test_slayer_a_tools_include_knowledge_for_parity():
+    """SLAYER_A_TOOLS exposes the bird-interact knowledge tools so SLayer
+    agents have the same access to external domain knowledge that raw
+    agents do (slayer MCP handles SLayer schema discovery)."""
     from bird_interact_agents.agents.claude_sdk import agent as agent_mod
 
     names = {t.name for t in agent_mod.SLAYER_A_TOOLS}
-    assert names == {"ask_user", "submit_query"}
+    assert names == {
+        "ask_user",
+        "submit_query",
+        "get_all_external_knowledge_names",
+        "get_knowledge_definition",
+        "get_all_knowledge_definitions",
+    }
 
 
 def test_slayer_c_tools_only_native():
+    """SLAYER_C_TOOLS stays minimal — knowledge is injected upfront in the
+    c-interact prompt, no fetch tool needed."""
     from bird_interact_agents.agents.claude_sdk import agent as agent_mod
 
     names = {t.name for t in agent_mod.SLAYER_C_TOOLS}

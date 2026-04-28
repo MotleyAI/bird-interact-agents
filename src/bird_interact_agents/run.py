@@ -61,9 +61,15 @@ async def run_evaluation(
     patience: int = 3,
     user_sim_model: str = "anthropic/claude-haiku-4-5-20251001",
     slayer_storage_root: str | None = None,
+    filter_ids: list[str] | None = None,
+    agent_model: str = "anthropic/claude-sonnet-4-5",
+    strict: bool = False,
 ) -> dict:
     """Run full evaluation across all tasks."""
     tasks = load_tasks(data_path, limit)
+    if filter_ids:
+        wanted = set(filter_ids)
+        tasks = [t for t in tasks if t.get("instance_id") in wanted]
     logger.info(
         "%s/%s: Evaluating %d tasks (concurrency=%d)",
         mode, query_mode, len(tasks), concurrency,
@@ -76,10 +82,16 @@ async def run_evaluation(
     elif framework == "claude_sdk":
         from bird_interact_agents.agents.claude_sdk.agent import ClaudeSDKAgent
 
-        agent = ClaudeSDKAgent(slayer_storage_root=slayer_storage_root)
+        if strict:
+            logger.warning(
+                "[claude_sdk] --strict is a no-op for Anthropic models; ignored."
+            )
+        agent = ClaudeSDKAgent(
+            slayer_storage_root=slayer_storage_root, model=agent_model,
+        )
 
         async def run_one(td: dict) -> dict:
-            budget = calculate_budget(td, patience)
+            budget = calculate_budget(td, patience, mode=mode)
             return await agent.run_task(
                 td, data_dir, budget, query_mode,
                 eval_mode=mode,
@@ -90,11 +102,12 @@ async def run_evaluation(
 
         agent_pa = PydanticAIAgent(
             slayer_storage_root=slayer_storage_root,
-            model="anthropic:claude-sonnet-4-5",
+            model=agent_model,
+            strict=strict,
         )
 
         async def run_one(td: dict) -> dict:
-            budget = calculate_budget(td, patience)
+            budget = calculate_budget(td, patience, mode=mode)
             return await agent_pa.run_task(
                 td, data_dir, budget, query_mode,
                 eval_mode=mode,
@@ -103,10 +116,13 @@ async def run_evaluation(
     elif framework == "mcp_agent":
         from bird_interact_agents.agents.mcp_agent.agent import McpAgentAgent
 
-        agent_mcp = McpAgentAgent(slayer_storage_root=slayer_storage_root)
+        agent_mcp = McpAgentAgent(
+            slayer_storage_root=slayer_storage_root, model=agent_model,
+            strict=strict,
+        )
 
         async def run_one(td: dict) -> dict:
-            budget = calculate_budget(td, patience)
+            budget = calculate_budget(td, patience, mode=mode)
             return await agent_mcp.run_task(
                 td, data_dir, budget, query_mode,
                 eval_mode=mode,
@@ -115,10 +131,13 @@ async def run_evaluation(
     elif framework == "agno":
         from bird_interact_agents.agents.agno.agent import AgnoAgent
 
-        agent_agno = AgnoAgent(slayer_storage_root=slayer_storage_root)
+        agent_agno = AgnoAgent(
+            slayer_storage_root=slayer_storage_root, model_id=agent_model,
+            strict=strict,
+        )
 
         async def run_one(td: dict) -> dict:
-            budget = calculate_budget(td, patience)
+            budget = calculate_budget(td, patience, mode=mode)
             return await agent_agno.run_task(
                 td, data_dir, budget, query_mode,
                 eval_mode=mode,
@@ -127,10 +146,13 @@ async def run_evaluation(
     elif framework == "smolagents":
         from bird_interact_agents.agents.smolagents.agent import SmolagentsAgent
 
-        agent_sa = SmolagentsAgent(slayer_storage_root=slayer_storage_root)
+        agent_sa = SmolagentsAgent(
+            slayer_storage_root=slayer_storage_root, model_id=agent_model,
+            strict=strict,
+        )
 
         async def run_one(td: dict) -> dict:
-            budget = calculate_budget(td, patience)
+            budget = calculate_budget(td, patience, mode=mode)
             return await agent_sa.run_task(
                 td, data_dir, budget, query_mode,
                 eval_mode=mode,
@@ -238,6 +260,19 @@ def main() -> None:
     parser.add_argument("--concurrency", type=int, default=3)
     parser.add_argument("--patience", type=int, default=3, help="User patience budget")
     parser.add_argument(
+        "--agent-model",
+        default="anthropic/claude-sonnet-4-5",
+        help=(
+            "LiteLLM-style PROVIDER/MODEL_ID for the system agent. "
+            "Examples: cerebras/zai-glm-4.7, openrouter/z-ai/glm-4.7-flash, "
+            "anthropic/claude-sonnet-4-5, fireworks_ai/glm-4p7. The matching "
+            "API-key env var (CEREBRAS_API_KEY, OPENROUTER_API_KEY, "
+            "ANTHROPIC_API_KEY, FIREWORKS_API_KEY) must be set. The "
+            "claude_sdk framework is locked to Anthropic and will skip "
+            "with a warning if given a non-Anthropic model."
+        ),
+    )
+    parser.add_argument(
         "--user-sim-model",
         default="anthropic/claude-haiku-4-5-20251001",
         help="LiteLLM model for user simulator",
@@ -247,7 +282,34 @@ def main() -> None:
         default="./slayer_storage",
         help="Root dir of per-DB SLayer model stores (only used in --query-mode slayer)",
     )
+    parser.add_argument(
+        "--filter-ids",
+        default=None,
+        help=(
+            "Path to a text file with one instance_id per line; only tasks "
+            "with these IDs are evaluated. Use to align with the original "
+            "harness in 3-way comparison runs."
+        ),
+    )
+    parser.add_argument(
+        "--strict",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "Force every tool definition to carry strict=True (OpenAI "
+            "strict structured-output mode). Default False matches the "
+            "non-strict, non-constrained-decoding behaviour of all "
+            "frameworks. claude_sdk silently ignores the flag (Anthropic "
+            "has no tool-level strict). mcp_agent doesn't expose a hook "
+            "for it and exits with a clear error when --strict is given."
+        ),
+    )
     args = parser.parse_args()
+
+    filter_ids: list[str] | None = None
+    if args.filter_ids:
+        with open(args.filter_ids) as f:
+            filter_ids = [line.strip() for line in f if line.strip()]
 
     asyncio.run(
         run_evaluation(
@@ -262,6 +324,9 @@ def main() -> None:
             patience=args.patience,
             user_sim_model=args.user_sim_model,
             slayer_storage_root=args.slayer_storage_root,
+            filter_ids=filter_ids,
+            agent_model=args.agent_model,
+            strict=args.strict,
         )
     )
 

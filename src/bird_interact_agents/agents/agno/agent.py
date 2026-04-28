@@ -12,15 +12,17 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from bird_interact_agents.agents._prompt_builders import (
+    build_raw_c_interact_prompt,
+    build_slayer_c_interact_prompt,
+)
 from bird_interact_agents.agents.claude_sdk.prompts import (
     RAW_A_INTERACT,
-    RAW_C_INTERACT,
     SLAYER_A_INTERACT,
-    SLAYER_C_INTERACT,
 )
 from bird_interact_agents.harness import (
+    ACTION_COSTS,
     SampleStatus,
-    _filter_knowledge_for_agent,
     _schema_cache,
     build_user_decoder_prompt,
     build_user_encoder_prompt,
@@ -29,6 +31,7 @@ from bird_interact_agents.harness import (
     load_db_data_if_needed,
     parse_encoder_response,
     slayer_mcp_stdio_config,
+    update_budget,
 )
 
 logger = logging.getLogger(__name__)
@@ -90,80 +93,111 @@ async def _ask_user_impl(state: TaskState, question: str) -> str:
     return match.group(1).strip() if match else raw_response.strip()
 
 
-def _build_native_tools(state: TaskState, query_mode: str) -> list:
+def _budget_note(status: SampleStatus) -> str:
+    return (
+        f"\n\n[Remaining budget: {status.remaining_budget:.1f}"
+        f" / {status.total_budget:.1f}]"
+    )
+
+
+def _gate(action_name: str, status: SampleStatus, query_mode: str) -> str | None:
+    """Reject a non-submit tool call when budget would go below submit cost.
+
+    Mirrors `claude_sdk.agent._gate`. Honors `status.force_submit` and uses
+    the right submit tool name for the active query mode.
+    """
+    if action_name.startswith("submit_"):
+        return None
+    submit_tool = "submit_query" if query_mode == "slayer" else "submit_sql"
+    submit_cost = ACTION_COSTS[submit_tool]
+    cost = ACTION_COSTS.get(action_name, 0)
+    if status.force_submit or status.remaining_budget < cost + submit_cost:
+        return (
+            f"Budget exhausted ({status.remaining_budget:.1f} remaining, "
+            f"{action_name} costs {cost}). You MUST call {submit_tool} now "
+            "with your best answer."
+        )
+    return None
+
+
+def _build_native_tools(
+    state: TaskState, query_mode: str, eval_mode: str = "a-interact"
+) -> list:
     """Construct the native tool functions, closing over per-task state.
 
     Each tool is a plain async function with a docstring — Agno auto-converts
-    these into tool definitions for the model.
+    these into tool definitions for the model. Each non-submit tool gates on
+    budget, executes, then `update_budget`s; submit tools `update_budget`
+    after running.
     """
+
+    async def _run_env(action_name: str, action_str: str) -> str:
+        err = _gate(action_name, state.status, query_mode)
+        if err is not None:
+            return err
+        observation, _ = execute_env_action(
+            action_str, state.status, state.data_path_base
+        )
+        update_budget(state.status, action_name)
+        return str(observation) + _budget_note(state.status)
 
     async def ask_user(question: str) -> str:
         """Ask the user a clarification question about their query."""
-        return await _ask_user_impl(state, question)
+        err = _gate("ask_user", state.status, query_mode)
+        if err is not None:
+            return err
+        answer = await _ask_user_impl(state, question)
+        update_budget(state.status, "ask_user")
+        return answer + _budget_note(state.status)
 
     async def execute_sql(sql: str) -> str:
         """Execute a SQL query against the database and return results."""
-        observation, _ = execute_env_action(
-            f"execute({sql})", state.status, state.data_path_base
-        )
-        return str(observation)
+        return await _run_env("execute_sql", f"execute({sql})")
 
     async def get_schema() -> str:
         """Get the database schema (CREATE TABLE statements with sample data)."""
-        observation, _ = execute_env_action(
-            "get_schema()", state.status, state.data_path_base
-        )
-        return str(observation)
+        return await _run_env("get_schema", "get_schema()")
 
     async def get_all_column_meanings() -> str:
         """Get the meanings/descriptions of all columns in the database."""
-        observation, _ = execute_env_action(
-            "get_all_column_meanings()", state.status, state.data_path_base
-        )
-        return str(observation)
+        return await _run_env("get_all_column_meanings", "get_all_column_meanings()")
 
     async def get_column_meaning(table_name: str, column_name: str) -> str:
         """Get the meaning of a specific column in a table."""
         action = f"get_column_meaning('{table_name}', '{column_name}')"
-        observation, _ = execute_env_action(
-            action, state.status, state.data_path_base
-        )
-        return str(observation)
+        return await _run_env("get_column_meaning", action)
 
     async def get_all_external_knowledge_names() -> str:
         """List all available external knowledge entry names for this database."""
-        observation, _ = execute_env_action(
-            "get_all_external_knowledge_names()", state.status, state.data_path_base
+        return await _run_env(
+            "get_all_external_knowledge_names",
+            "get_all_external_knowledge_names()",
         )
-        return str(observation)
 
     async def get_knowledge_definition(knowledge_name: str) -> str:
         """Get the definition of a specific external knowledge entry."""
         action = f"get_knowledge_definition('{knowledge_name}')"
-        observation, _ = execute_env_action(
-            action, state.status, state.data_path_base
-        )
-        return str(observation)
+        return await _run_env("get_knowledge_definition", action)
 
     async def get_all_knowledge_definitions() -> str:
         """Get all external knowledge definitions for this database."""
-        observation, _ = execute_env_action(
-            "get_all_knowledge_definitions()", state.status, state.data_path_base
+        return await _run_env(
+            "get_all_knowledge_definitions", "get_all_knowledge_definitions()"
         )
-        return str(observation)
 
     async def submit_sql(sql: str) -> str:
         """Submit your final SQL query for evaluation. Only submit when confident."""
         observation, reward, p1, p2, finished = execute_submit_action(
             sql, state.status, state.data_path_base
         )
+        update_budget(state.status, "submit_sql")
         state.result = {
             "phase1_passed": p1,
             "phase2_passed": p2,
             "total_reward": reward if reward is not None else 0.0,
             "finished": finished,
         }
-        return str(observation)
+        return str(observation) + _budget_note(state.status)
 
     async def submit_query(query_json: str) -> str:
         """Submit your final SLayer query for evaluation. Translates the
@@ -182,6 +216,7 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
         observation, reward, p1, p2, finished = execute_submit_action(
             sql, state.status, state.data_path_base
         )
+        update_budget(state.status, "submit_query")
         state.result = {
             "phase1_passed": p1,
             "phase2_passed": p2,
@@ -189,8 +224,10 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
             "finished": finished,
             "submitted_sql": sql,
         }
-        return f"Generated SQL:\n{sql}\n\nResult: {observation}"
+        return f"Generated SQL:\n{sql}\n\nResult: {observation}" + _budget_note(state.status)
 
+    if query_mode == "raw" and eval_mode == "c-interact":
+        return [ask_user, submit_sql]
     if query_mode == "raw":
         return [
             execute_sql,
@@ -217,36 +254,44 @@ async def _build_prompt(
             budget=budget, db_name=db_name, user_query=user_query
         )
     if query_mode == "raw" and eval_mode == "c-interact":
-        schema = _schema_cache.get(db_name, "")
-        knowledge = _filter_knowledge_for_agent(db_name, task_data)
-        knowledge_text = "\n".join(
-            f"- {k}: {v.get('description', '') or v.get('definition', '')}"
-            for k, v in (knowledge or {}).items()
-        )
-        return RAW_C_INTERACT.format(
-            budget=budget, db_name=db_name, user_query=user_query,
-            schema=schema, knowledge=knowledge_text or "(none)",
+        return await build_raw_c_interact_prompt(
+            budget=budget,
+            db_name=db_name,
+            user_query=user_query,
+            task_data=task_data,
         )
     if query_mode == "slayer" and eval_mode == "a-interact":
         return SLAYER_A_INTERACT.format(budget=budget, user_query=user_query)
     if query_mode == "slayer" and eval_mode == "c-interact":
-        from slayer.help import render_help
-        from slayer.storage.yaml_storage import YAMLStorage
-
-        storage = YAMLStorage(base_dir=state.slayer_storage_dir)
-        names = await storage.list_models()
-        lines = []
-        for name in names:
-            m = await storage.get_model(name)
-            dims = ", ".join(d.name for d in (m.dimensions or [])[:8]) if m else ""
-            meas = ", ".join(x.name for x in (m.measures or [])[:8]) if m else ""
-            lines.append(f"- {name}: dims=[{dims}] measures=[{meas}]")
-        return SLAYER_C_INTERACT.format(
-            budget=budget, user_query=user_query,
-            slayer_help=render_help(),
-            models_summary="\n".join(lines),
+        return await build_slayer_c_interact_prompt(
+            budget=budget,
+            user_query=user_query,
+            slayer_storage_dir=state.slayer_storage_dir,
+            db_name=db_name,
+            task_data=task_data,
         )
     raise ValueError(f"Unknown mode combo: {query_mode}/{eval_mode}")
+
+
+def _build_strict_litellm_class():
+    """Subclass `agno.models.litellm.LiteLLM` so we can mutate the outgoing
+    `tools` payload in `get_request_params`. agno's stock LiteLLM never
+    writes `strict`; this is the surgical place to inject a uniform value.
+    """
+    from agno.models.litellm import LiteLLM
+
+    class _StrictLiteLLM(LiteLLM):
+        def __init__(self, *a, _strict_value: bool, **kw):
+            super().__init__(*a, **kw)
+            self._strict_value = _strict_value
+
+        def get_request_params(self, tools=None):
+            params = super().get_request_params(tools=tools)
+            for t in params.get("tools") or []:
+                t.setdefault("function", {})["strict"] = self._strict_value
+            return params
+
+    return _StrictLiteLLM
 
 
 class AgnoAgent:
@@ -255,10 +300,16 @@ class AgnoAgent:
     def __init__(
         self,
         slayer_storage_root: str | None = None,
-        model_id: str = "claude-sonnet-4-5-20250929",
+        model_id: str = "anthropic/claude-sonnet-4-5",
+        strict: bool = False,
     ) -> None:
         self.slayer_storage_root = slayer_storage_root
+        # Canonical LiteLLM-style "provider/model_id". For Anthropic we
+        # construct an `agno.models.anthropic.Claude(id=...)` with the
+        # bare model id; for everything else we use Agno's LiteLLM shim
+        # which accepts the prefixed string verbatim.
         self.model_id = model_id
+        self.strict = strict
 
     async def run_task(
         self,
@@ -271,8 +322,18 @@ class AgnoAgent:
         user_sim_prompt_version: str = "v2",
     ) -> dict:
         from agno.agent import Agent
-        from agno.models.anthropic import Claude
         from agno.tools.mcp import MCPTools
+
+        from bird_interact_agents.model_string import is_anthropic, native_model_id
+
+        if is_anthropic(self.model_id):
+            from agno.models.anthropic import Claude
+            # Anthropic doesn't have a tool-level strict concept; --strict
+            # is silently a no-op for the anthropic/* path.
+            agno_model = Claude(id=native_model_id(self.model_id))
+        else:
+            StrictLiteLLM = _build_strict_litellm_class()
+            agno_model = StrictLiteLLM(id=self.model_id, _strict_value=self.strict)
 
         db_name = task_data["selected_database"]
         instance_id = task_data["instance_id"]
@@ -292,12 +353,12 @@ class AgnoAgent:
             slayer_storage_dir=slayer_storage_dir,
         )
 
-        native_tools = _build_native_tools(state, query_mode)
+        native_tools = _build_native_tools(state, query_mode, eval_mode)
         prompt = await _build_prompt(query_mode, eval_mode, task_data, budget, state)
 
         async def _run_with_tools(tools_list: list) -> str:
             agent = Agent(
-                model=Claude(id=self.model_id),
+                model=agno_model,
                 tools=tools_list,
                 instructions=prompt,
             )

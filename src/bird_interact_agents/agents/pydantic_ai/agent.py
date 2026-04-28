@@ -9,19 +9,47 @@ import logging
 import re
 from typing import Any
 
+from dataclasses import replace
+
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStdio
+from pydantic_ai.tools import ToolDefinition
+from pydantic_ai.usage import UsageLimits
 
+from bird_interact_agents.harness import MAX_MODEL_TURNS
+
+
+def _make_prepare_tools(strict_value: bool):
+    """Return a `prepare_tools` callback that forces a uniform `strict` on
+    every tool definition right before each model request.
+
+    Cerebras's OpenAI-compatible API rejects requests with inconsistent
+    `strict` values across entries — PydanticAI's native @agent.tool
+    defaults to None and MCP-server tools also come in as None, so the
+    merged list violates the constraint. This callback is PydanticAI's
+    documented mechanism for cross-source uniformity (see the example
+    `turn_on_strict_if_openai` in pydantic_ai.tools).
+    """
+
+    async def _force_strict(
+        ctx: RunContext, tool_defs: list[ToolDefinition]
+    ) -> list[ToolDefinition]:
+        return [replace(td, strict=strict_value) for td in tool_defs]
+
+    return _force_strict
+
+from bird_interact_agents.agents._prompt_builders import (
+    build_raw_c_interact_prompt,
+    build_slayer_c_interact_prompt,
+)
 from bird_interact_agents.agents.claude_sdk.prompts import (
     RAW_A_INTERACT,
-    RAW_C_INTERACT,
     SLAYER_A_INTERACT,
-    SLAYER_C_INTERACT,
 )
 from bird_interact_agents.harness import (
+    ACTION_COSTS,
     SampleStatus,
-    _filter_knowledge_for_agent,
     _schema_cache,
     build_user_decoder_prompt,
     build_user_encoder_prompt,
@@ -30,6 +58,7 @@ from bird_interact_agents.harness import (
     load_db_data_if_needed,
     parse_encoder_response,
     slayer_mcp_stdio_config,
+    update_budget,
 )
 
 logger = logging.getLogger(__name__)
@@ -99,36 +128,75 @@ async def _ask_user_impl(deps: TaskDeps, question: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Budget gate / bookkeeping — mirrors `claude_sdk.agent._gate`.
+# ---------------------------------------------------------------------------
+
+def _budget_note(status: SampleStatus) -> str:
+    return (
+        f"\n\n[Remaining budget: {status.remaining_budget:.1f}"
+        f" / {status.total_budget:.1f}]"
+    )
+
+
+def _gate(action_name: str, status: SampleStatus, query_mode: str) -> str | None:
+    """Reject a non-submit tool call when budget would go below submit cost."""
+    if action_name.startswith("submit_"):
+        return None
+    submit_tool = "submit_query" if query_mode == "slayer" else "submit_sql"
+    submit_cost = ACTION_COSTS[submit_tool]
+    cost = ACTION_COSTS.get(action_name, 0)
+    if status.force_submit or status.remaining_budget < cost + submit_cost:
+        return (
+            f"Budget exhausted ({status.remaining_budget:.1f} remaining, "
+            f"{action_name} costs {cost}). You MUST call {submit_tool} now "
+            "with your best answer."
+        )
+    return None
+
+
+def _run_env_sync(
+    deps: TaskDeps, action_name: str, action_str: str, query_mode: str
+) -> str:
+    err = _gate(action_name, deps.status, query_mode)
+    if err is not None:
+        return err
+    observation, _ = execute_env_action(action_str, deps.status, deps.data_path_base)
+    update_budget(deps.status, action_name)
+    return str(observation) + _budget_note(deps.status)
+
+
+# ---------------------------------------------------------------------------
 # Agent factory — one agent per (query_mode, eval_mode) combo, since
 # PydanticAI agents register tools at construction time.
 # ---------------------------------------------------------------------------
 
-def _build_raw_a_agent(model: str) -> Agent:
-    agent = Agent(model=model, deps_type=TaskDeps, retries=2)
+def _build_raw_a_agent(model: str, strict_value: bool = False) -> Agent:
+    agent = Agent(
+        model=model, deps_type=TaskDeps, retries=2,
+        prepare_tools=_make_prepare_tools(strict_value),
+    )
+
+    query_mode = "raw"
 
     @agent.tool
     async def execute_sql(ctx: RunContext[TaskDeps], sql: str) -> str:
         """Execute a SQL query against the database and return results."""
-        observation, _ = execute_env_action(
-            f"execute({sql})", ctx.deps.status, ctx.deps.data_path_base
-        )
-        return str(observation)
+        return _run_env_sync(ctx.deps, "execute_sql", f"execute({sql})", query_mode)
 
     @agent.tool
     async def get_schema(ctx: RunContext[TaskDeps]) -> str:
         """Get the database schema (CREATE TABLE statements with sample data)."""
-        observation, _ = execute_env_action(
-            "get_schema()", ctx.deps.status, ctx.deps.data_path_base
-        )
-        return str(observation)
+        return _run_env_sync(ctx.deps, "get_schema", "get_schema()", query_mode)
 
     @agent.tool
     async def get_all_column_meanings(ctx: RunContext[TaskDeps]) -> str:
         """Get the meanings/descriptions of all columns in the database."""
-        observation, _ = execute_env_action(
-            "get_all_column_meanings()", ctx.deps.status, ctx.deps.data_path_base
+        return _run_env_sync(
+            ctx.deps,
+            "get_all_column_meanings",
+            "get_all_column_meanings()",
+            query_mode,
         )
-        return str(observation)
 
     @agent.tool
     async def get_column_meaning(
@@ -136,18 +204,17 @@ def _build_raw_a_agent(model: str) -> Agent:
     ) -> str:
         """Get the meaning of a specific column in a table."""
         action = f"get_column_meaning('{table_name}', '{column_name}')"
-        observation, _ = execute_env_action(
-            action, ctx.deps.status, ctx.deps.data_path_base
-        )
-        return str(observation)
+        return _run_env_sync(ctx.deps, "get_column_meaning", action, query_mode)
 
     @agent.tool
     async def get_all_external_knowledge_names(ctx: RunContext[TaskDeps]) -> str:
         """List all available external knowledge entry names for this database."""
-        observation, _ = execute_env_action(
-            "get_all_external_knowledge_names()", ctx.deps.status, ctx.deps.data_path_base
+        return _run_env_sync(
+            ctx.deps,
+            "get_all_external_knowledge_names",
+            "get_all_external_knowledge_names()",
+            query_mode,
         )
-        return str(observation)
 
     @agent.tool
     async def get_knowledge_definition(
@@ -155,23 +222,27 @@ def _build_raw_a_agent(model: str) -> Agent:
     ) -> str:
         """Get the definition of a specific external knowledge entry."""
         action = f"get_knowledge_definition('{knowledge_name}')"
-        observation, _ = execute_env_action(
-            action, ctx.deps.status, ctx.deps.data_path_base
-        )
-        return str(observation)
+        return _run_env_sync(ctx.deps, "get_knowledge_definition", action, query_mode)
 
     @agent.tool
     async def get_all_knowledge_definitions(ctx: RunContext[TaskDeps]) -> str:
         """Get all external knowledge definitions for this database."""
-        observation, _ = execute_env_action(
-            "get_all_knowledge_definitions()", ctx.deps.status, ctx.deps.data_path_base
+        return _run_env_sync(
+            ctx.deps,
+            "get_all_knowledge_definitions",
+            "get_all_knowledge_definitions()",
+            query_mode,
         )
-        return str(observation)
 
     @agent.tool
     async def ask_user(ctx: RunContext[TaskDeps], question: str) -> str:
         """Ask the user a clarification question about their query."""
-        return await _ask_user_impl(ctx.deps, question)
+        err = _gate("ask_user", ctx.deps.status, query_mode)
+        if err is not None:
+            return err
+        answer = await _ask_user_impl(ctx.deps, question)
+        update_budget(ctx.deps.status, "ask_user")
+        return answer + _budget_note(ctx.deps.status)
 
     @agent.tool
     async def submit_sql(ctx: RunContext[TaskDeps], sql: str) -> str:
@@ -179,24 +250,34 @@ def _build_raw_a_agent(model: str) -> Agent:
         observation, reward, p1, p2, finished = execute_submit_action(
             sql, ctx.deps.status, ctx.deps.data_path_base
         )
+        update_budget(ctx.deps.status, "submit_sql")
         ctx.deps.result = {
             "phase1_passed": p1,
             "phase2_passed": p2,
             "total_reward": reward if reward is not None else 0.0,
             "finished": finished,
         }
-        return str(observation)
+        return str(observation) + _budget_note(ctx.deps.status)
 
     return agent
 
 
-def _build_raw_c_agent(model: str) -> Agent:
-    agent = Agent(model=model, deps_type=TaskDeps, retries=2)
+def _build_raw_c_agent(model: str, strict_value: bool = False) -> Agent:
+    agent = Agent(
+        model=model, deps_type=TaskDeps, retries=2,
+        prepare_tools=_make_prepare_tools(strict_value),
+    )
+    query_mode = "raw"
 
     @agent.tool
     async def ask_user(ctx: RunContext[TaskDeps], question: str) -> str:
         """Ask the user a clarification question about their query."""
-        return await _ask_user_impl(ctx.deps, question)
+        err = _gate("ask_user", ctx.deps.status, query_mode)
+        if err is not None:
+            return err
+        answer = await _ask_user_impl(ctx.deps, question)
+        update_budget(ctx.deps.status, "ask_user")
+        return answer + _budget_note(ctx.deps.status)
 
     @agent.tool
     async def submit_sql(ctx: RunContext[TaskDeps], sql: str) -> str:
@@ -204,18 +285,21 @@ def _build_raw_c_agent(model: str) -> Agent:
         observation, reward, p1, p2, finished = execute_submit_action(
             sql, ctx.deps.status, ctx.deps.data_path_base
         )
+        update_budget(ctx.deps.status, "submit_sql")
         ctx.deps.result = {
             "phase1_passed": p1,
             "phase2_passed": p2,
             "total_reward": reward if reward is not None else 0.0,
             "finished": finished,
         }
-        return str(observation)
+        return str(observation) + _budget_note(ctx.deps.status)
 
     return agent
 
 
-def _build_slayer_agent(model: str, slayer_storage_dir: str) -> Agent:
+def _build_slayer_agent(
+    model: str, slayer_storage_dir: str, strict_value: bool = False,
+) -> Agent:
     """Build a SLayer-mode agent (shared between a- and c-interact variants).
 
     Discovery tools come from the actual `slayer mcp` server attached as a
@@ -226,13 +310,20 @@ def _build_slayer_agent(model: str, slayer_storage_dir: str) -> Agent:
         command=cfg["command"], args=cfg["args"], env=cfg["env"]
     )
     agent = Agent(
-        model=model, deps_type=TaskDeps, retries=2, toolsets=[slayer_server]
+        model=model, deps_type=TaskDeps, retries=2, toolsets=[slayer_server],
+        prepare_tools=_make_prepare_tools(strict_value),
     )
+    query_mode = "slayer"
 
     @agent.tool
     async def ask_user(ctx: RunContext[TaskDeps], question: str) -> str:
         """Ask the user a clarification question."""
-        return await _ask_user_impl(ctx.deps, question)
+        err = _gate("ask_user", ctx.deps.status, query_mode)
+        if err is not None:
+            return err
+        answer = await _ask_user_impl(ctx.deps, question)
+        update_budget(ctx.deps.status, "ask_user")
+        return answer + _budget_note(ctx.deps.status)
 
     @agent.tool
     async def submit_query(ctx: RunContext[TaskDeps], query_json: str) -> str:
@@ -253,6 +344,7 @@ def _build_slayer_agent(model: str, slayer_storage_dir: str) -> Agent:
         observation, reward, p1, p2, finished = execute_submit_action(
             sql, ctx.deps.status, ctx.deps.data_path_base
         )
+        update_budget(ctx.deps.status, "submit_query")
         ctx.deps.result = {
             "phase1_passed": p1,
             "phase2_passed": p2,
@@ -260,7 +352,7 @@ def _build_slayer_agent(model: str, slayer_storage_dir: str) -> Agent:
             "finished": finished,
             "submitted_sql": sql,
         }
-        return f"Generated SQL:\n{sql}\n\nResult: {observation}"
+        return f"Generated SQL:\n{sql}\n\nResult: {observation}" + _budget_note(ctx.deps.status)
 
     return agent
 
@@ -276,10 +368,18 @@ class PydanticAIAgent:
     def __init__(
         self,
         slayer_storage_root: str | None = None,
-        model: str = "anthropic:claude-sonnet-4-5",
+        model: str = "anthropic/claude-sonnet-4-5",
+        strict: bool = False,
     ) -> None:
+        from bird_interact_agents.model_string import to_pydantic_ai
+
         self.slayer_storage_root = slayer_storage_root
-        self.model = model
+        # Accept the canonical LiteLLM-style `provider/model_id` and convert
+        # to PydanticAI's `provider:model_id`. PydanticAI also accepts the
+        # colon form natively, so this is idempotent for callers that
+        # already pass that shape.
+        self.model = to_pydantic_ai(model) if "/" in model else model
+        self.strict = strict
 
     def _select_agent(
         self,
@@ -288,13 +388,15 @@ class PydanticAIAgent:
         slayer_storage_dir: str = "",
     ) -> Agent:
         if query_mode == "raw" and eval_mode == "a-interact":
-            return _build_raw_a_agent(self.model)
+            return _build_raw_a_agent(self.model, self.strict)
         if query_mode == "raw" and eval_mode == "c-interact":
-            return _build_raw_c_agent(self.model)
+            return _build_raw_c_agent(self.model, self.strict)
         if query_mode == "slayer":
             # Same agent shape for a- and c-interact; the system prompt
             # differs in the runner.
-            return _build_slayer_agent(self.model, slayer_storage_dir)
+            return _build_slayer_agent(
+                self.model, slayer_storage_dir, self.strict,
+            )
         raise ValueError(f"Unknown mode combo: {query_mode}/{eval_mode}")
 
     async def _build_prompt(
@@ -308,34 +410,21 @@ class PydanticAIAgent:
                 budget=budget, db_name=db_name, user_query=user_query
             )
         if query_mode == "raw" and eval_mode == "c-interact":
-            schema = _schema_cache.get(db_name, "")
-            knowledge = _filter_knowledge_for_agent(db_name, task_data)
-            knowledge_text = "\n".join(
-                f"- {k}: {v.get('description', '') or v.get('definition', '')}"
-                for k, v in (knowledge or {}).items()
-            )
-            return RAW_C_INTERACT.format(
-                budget=budget, db_name=db_name, user_query=user_query,
-                schema=schema, knowledge=knowledge_text or "(none)",
+            return await build_raw_c_interact_prompt(
+                budget=budget,
+                db_name=db_name,
+                user_query=user_query,
+                task_data=task_data,
             )
         if query_mode == "slayer" and eval_mode == "a-interact":
             return SLAYER_A_INTERACT.format(budget=budget, user_query=user_query)
         if query_mode == "slayer" and eval_mode == "c-interact":
-            from slayer.help import render_help
-            from slayer.storage.yaml_storage import YAMLStorage
-
-            storage = YAMLStorage(base_dir=deps.slayer_storage_dir)
-            names = await storage.list_models()
-            lines = []
-            for name in names:
-                m = await storage.get_model(name)
-                dims = ", ".join(d.name for d in (m.dimensions or [])[:8]) if m else ""
-                meas = ", ".join(x.name for x in (m.measures or [])[:8]) if m else ""
-                lines.append(f"- {name}: dims=[{dims}] measures=[{meas}]")
-            return SLAYER_C_INTERACT.format(
-                budget=budget, user_query=user_query,
-                slayer_help=render_help(),
-                models_summary="\n".join(lines),
+            return await build_slayer_c_interact_prompt(
+                budget=budget,
+                user_query=user_query,
+                slayer_storage_dir=deps.slayer_storage_dir,
+                db_name=db_name,
+                task_data=task_data,
             )
         raise ValueError(f"Unknown mode combo: {query_mode}/{eval_mode}")
 
@@ -373,10 +462,17 @@ class PydanticAIAgent:
         prompt = await self._build_prompt(query_mode, eval_mode, task_data, budget, deps)
 
         try:
+            # Lift PydanticAI's default request_limit (50) above our
+            # MAX_MODEL_TURNS cap so long-tail tasks don't get killed
+            # mid-flight before they can submit. Multiply by 2 because
+            # one of our "turns" can map to multiple HTTP requests when
+            # the model issues a tool call followed by its consumption
+            # of the tool result in the same step.
             agent_run = await agent.run(
                 user_prompt=task_data["amb_user_query"],
                 instructions=prompt,
                 deps=deps,
+                usage_limits=UsageLimits(request_limit=MAX_MODEL_TURNS * 2),
             )
             output_text = str(agent_run.output)
         except Exception as e:

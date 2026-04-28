@@ -12,15 +12,18 @@ from claude_agent_sdk import (
     tool,
 )
 
+from bird_interact_agents.agents._prompt_builders import (
+    build_raw_c_interact_prompt,
+    build_slayer_c_interact_prompt,
+)
 from bird_interact_agents.agents.claude_sdk.prompts import (
     RAW_A_INTERACT,
-    RAW_C_INTERACT,
     SLAYER_A_INTERACT,
-    SLAYER_C_INTERACT,
 )
 from bird_interact_agents.harness import (
+    ACTION_COSTS,
+    MAX_MODEL_TURNS,
     SampleStatus,
-    _filter_knowledge_for_agent,
     _schema_cache,
     build_user_decoder_prompt,
     build_user_encoder_prompt,
@@ -29,6 +32,7 @@ from bird_interact_agents.harness import (
     load_db_data_if_needed,
     parse_encoder_response,
     slayer_mcp_stdio_config,
+    update_budget,
 )
 
 logger = logging.getLogger(__name__)
@@ -83,24 +87,57 @@ def _text(msg: str) -> dict:
     return {"content": [{"type": "text", "text": str(msg)}]}
 
 
+def _budget_note(status: SampleStatus) -> str:
+    return (
+        f"\n\n[Remaining budget: {status.remaining_budget:.1f}"
+        f" / {status.total_budget:.1f}]"
+    )
+
+
+def _gate(action_name: str, status: SampleStatus) -> str | None:
+    """Reject a non-submit tool call when budget would go below submit cost.
+
+    Returns an error message to surface back to the agent, or None if OK.
+    Mirrors the `force_submit` gating in the original mini_interact_agent
+    and ADK before_tool_callback.
+    """
+    if action_name.startswith("submit_"):
+        return None
+    submit_tool = "submit_query" if _ctx.get("query_mode") == "slayer" else "submit_sql"
+    submit_cost = ACTION_COSTS[submit_tool]
+    cost = ACTION_COSTS.get(action_name, 0)
+    if status.force_submit or status.remaining_budget < cost + submit_cost:
+        return (
+            f"Budget exhausted ({status.remaining_budget:.1f} remaining, "
+            f"{action_name} costs {cost}). You MUST call {submit_tool} now "
+            "with your best answer."
+        )
+    return None
+
+
+async def _run_env(action_name: str, action_str: str) -> dict:
+    """Shared body for raw exploration tools: gate → execute → bookkeep → annotate."""
+    status: SampleStatus = _ctx["status"]
+    err = _gate(action_name, status)
+    if err is not None:
+        return _text(err)
+    observation, _ = execute_env_action(action_str, status, _ctx["data_path_base"])
+    update_budget(status, action_name)
+    return _text(str(observation) + _budget_note(status))
+
+
 # ---------------------------------------------------------------------------
 # Raw-mode tools — direct DB exploration + SQL execution
 # ---------------------------------------------------------------------------
 
 @tool("execute_sql", "Execute a SQL query against the database and return results", {"sql": str})
 async def execute_sql(args: dict) -> dict:
-    status: SampleStatus = _ctx["status"]
-    observation, _ = execute_env_action(
-        f"execute({args['sql']})", status, _ctx["data_path_base"]
-    )
-    return _text(observation)
+    return await _run_env("execute_sql", f"execute({args['sql']})")
 
 
 @tool("get_schema", "Get the database schema (CREATE TABLE statements with sample data)", {})
 async def get_schema(args: dict) -> dict:
-    status: SampleStatus = _ctx["status"]
-    observation, _ = execute_env_action("get_schema()", status, _ctx["data_path_base"])
-    return _text(observation)
+    return await _run_env("get_schema", "get_schema()")
 
 
 @tool(
@@ -109,11 +146,7 @@ async def get_schema(args: dict) -> dict:
     {},
 )
 async def get_all_column_meanings(args: dict) -> dict:
-    status: SampleStatus = _ctx["status"]
-    observation, _ = execute_env_action(
-        "get_all_column_meanings()", status, _ctx["data_path_base"]
-    )
-    return _text(observation)
+    return await _run_env("get_all_column_meanings", "get_all_column_meanings()")
 
 
 @tool(
@@ -122,10 +155,8 @@ async def get_all_column_meanings(args: dict) -> dict:
     {"table_name": str, "column_name": str},
 )
 async def get_column_meaning(args: dict) -> dict:
-    status: SampleStatus = _ctx["status"]
     action = f"get_column_meaning('{args['table_name']}', '{args['column_name']}')"
-    observation, _ = execute_env_action(action, status, _ctx["data_path_base"])
-    return _text(observation)
+    return await _run_env("get_column_meaning", action)
 
 
 @tool(
@@ -134,11 +165,9 @@ async def get_column_meaning(args: dict) -> dict:
     {},
 )
 async def get_all_external_knowledge_names(args: dict) -> dict:
-    status: SampleStatus = _ctx["status"]
-    observation, _ = execute_env_action(
-        "get_all_external_knowledge_names()", status, _ctx["data_path_base"]
+    return await _run_env(
+        "get_all_external_knowledge_names", "get_all_external_knowledge_names()"
     )
-    return _text(observation)
 
 
 @tool(
@@ -147,10 +176,8 @@ async def get_all_external_knowledge_names(args: dict) -> dict:
     {"knowledge_name": str},
 )
 async def get_knowledge_definition(args: dict) -> dict:
-    status: SampleStatus = _ctx["status"]
     action = f"get_knowledge_definition('{args['knowledge_name']}')"
-    observation, _ = execute_env_action(action, status, _ctx["data_path_base"])
-    return _text(observation)
+    return await _run_env("get_knowledge_definition", action)
 
 
 @tool(
@@ -159,11 +186,9 @@ async def get_knowledge_definition(args: dict) -> dict:
     {},
 )
 async def get_all_knowledge_definitions(args: dict) -> dict:
-    status: SampleStatus = _ctx["status"]
-    observation, _ = execute_env_action(
-        "get_all_knowledge_definitions()", status, _ctx["data_path_base"]
+    return await _run_env(
+        "get_all_knowledge_definitions", "get_all_knowledge_definitions()"
     )
-    return _text(observation)
 
 
 # ---------------------------------------------------------------------------
@@ -208,8 +233,24 @@ async def _ask_user_impl(question: str) -> str:
     {"question": str},
 )
 async def ask_user(args: dict) -> dict:
+    status: SampleStatus = _ctx["status"]
+    err = _gate("ask_user", status)
+    if err is not None:
+        return _text(err)
     answer = await _ask_user_impl(args["question"])
-    return _text(answer)
+    update_budget(status, "ask_user")
+    _ctx["asks_used"] = _ctx.get("asks_used", 0) + 1
+
+    suffix = _budget_note(status)
+    # In c-interact, the budget IS the turn budget; surface remaining ask
+    # rounds explicitly (matches ADK callbacks_cinteract.after_tool_callback).
+    if _ctx.get("eval_mode") == "c-interact":
+        max_asks = _ctx.get("max_asks", 0)
+        remaining = max(0, max_asks - _ctx["asks_used"])
+        suffix += (
+            f"\n[Clarification turns remaining: {remaining}/{max_asks}]"
+        )
+    return _text(answer + suffix)
 
 
 @tool(
@@ -222,6 +263,7 @@ async def submit_sql(args: dict) -> dict:
     observation, reward, p1, p2, finished = execute_submit_action(
         args["sql"], status, _ctx["data_path_base"]
     )
+    update_budget(status, "submit_sql")
     _ctx["result"] = {
         "phase1_passed": p1,
         "phase2_passed": p2,
@@ -229,7 +271,7 @@ async def submit_sql(args: dict) -> dict:
         "finished": finished,
         "observation": observation,
     }
-    return _text(observation)
+    return _text(str(observation) + _budget_note(status))
 
 
 # ---------------------------------------------------------------------------
@@ -279,6 +321,7 @@ async def submit_query(args: dict) -> dict:
     observation, reward, p1, p2, finished = execute_submit_action(
         sql, status, _ctx["data_path_base"]
     )
+    update_budget(status, "submit_query")
     _ctx["result"] = {
         "phase1_passed": p1,
         "phase2_passed": p2,
@@ -287,7 +330,9 @@ async def submit_query(args: dict) -> dict:
         "observation": observation,
         "submitted_sql": sql,
     }
-    return _text(f"Generated SQL:\n{sql}\n\nResult: {observation}")
+    return _text(
+        f"Generated SQL:\n{sql}\n\nResult: {observation}{_budget_note(status)}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -312,9 +357,18 @@ RAW_C_TOOLS = [ask_user, submit_sql]
 
 # In SLayer mode, exploration tools (help, models_summary, inspect_model,
 # query, list_datasources) come from the slayer MCP server itself —
-# wired into ClaudeAgentOptions.mcp_servers. We only register the native
-# bird-interact tools here.
-SLAYER_A_TOOLS = [ask_user, submit_query]
+# wired into ClaudeAgentOptions.mcp_servers. We also expose the native
+# bird-interact knowledge tools so SLayer agents have the same access
+# to external domain knowledge that raw agents do.
+SLAYER_A_TOOLS = [
+    get_all_external_knowledge_names,
+    get_knowledge_definition,
+    get_all_knowledge_definitions,
+    ask_user,
+    submit_query,
+]
+# c-interact slayer: knowledge is injected upfront in the prompt (matches
+# raw c-interact's contract), so no separate knowledge tools are needed.
 SLAYER_C_TOOLS = [ask_user, submit_query]
 
 
@@ -346,42 +400,23 @@ async def _build_prompt(
         )
 
     if query_mode == "raw" and eval_mode == "c-interact":
-        # Inject schema + knowledge directly
-        schema = _schema_cache.get(db_name, "")
-        knowledge = _filter_knowledge_for_agent(db_name, task_data)
-        knowledge_text = "\n".join(
-            f"- {k}: {v.get('description', '') or v.get('definition', '')}"
-            for k, v in (knowledge or {}).items()
-        )
-        return RAW_C_INTERACT.format(
+        return await build_raw_c_interact_prompt(
             budget=budget,
             db_name=db_name,
             user_query=user_query,
-            schema=schema,
-            knowledge=knowledge_text or "(no external knowledge available)",
+            task_data=task_data,
         )
 
     if query_mode == "slayer" and eval_mode == "a-interact":
         return SLAYER_A_INTERACT.format(budget=budget, user_query=user_query)
 
     if query_mode == "slayer" and eval_mode == "c-interact":
-        # Inject SLayer help text + models summary up front
-        from slayer.help import render_help
-        from slayer.storage.yaml_storage import YAMLStorage
-
-        storage = YAMLStorage(base_dir=_ctx["slayer_storage_dir"])
-        names = await storage.list_models()
-        lines = []
-        for name in names:
-            m = await storage.get_model(name)
-            dims = ", ".join(d.name for d in (m.dimensions or [])[:8]) if m else ""
-            meas = ", ".join(x.name for x in (m.measures or [])[:8]) if m else ""
-            lines.append(f"- {name}: dims=[{dims}] measures=[{meas}]")
-        return SLAYER_C_INTERACT.format(
+        return await build_slayer_c_interact_prompt(
             budget=budget,
             user_query=user_query,
-            slayer_help=render_help(),
-            models_summary="\n".join(lines),
+            slayer_storage_dir=_ctx["slayer_storage_dir"],
+            db_name=db_name,
+            task_data=task_data,
         )
 
     raise ValueError(f"Unknown mode combo: query_mode={query_mode} eval_mode={eval_mode}")
@@ -393,10 +428,21 @@ async def _build_prompt(
 
 
 class ClaudeSDKAgent:
-    """SystemAgent implementation using the Claude Agent SDK."""
+    """SystemAgent implementation using the Claude Agent SDK.
 
-    def __init__(self, slayer_storage_root: str | None = None) -> None:
+    The SDK is locked to Anthropic models — passing a non-Anthropic
+    `model` causes `run_task` to short-circuit with a skip-shaped row so
+    the 3-way comparison still renders cleanly. Use a different
+    framework (`pydantic_ai`, `smolagents`, ...) for non-Anthropic models.
+    """
+
+    def __init__(
+        self,
+        slayer_storage_root: str | None = None,
+        model: str = "anthropic/claude-sonnet-4-5",
+    ) -> None:
         self.slayer_storage_root = slayer_storage_root
+        self.model = model
 
     async def run_task(
         self,
@@ -408,8 +454,27 @@ class ClaudeSDKAgent:
         user_sim_model: str = "anthropic/claude-haiku-4-5-20251001",
         user_sim_prompt_version: str = "v2",
     ) -> dict:
-        db_name = task_data["selected_database"]
+        from bird_interact_agents.model_string import is_anthropic
+
         instance_id = task_data["instance_id"]
+        db_name = task_data["selected_database"]
+        if not is_anthropic(self.model):
+            msg = (
+                f"claude_sdk requires an Anthropic model; got {self.model!r}. "
+                "Skipped — use --framework pydantic_ai for non-Anthropic models."
+            )
+            logger.warning("[%s] %s", instance_id, msg)
+            return {
+                "task_id": instance_id,
+                "instance_id": instance_id,
+                "database": db_name,
+                "phase1_passed": False,
+                "phase2_passed": False,
+                "total_reward": 0.0,
+                "trajectory": [],
+                "error": msg,
+            }
+
 
         status = SampleStatus(
             idx=0,
@@ -424,6 +489,12 @@ class ClaudeSDKAgent:
             f"{self.slayer_storage_root}/{db_name}" if self.slayer_storage_root else ""
         )
 
+        # Number of clarification turns the c-interact contract grants to the
+        # agent — used for the post-ask_user "turns remaining" notice.
+        from bird_interact_agents.harness import _ambiguity_count
+
+        max_asks = _ambiguity_count(task_data) + 3  # +patience(3); matches ADK
+
         # Set the per-task context dict via contextvars — concurrent task
         # runs each get their own dict instance.
         _ctx_var.set({
@@ -435,6 +506,10 @@ class ClaudeSDKAgent:
             "_slayer_client": None,
             "_slayer_storage": None,
             "result": None,
+            "eval_mode": eval_mode,
+            "query_mode": query_mode,
+            "max_asks": max_asks,
+            "asks_used": 0,
         })
 
         tools = _select_tools(query_mode, eval_mode)
@@ -468,10 +543,22 @@ class ClaudeSDKAgent:
         try:
             async with ClaudeSDKClient(options=options) as client:
                 await client.query(task_data["amb_user_query"])
+                turns = 0
                 async for msg in client.receive_response():
                     trajectory.append(
                         {"type": str(type(msg).__name__), "data": str(msg)[:500]}
                     )
+                    # Count assistant model turns; cap at MAX_MODEL_TURNS to
+                    # match the original mini_interact_agent (--max_turns=60)
+                    # and ADK before_model_callback.
+                    if type(msg).__name__ == "AssistantMessage":
+                        turns += 1
+                        if turns >= MAX_MODEL_TURNS:
+                            logger.warning(
+                                "Max model turns (%d) reached for %s; stopping.",
+                                MAX_MODEL_TURNS, instance_id,
+                            )
+                            break
         except Exception as e:
             logger.error("Agent error on %s: %s", instance_id, e)
             return {

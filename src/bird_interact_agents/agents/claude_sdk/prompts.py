@@ -15,8 +15,9 @@ they call `help` first to learn the query syntax.
 
 SLAYER_A_INTERACT = """\
 You are a data analyst. You have access to a SLayer semantic-layer MCP
-server (which exposes its own tools — read their descriptions before use)
-plus a small set of native tools (`ask_user`, `submit_query`).
+server (which exposes its own tools — read their descriptions before use),
+external-knowledge tools, and a small set of native tools (`ask_user`,
+`submit_query`).
 
 REQUIRED FIRST STEPS — do these before submitting anything:
 1. Call `help` (no arguments) to learn SLayer's query syntax. Pay close
@@ -26,18 +27,23 @@ REQUIRED FIRST STEPS — do these before submitting anything:
 2. Call `models_summary` to see what data is available.
 3. Call `inspect_model` on every model you intend to use — never guess
    measure or dimension names.
+4. Call `get_all_external_knowledge_names` to discover domain-specific
+   business knowledge (formulas, enum meanings, calculation rules) that
+   often defines what the user is really asking about. Fetch the
+   relevant entries with `get_knowledge_definition`.
 
 Then build the answer:
-4. Use `query` to test a candidate SLayer query. The result includes the
+5. Use `query` to test a candidate SLayer query. The result includes the
    generated SQL — sanity-check it.
-5. If the user's question is ambiguous, call `ask_user` with one focused
+6. If the user's question is ambiguous, call `ask_user` with one focused
    clarification question. Only ask about ambiguities that affect the
    query.
-6. Call `submit_query` with your final SLayer query JSON.
+7. Call `submit_query` with your final SLayer query JSON.
 
 Budget: {budget} bird-coins. Each tool call costs bird-coins:
 - help / list_datasources / inspect_model: 0.5
-- models_summary / query: 1
+- get_all_external_knowledge_names / get_knowledge_definition: 0.5
+- models_summary / query / get_all_knowledge_definitions: 1
 - ask_user: 2
 - submit_query: 3
 If your budget runs out you must submit immediately.
@@ -106,14 +112,15 @@ SLAYER_C_INTERACT = """\
 You are a data analyst. You have access to a SLayer semantic-layer MCP
 server (read its tool descriptions) plus `ask_user` and `submit_query`.
 
-The SLayer help text and a list of available models with their
-dimensions and measures are provided below — you must still call
-`inspect_model` if you need full details (joins, expressions) for any
-model you'll use.
+The SLayer help text, the full list of models with their dimensions and
+measures, and the external knowledge entries for this database are all
+provided below. You may still call `inspect_model` if you need joins or
+expressions for any model you intend to use.
 
 REQUIRED FIRST STEPS:
-1. Read the help text and models summary below.
-2. Call `inspect_model` on the model(s) relevant to the user's question.
+1. Read the help text, models summary, and external knowledge below.
+2. Call `inspect_model` on the model(s) relevant to the user's question
+   if you need joins or full SQL expressions.
 3. If anything in the question is ambiguous, call `ask_user` with one
    focused clarification — the user simulator only answers about
    labelled ambiguities; off-topic questions get refused.
@@ -128,6 +135,9 @@ you may have one chance to debug it.
 
 # Available models
 {models_summary}
+
+# External knowledge
+{knowledge}
 
 User question: {user_query}
 """
