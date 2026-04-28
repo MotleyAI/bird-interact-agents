@@ -38,14 +38,11 @@ async def test_user_sim_records_tracked_usage(monkeypatch):
     monkeypatch.setattr(litellm, "acompletion", fake_acompletion)
     monkeypatch.setattr(usage_mod, "_cost_per_token", lambda **_: (0.0, 0.0))
 
+    from bird_interact_agents.agents import _submit
+    monkeypatch.setattr(_submit, "build_user_encoder_prompt", lambda *a, **kw: "enc")
+    monkeypatch.setattr(_submit, "build_user_decoder_prompt", lambda *a, **kw: "dec")
     monkeypatch.setattr(
-        cs_agent, "build_user_encoder_prompt", lambda *a, **kw: "enc",
-    )
-    monkeypatch.setattr(
-        cs_agent, "build_user_decoder_prompt", lambda *a, **kw: "dec",
-    )
-    monkeypatch.setattr(
-        cs_agent, "parse_encoder_response",
+        _submit, "parse_encoder_response",
         lambda raw: {"action_type": "answer", "encoded_data": "x"},
     )
 

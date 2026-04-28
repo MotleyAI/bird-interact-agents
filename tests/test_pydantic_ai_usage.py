@@ -19,7 +19,13 @@ import pytest
 
 @pytest.mark.asyncio
 async def test_user_sim_records_tracked_usage(monkeypatch):
+    """The pydantic_ai adapter's user-sim path goes through the shared
+    `_submit.ask_user_impl` helper. End-to-end coverage of the user-sim
+    accumulator lives in test_submit_helpers.py — this test is just a
+    smoke check that the pydantic_ai adapter still threads a TaskDeps
+    through to it."""
     from bird_interact_agents import usage as usage_mod
+    from bird_interact_agents.agents import _submit
     from bird_interact_agents.agents.pydantic_ai import agent as pa_agent
     from bird_interact_agents.harness import SampleStatus, _schema_cache
 
@@ -36,14 +42,10 @@ async def test_user_sim_records_tracked_usage(monkeypatch):
     monkeypatch.setattr(litellm, "acompletion", fake_acompletion)
     monkeypatch.setattr(usage_mod, "_cost_per_token", lambda **_: (0.0, 0.0))
 
+    monkeypatch.setattr(_submit, "build_user_encoder_prompt", lambda *a, **kw: "enc")
+    monkeypatch.setattr(_submit, "build_user_decoder_prompt", lambda *a, **kw: "dec")
     monkeypatch.setattr(
-        pa_agent, "build_user_encoder_prompt", lambda *a, **kw: "enc",
-    )
-    monkeypatch.setattr(
-        pa_agent, "build_user_decoder_prompt", lambda *a, **kw: "dec",
-    )
-    monkeypatch.setattr(
-        pa_agent, "parse_encoder_response",
+        _submit, "parse_encoder_response",
         lambda raw: {"action_type": "answer", "encoded_data": "x"},
     )
 
@@ -58,14 +60,13 @@ async def test_user_sim_records_tracked_usage(monkeypatch):
         user_sim_model="anthropic/claude-haiku-4-5-20251001",
     )
 
-    out = await pa_agent._ask_user_impl(deps, "any question?")
+    out = await _submit.ask_user_impl(deps, "any question?")
 
     assert out == "resp"
     assert deps.usage.n_calls == 2
     assert deps.usage.prompt_tokens == 22
     assert deps.usage.completion_tokens == 6
     assert all(row.scope == "user_sim" for row in deps.usage.breakdown)
-    assert deps.usage.user_sim_cost_usd == 0.0
 
 
 @pytest.mark.asyncio

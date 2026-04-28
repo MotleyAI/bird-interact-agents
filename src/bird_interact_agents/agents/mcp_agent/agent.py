@@ -6,13 +6,12 @@ attach the slayer MCP server in slayer mode without wrapping any of its
 tools ourselves.
 
 Native tools (`ask_user`, `submit_sql`, `submit_query`) are plain async
-Python functions passed via `Agent.functions`. They close over per-task
-state — no shared globals, no contextvars needed.
+Python functions passed via `Agent.functions`. Bodies live in
+`bird_interact_agents.agents._submit`; this module supplies the
+mcp-agent-specific async wrappers.
 """
 
-import json
 import logging
-import re
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -21,22 +20,26 @@ from bird_interact_agents.agents._prompt_builders import (
     build_raw_c_interact_prompt,
     build_slayer_c_interact_prompt,
 )
-from bird_interact_agents.usage import TokenUsage, acompletion_tracked
+from bird_interact_agents.agents._submit import (
+    ask_user_impl,
+    run_env_action,
+    submit_raw_sql,
+    submit_slayer_query,
+)
+from bird_interact_agents.agents._tool_specs import BIRD_INTERACT_TOOLS
 from bird_interact_agents.agents.claude_sdk.prompts import (
     RAW_A_INTERACT,
     SLAYER_A_INTERACT,
 )
 from bird_interact_agents.harness import (
     SampleStatus,
-    _schema_cache,
-    build_user_decoder_prompt,
-    build_user_encoder_prompt,
-    execute_env_action,
-    execute_submit_action,
     load_db_data_if_needed,
-    parse_encoder_response,
     slayer_mcp_stdio_config,
 )
+from bird_interact_agents.usage import TokenUsage
+
+
+_BY_NAME = {t.name: t for t in BIRD_INTERACT_TOOLS}
 
 logger = logging.getLogger(__name__)
 
@@ -68,134 +71,59 @@ def _slayer_client(state: TaskState):
     return state._slayer_client
 
 
-async def _ask_user_impl(state: TaskState, question: str) -> str:
-    """Encoder/decoder user simulator using LiteLLM."""
-    db_name = state.status.original_data["selected_database"]
-    schema = _schema_cache.get(db_name, "")
-
-    encoder_prompt = build_user_encoder_prompt(
-        question, state.status, schema, state.user_sim_prompt_version
-    )
-    encoder_resp = await acompletion_tracked(
-        state.usage,
-        scope="user_sim",
-        model=state.user_sim_model,
-        messages=[{"role": "user", "content": encoder_prompt}],
-    )
-    encoder_action = parse_encoder_response(
-        encoder_resp.choices[0].message.content or ""
-    )
-
-    decoder_prompt = build_user_decoder_prompt(
-        question, encoder_action, state.status, schema, state.user_sim_prompt_version
-    )
-    decoder_resp = await acompletion_tracked(
-        state.usage,
-        scope="user_sim",
-        model=state.user_sim_model,
-        messages=[{"role": "user", "content": decoder_prompt}],
-    )
-    raw_response = decoder_resp.choices[0].message.content or ""
-
-    match = re.search(r"<s>(.*?)</s>", raw_response, re.DOTALL)
-    return match.group(1).strip() if match else raw_response.strip()
-
-
 def _build_native_functions(state: TaskState, query_mode: str) -> list:
-    """Construct the native tool functions, closing over per-task state."""
+    """Construct the native tool functions, closing over per-task state.
+
+    Each wrapper is a one-liner over the shared helpers in `_submit`.
+    """
 
     async def ask_user(question: str) -> str:
         """Ask the user a clarification question about their query."""
-        return await _ask_user_impl(state, question)
+        return await ask_user_impl(state, question)
 
     async def execute_sql(sql: str) -> str:
         """Execute a SQL query against the database and return results."""
-        observation, _ = execute_env_action(
-            f"execute({sql})", state.status, state.data_path_base
-        )
-        return str(observation)
+        return run_env_action(state, _BY_NAME["execute_sql"], sql=sql)
 
     async def get_schema() -> str:
         """Get the database schema (CREATE TABLE statements with sample data)."""
-        observation, _ = execute_env_action(
-            "get_schema()", state.status, state.data_path_base
-        )
-        return str(observation)
+        return run_env_action(state, _BY_NAME["get_schema"])
 
     async def get_all_column_meanings() -> str:
         """Get the meanings/descriptions of all columns in the database."""
-        observation, _ = execute_env_action(
-            "get_all_column_meanings()", state.status, state.data_path_base
-        )
-        return str(observation)
+        return run_env_action(state, _BY_NAME["get_all_column_meanings"])
 
     async def get_column_meaning(table_name: str, column_name: str) -> str:
         """Get the meaning of a specific column in a table."""
-        action = f"get_column_meaning('{table_name}', '{column_name}')"
-        observation, _ = execute_env_action(
-            action, state.status, state.data_path_base
+        return run_env_action(
+            state, _BY_NAME["get_column_meaning"],
+            table_name=table_name, column_name=column_name,
         )
-        return str(observation)
 
     async def get_all_external_knowledge_names() -> str:
         """List all available external knowledge entry names for this database."""
-        observation, _ = execute_env_action(
-            "get_all_external_knowledge_names()", state.status, state.data_path_base
-        )
-        return str(observation)
+        return run_env_action(state, _BY_NAME["get_all_external_knowledge_names"])
 
     async def get_knowledge_definition(knowledge_name: str) -> str:
         """Get the definition of a specific external knowledge entry."""
-        action = f"get_knowledge_definition('{knowledge_name}')"
-        observation, _ = execute_env_action(
-            action, state.status, state.data_path_base
+        return run_env_action(
+            state, _BY_NAME["get_knowledge_definition"],
+            knowledge_name=knowledge_name,
         )
-        return str(observation)
 
     async def get_all_knowledge_definitions() -> str:
         """Get all external knowledge definitions for this database."""
-        observation, _ = execute_env_action(
-            "get_all_knowledge_definitions()", state.status, state.data_path_base
-        )
-        return str(observation)
+        return run_env_action(state, _BY_NAME["get_all_knowledge_definitions"])
 
     async def submit_sql(sql: str) -> str:
         """Submit your final SQL query for evaluation. Only submit when confident."""
-        observation, reward, p1, p2, finished = execute_submit_action(
-            sql, state.status, state.data_path_base
-        )
-        state.result = {
-            "phase1_passed": p1,
-            "phase2_passed": p2,
-            "total_reward": reward if reward is not None else 0.0,
-            "finished": finished,
-        }
-        return str(observation)
+        return submit_raw_sql(state, sql)
 
     async def submit_query(query_json: str) -> str:
         """Submit your final SLayer query for evaluation. Translates to SQL
         deterministically and tests against ground truth.
         """
-        try:
-            query_dict = json.loads(query_json)
-        except json.JSONDecodeError as e:
-            return f"Invalid JSON — submission aborted: {e}"
-        client = _slayer_client(state)
-        try:
-            sql = client.sql_sync(query_dict)
-        except Exception as e:
-            return f"Could not generate SQL — submission aborted: {e}"
-        observation, reward, p1, p2, finished = execute_submit_action(
-            sql, state.status, state.data_path_base
-        )
-        state.result = {
-            "phase1_passed": p1,
-            "phase2_passed": p2,
-            "total_reward": reward if reward is not None else 0.0,
-            "finished": finished,
-            "submitted_sql": sql,
-        }
-        return f"Generated SQL:\n{sql}\n\nResult: {observation}"
+        return submit_slayer_query(state, query_json, _slayer_client)
 
     if query_mode == "raw":
         return [

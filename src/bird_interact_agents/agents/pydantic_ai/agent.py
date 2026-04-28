@@ -2,14 +2,16 @@
 
 Per-task context is passed via PydanticAI's `deps` mechanism — no global
 state, no subprocess. Tools access task data through `ctx.deps`.
+
+The bird-interact discovery + submission tool *bodies* live in
+`bird_interact_agents.agents._submit`; this file only contains the
+PydanticAI-specific wiring (decorators, RunContext type binding,
+prepare_tools strict-mode shim, MCP toolset, agent factory).
 """
 
-import json
 import logging
-import re
-from typing import Any
-
 from dataclasses import replace
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent, RunContext
@@ -17,8 +19,31 @@ from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.usage import UsageLimits
 
+from bird_interact_agents.agents._prompt_builders import (
+    build_raw_c_interact_prompt,
+    build_slayer_c_interact_prompt,
+)
+from bird_interact_agents.agents._submit import (
+    ask_user_impl,
+    run_env_action,
+    submit_raw_sql,
+    submit_slayer_query,
+)
+from bird_interact_agents.agents._tool_specs import BIRD_INTERACT_TOOLS
 from bird_interact_agents.agents.claude_sdk.agent import MAX_MODEL_TURNS
-from bird_interact_agents.usage import TokenUsage, acompletion_tracked
+from bird_interact_agents.agents.claude_sdk.prompts import (
+    RAW_A_INTERACT,
+    SLAYER_A_INTERACT,
+)
+from bird_interact_agents.harness import (
+    SampleStatus,
+    load_db_data_if_needed,
+    slayer_mcp_stdio_config,
+)
+from bird_interact_agents.usage import TokenUsage
+
+
+_BY_NAME = {t.name: t for t in BIRD_INTERACT_TOOLS}
 
 
 def _make_prepare_tools(strict_value: bool):
@@ -39,26 +64,6 @@ def _make_prepare_tools(strict_value: bool):
         return [replace(td, strict=strict_value) for td in tool_defs]
 
     return _force_strict
-
-from bird_interact_agents.agents._prompt_builders import (
-    build_raw_c_interact_prompt,
-    build_slayer_c_interact_prompt,
-)
-from bird_interact_agents.agents.claude_sdk.prompts import (
-    RAW_A_INTERACT,
-    SLAYER_A_INTERACT,
-)
-from bird_interact_agents.harness import (
-    SampleStatus,
-    _schema_cache,
-    build_user_decoder_prompt,
-    build_user_encoder_prompt,
-    execute_env_action,
-    execute_submit_action,
-    load_db_data_if_needed,
-    parse_encoder_response,
-    slayer_mcp_stdio_config,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -99,36 +104,60 @@ def _slayer_client(deps: TaskDeps):
     return deps._slayer_client
 
 
-async def _ask_user_impl(deps: TaskDeps, question: str) -> str:
-    db_name = deps.status.original_data["selected_database"]
-    schema = _schema_cache.get(db_name, "")
+def _register_bird_interact_tools(agent: Agent) -> None:
+    """Wire the seven raw-mode discovery tools onto a PydanticAI agent.
 
-    encoder_prompt = build_user_encoder_prompt(
-        question, deps.status, schema, deps.user_sim_prompt_version
-    )
-    encoder_resp = await acompletion_tracked(
-        deps.usage,
-        scope="user_sim",
-        model=deps.user_sim_model,
-        messages=[{"role": "user", "content": encoder_prompt}],
-    )
-    encoder_action = parse_encoder_response(
-        encoder_resp.choices[0].message.content or ""
-    )
+    Each wrapper is a one-liner over the shared `run_env_action` helper;
+    only the framework-specific decoration (signature + @agent.tool)
+    lives here. Add a new tool by extending BIRD_INTERACT_TOOLS in
+    `_tool_specs.py` and adding a wrapper here that matches its
+    parameter shape.
+    """
 
-    decoder_prompt = build_user_decoder_prompt(
-        question, encoder_action, deps.status, schema, deps.user_sim_prompt_version
-    )
-    decoder_resp = await acompletion_tracked(
-        deps.usage,
-        scope="user_sim",
-        model=deps.user_sim_model,
-        messages=[{"role": "user", "content": decoder_prompt}],
-    )
-    raw_response = decoder_resp.choices[0].message.content or ""
+    @agent.tool
+    async def execute_sql(ctx: RunContext[TaskDeps], sql: str) -> str:
+        """Execute a SQL query against the database and return results."""
+        return run_env_action(ctx.deps, _BY_NAME["execute_sql"], sql=sql)
 
-    match = re.search(r"<s>(.*?)</s>", raw_response, re.DOTALL)
-    return match.group(1).strip() if match else raw_response.strip()
+    @agent.tool
+    async def get_schema(ctx: RunContext[TaskDeps]) -> str:
+        """Get the database schema (CREATE TABLE statements with sample data)."""
+        return run_env_action(ctx.deps, _BY_NAME["get_schema"])
+
+    @agent.tool
+    async def get_all_column_meanings(ctx: RunContext[TaskDeps]) -> str:
+        """Get the meanings/descriptions of all columns in the database."""
+        return run_env_action(ctx.deps, _BY_NAME["get_all_column_meanings"])
+
+    @agent.tool
+    async def get_column_meaning(
+        ctx: RunContext[TaskDeps], table_name: str, column_name: str,
+    ) -> str:
+        """Get the meaning of a specific column in a table."""
+        return run_env_action(
+            ctx.deps, _BY_NAME["get_column_meaning"],
+            table_name=table_name, column_name=column_name,
+        )
+
+    @agent.tool
+    async def get_all_external_knowledge_names(ctx: RunContext[TaskDeps]) -> str:
+        """List all available external knowledge entry names for this database."""
+        return run_env_action(ctx.deps, _BY_NAME["get_all_external_knowledge_names"])
+
+    @agent.tool
+    async def get_knowledge_definition(
+        ctx: RunContext[TaskDeps], knowledge_name: str,
+    ) -> str:
+        """Get the definition of a specific external knowledge entry."""
+        return run_env_action(
+            ctx.deps, _BY_NAME["get_knowledge_definition"],
+            knowledge_name=knowledge_name,
+        )
+
+    @agent.tool
+    async def get_all_knowledge_definitions(ctx: RunContext[TaskDeps]) -> str:
+        """Get all external knowledge definitions for this database."""
+        return run_env_action(ctx.deps, _BY_NAME["get_all_knowledge_definitions"])
 
 
 # ---------------------------------------------------------------------------
@@ -136,126 +165,52 @@ async def _ask_user_impl(deps: TaskDeps, question: str) -> str:
 # PydanticAI agents register tools at construction time.
 # ---------------------------------------------------------------------------
 
-def _build_raw_a_agent(model: str, strict_value: bool = False) -> Agent:
-    agent = Agent(
-        model=model, deps_type=TaskDeps, retries=2,
-        prepare_tools=_make_prepare_tools(strict_value),
-    )
-
-    @agent.tool
-    async def execute_sql(ctx: RunContext[TaskDeps], sql: str) -> str:
-        """Execute a SQL query against the database and return results."""
-        observation, _ = execute_env_action(
-            f"execute({sql})", ctx.deps.status, ctx.deps.data_path_base
-        )
-        return str(observation)
-
-    @agent.tool
-    async def get_schema(ctx: RunContext[TaskDeps]) -> str:
-        """Get the database schema (CREATE TABLE statements with sample data)."""
-        observation, _ = execute_env_action(
-            "get_schema()", ctx.deps.status, ctx.deps.data_path_base
-        )
-        return str(observation)
-
-    @agent.tool
-    async def get_all_column_meanings(ctx: RunContext[TaskDeps]) -> str:
-        """Get the meanings/descriptions of all columns in the database."""
-        observation, _ = execute_env_action(
-            "get_all_column_meanings()", ctx.deps.status, ctx.deps.data_path_base
-        )
-        return str(observation)
-
-    @agent.tool
-    async def get_column_meaning(
-        ctx: RunContext[TaskDeps], table_name: str, column_name: str
-    ) -> str:
-        """Get the meaning of a specific column in a table."""
-        action = f"get_column_meaning('{table_name}', '{column_name}')"
-        observation, _ = execute_env_action(
-            action, ctx.deps.status, ctx.deps.data_path_base
-        )
-        return str(observation)
-
-    @agent.tool
-    async def get_all_external_knowledge_names(ctx: RunContext[TaskDeps]) -> str:
-        """List all available external knowledge entry names for this database."""
-        observation, _ = execute_env_action(
-            "get_all_external_knowledge_names()", ctx.deps.status, ctx.deps.data_path_base
-        )
-        return str(observation)
-
-    @agent.tool
-    async def get_knowledge_definition(
-        ctx: RunContext[TaskDeps], knowledge_name: str
-    ) -> str:
-        """Get the definition of a specific external knowledge entry."""
-        action = f"get_knowledge_definition('{knowledge_name}')"
-        observation, _ = execute_env_action(
-            action, ctx.deps.status, ctx.deps.data_path_base
-        )
-        return str(observation)
-
-    @agent.tool
-    async def get_all_knowledge_definitions(ctx: RunContext[TaskDeps]) -> str:
-        """Get all external knowledge definitions for this database."""
-        observation, _ = execute_env_action(
-            "get_all_knowledge_definitions()", ctx.deps.status, ctx.deps.data_path_base
-        )
-        return str(observation)
-
+def _register_ask_user(agent: Agent) -> None:
     @agent.tool
     async def ask_user(ctx: RunContext[TaskDeps], question: str) -> str:
         """Ask the user a clarification question about their query."""
-        return await _ask_user_impl(ctx.deps, question)
+        return await ask_user_impl(ctx.deps, question)
 
+
+def _register_submit_sql(agent: Agent) -> None:
     @agent.tool
     async def submit_sql(ctx: RunContext[TaskDeps], sql: str) -> str:
         """Submit your final SQL query for evaluation. Only submit when confident."""
-        observation, reward, p1, p2, finished = execute_submit_action(
-            sql, ctx.deps.status, ctx.deps.data_path_base
-        )
-        ctx.deps.result = {
-            "phase1_passed": p1,
-            "phase2_passed": p2,
-            "total_reward": reward if reward is not None else 0.0,
-            "finished": finished,
-        }
-        return str(observation)
-
-    return agent
+        return submit_raw_sql(ctx.deps, sql)
 
 
-def _build_raw_c_agent(model: str, strict_value: bool = False) -> Agent:
+def _register_submit_query(agent: Agent) -> None:
+    @agent.tool
+    async def submit_query(ctx: RunContext[TaskDeps], query_json: str) -> str:
+        """Submit your final SLayer query for evaluation. Translates the
+        SLayer query JSON to SQL and tests it against the ground truth.
+        """
+        return submit_slayer_query(ctx.deps, query_json, _slayer_client)
+
+
+def _build_raw_a_agent(model: Any, strict_value: bool = False) -> Agent:
     agent = Agent(
         model=model, deps_type=TaskDeps, retries=2,
         prepare_tools=_make_prepare_tools(strict_value),
     )
+    _register_bird_interact_tools(agent)
+    _register_ask_user(agent)
+    _register_submit_sql(agent)
+    return agent
 
-    @agent.tool
-    async def ask_user(ctx: RunContext[TaskDeps], question: str) -> str:
-        """Ask the user a clarification question about their query."""
-        return await _ask_user_impl(ctx.deps, question)
 
-    @agent.tool
-    async def submit_sql(ctx: RunContext[TaskDeps], sql: str) -> str:
-        """Submit your final SQL query for evaluation."""
-        observation, reward, p1, p2, finished = execute_submit_action(
-            sql, ctx.deps.status, ctx.deps.data_path_base
-        )
-        ctx.deps.result = {
-            "phase1_passed": p1,
-            "phase2_passed": p2,
-            "total_reward": reward if reward is not None else 0.0,
-            "finished": finished,
-        }
-        return str(observation)
-
+def _build_raw_c_agent(model: Any, strict_value: bool = False) -> Agent:
+    agent = Agent(
+        model=model, deps_type=TaskDeps, retries=2,
+        prepare_tools=_make_prepare_tools(strict_value),
+    )
+    _register_ask_user(agent)
+    _register_submit_sql(agent)
     return agent
 
 
 def _build_slayer_agent(
-    model: str, slayer_storage_dir: str, strict_value: bool = False,
+    model: Any, slayer_storage_dir: str, strict_value: bool = False,
 ) -> Agent:
     """Build a SLayer-mode agent (shared between a- and c-interact variants).
 
@@ -270,40 +225,8 @@ def _build_slayer_agent(
         model=model, deps_type=TaskDeps, retries=2, toolsets=[slayer_server],
         prepare_tools=_make_prepare_tools(strict_value),
     )
-
-    @agent.tool
-    async def ask_user(ctx: RunContext[TaskDeps], question: str) -> str:
-        """Ask the user a clarification question."""
-        return await _ask_user_impl(ctx.deps, question)
-
-    @agent.tool
-    async def submit_query(ctx: RunContext[TaskDeps], query_json: str) -> str:
-        """Submit your final SLayer query for evaluation. Translates the
-        SLayer query JSON to SQL and tests it against the ground truth.
-        """
-        try:
-            query_dict = json.loads(query_json)
-        except json.JSONDecodeError as e:
-            return f"Invalid JSON — submission aborted: {e}"
-
-        client = _slayer_client(ctx.deps)
-        try:
-            sql = client.sql_sync(query_dict)
-        except Exception as e:
-            return f"Could not generate SQL — submission aborted: {e}"
-
-        observation, reward, p1, p2, finished = execute_submit_action(
-            sql, ctx.deps.status, ctx.deps.data_path_base
-        )
-        ctx.deps.result = {
-            "phase1_passed": p1,
-            "phase2_passed": p2,
-            "total_reward": reward if reward is not None else 0.0,
-            "finished": finished,
-            "submitted_sql": sql,
-        }
-        return f"Generated SQL:\n{sql}\n\nResult: {observation}"
-
+    _register_ask_user(agent)
+    _register_submit_query(agent)
     return agent
 
 
@@ -321,15 +244,15 @@ class PydanticAIAgent:
         model: str = "anthropic/claude-sonnet-4-5",
         strict: bool = False,
     ) -> None:
-        from bird_interact_agents.model_string import to_pydantic_ai
+        from bird_interact_agents.model_string import build_pydantic_ai_model
 
         self.slayer_storage_root = slayer_storage_root
         # Accept the canonical LiteLLM-style `provider/model_id` and convert
-        # to PydanticAI's `provider:model_id`. PydanticAI also accepts the
-        # colon form natively, so this is idempotent for callers that
-        # already pass that shape.
+        # to whatever PydanticAI needs — for native providers that's a
+        # `provider:model_id` string; for OpenAI-compatible third parties
+        # like DeepInfra it's a fully-built OpenAIChatModel instance.
         self.model_id = model  # litellm form, kept for cost lookup
-        self.model = to_pydantic_ai(model) if "/" in model else model
+        self.model = build_pydantic_ai_model(model)
         self.strict = strict
 
     def _select_agent(

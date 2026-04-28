@@ -26,10 +26,11 @@ async def test_user_sim_records_tracked_usage(monkeypatch):
     monkeypatch.setattr(litellm, "acompletion", fake_acompletion)
     monkeypatch.setattr(usage_mod, "_cost_per_token", lambda **_: (0.0, 0.0))
 
-    monkeypatch.setattr(ag_agent, "build_user_encoder_prompt", lambda *a, **kw: "enc")
-    monkeypatch.setattr(ag_agent, "build_user_decoder_prompt", lambda *a, **kw: "dec")
+    from bird_interact_agents.agents import _submit
+    monkeypatch.setattr(_submit, "build_user_encoder_prompt", lambda *a, **kw: "enc")
+    monkeypatch.setattr(_submit, "build_user_decoder_prompt", lambda *a, **kw: "dec")
     monkeypatch.setattr(
-        ag_agent, "parse_encoder_response",
+        _submit, "parse_encoder_response",
         lambda raw: {"action_type": "answer", "encoded_data": "x"},
     )
 
@@ -43,7 +44,7 @@ async def test_user_sim_records_tracked_usage(monkeypatch):
         user_sim_model="anthropic/claude-haiku-4-5-20251001",
         user_sim_prompt_version="v2",
     )
-    out = await ag_agent._ask_user_impl(state, "?")
+    out = await _submit.ask_user_impl(state, "?")
 
     assert out == "resp"
     assert state.usage.n_calls == 2

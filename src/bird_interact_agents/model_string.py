@@ -43,3 +43,43 @@ def native_model_id(model: str) -> str:
     """
     _, sep, rest = model.partition("/")
     return rest if sep else model
+
+
+# Providers whose models can be used with PydanticAI by passing them through
+# OpenAI's chat-completion wire format. Each entry is the OpenAI-compatible
+# base URL plus the env var holding the API key.
+_OPENAI_COMPAT_PROVIDERS: list[tuple[str, str, str]] = [
+    ("deepinfra", "https://api.deepinfra.com/v1/openai", "DEEPINFRA_API_KEY"),
+]
+
+
+def build_pydantic_ai_model(model: str):
+    """Return either a model-id string or a PydanticAI Model instance.
+
+    For pydantic-ai-native providers (anthropic, cerebras, openrouter, ...)
+    the colon-form string is enough — Agent(model="cerebras:zai-glm-4.7")
+    works out of the box. For OpenAI-compatible providers that PydanticAI
+    doesn't ship a dedicated provider for (DeepInfra), build an
+    `OpenAIChatModel` pointing at the provider's chat-completion endpoint.
+    """
+    import os
+
+    provider, sep, rest = model.partition("/")
+    if not sep:
+        return model
+
+    for prov, base_url, env_var in _OPENAI_COMPAT_PROVIDERS:
+        if provider == prov:
+            api_key = os.environ.get(env_var)
+            if not api_key:
+                raise RuntimeError(
+                    f"{env_var} is not set; required to use {prov!r} models."
+                )
+            from pydantic_ai.models.openai import OpenAIChatModel
+            from pydantic_ai.providers.openai import OpenAIProvider
+            return OpenAIChatModel(
+                rest,
+                provider=OpenAIProvider(base_url=base_url, api_key=api_key),
+            )
+
+    return f"{provider}:{rest}"
