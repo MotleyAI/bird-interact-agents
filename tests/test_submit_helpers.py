@@ -14,7 +14,12 @@ class _FakeState(SimpleNamespace):
 
     def __init__(self, **kw):
         defaults = dict(
-            status=SimpleNamespace(original_data={"selected_database": "fake_db"}),
+            status=SimpleNamespace(
+                original_data={"selected_database": "fake_db"},
+                remaining_budget=100.0,
+                total_budget=100.0,
+                force_submit=False,
+            ),
             data_path_base="/tmp/ignored",
             user_sim_model="anthropic/claude-haiku-4-5-20251001",
             user_sim_prompt_version="v2",
@@ -116,9 +121,11 @@ def test_run_env_action_renders_template_and_calls_executor(monkeypatch):
 
     state = _FakeState()
     spec = next(t for t in BIRD_INTERACT_TOOLS if t.name == "get_column_meaning")
-    out = _submit.run_env_action(state, spec, table_name="t1", column_name="c1")
+    out = _submit.run_env_action(state, spec, "raw", table_name="t1", column_name="c1")
 
-    assert out == "schema goes here"
+    # Helper now appends a budget-remaining note; substring match keeps the
+    # test focused on the dispatch + template-rendering invariant.
+    assert "schema goes here" in out
     assert seen["action"] == "get_column_meaning('t1', 'c1')"
     assert seen["dpb"] == "/tmp/ignored"
 

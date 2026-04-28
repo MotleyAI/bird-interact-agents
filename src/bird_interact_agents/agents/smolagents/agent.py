@@ -104,14 +104,17 @@ def _slayer_client(state: TaskState):
     return state._slayer_client
 
 
-def _build_native_tools(state: TaskState, query_mode: str) -> list:
+def _build_native_tools(
+    state: TaskState, query_mode: str, eval_mode: str = "a-interact",
+) -> list:
     """Construct the native smolagents tools, closing over per-task state.
 
     smolagents' @tool decorator wraps a regular sync function. We use
     asyncio.run() inside ask_user because the smolagents agent loop runs
     in a worker thread that has no active event loop. Tools that touch
     the SQLite DB also call `_ensure_thread_safe` first so the harness's
-    thread-bound connection cache is scrubbed.
+    thread-bound connection cache is scrubbed. Bodies route through
+    `_submit` which applies budget gating + bookkeeping.
     """
     from smolagents import tool
 
@@ -124,7 +127,7 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
         Args:
             question: The clarification question to ask.
         """
-        return asyncio.run(ask_user_impl(state, question))
+        return asyncio.run(ask_user_impl(state, question, query_mode))
 
     @tool
     def execute_sql(sql: str) -> str:
@@ -134,17 +137,17 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
             sql: The SQL query to execute.
         """
         _ensure_thread_safe(db_name, state.data_path_base)
-        return run_env_action(state, _BY_NAME["execute_sql"], sql=sql)
+        return run_env_action(state, _BY_NAME["execute_sql"], query_mode, sql=sql)
 
     @tool
     def get_schema() -> str:
         """Get the database schema (CREATE TABLE statements with sample data)."""
-        return run_env_action(state, _BY_NAME["get_schema"])
+        return run_env_action(state, _BY_NAME["get_schema"], query_mode)
 
     @tool
     def get_all_column_meanings() -> str:
         """Get the meanings/descriptions of all columns in the database."""
-        return run_env_action(state, _BY_NAME["get_all_column_meanings"])
+        return run_env_action(state, _BY_NAME["get_all_column_meanings"], query_mode)
 
     @tool
     def get_column_meaning(table_name: str, column_name: str) -> str:
@@ -155,14 +158,16 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
             column_name: The column name.
         """
         return run_env_action(
-            state, _BY_NAME["get_column_meaning"],
+            state, _BY_NAME["get_column_meaning"], query_mode,
             table_name=table_name, column_name=column_name,
         )
 
     @tool
     def get_all_external_knowledge_names() -> str:
         """List all available external knowledge entry names for this database."""
-        return run_env_action(state, _BY_NAME["get_all_external_knowledge_names"])
+        return run_env_action(
+            state, _BY_NAME["get_all_external_knowledge_names"], query_mode,
+        )
 
     @tool
     def get_knowledge_definition(knowledge_name: str) -> str:
@@ -172,14 +177,16 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
             knowledge_name: The knowledge entry name.
         """
         return run_env_action(
-            state, _BY_NAME["get_knowledge_definition"],
+            state, _BY_NAME["get_knowledge_definition"], query_mode,
             knowledge_name=knowledge_name,
         )
 
     @tool
     def get_all_knowledge_definitions() -> str:
         """Get all external knowledge definitions for this database."""
-        return run_env_action(state, _BY_NAME["get_all_knowledge_definitions"])
+        return run_env_action(
+            state, _BY_NAME["get_all_knowledge_definitions"], query_mode,
+        )
 
     @tool
     def submit_sql(sql: str) -> str:
@@ -203,6 +210,8 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
         _ensure_thread_safe(db_name, state.data_path_base)
         return submit_slayer_query(state, query_json, _slayer_client)
 
+    if query_mode == "raw" and eval_mode == "c-interact":
+        return [ask_user, submit_sql]
     if query_mode == "raw":
         return [
             execute_sql,
@@ -370,7 +379,7 @@ class SmolagentsAgent:
             slayer_storage_dir=slayer_storage_dir,
         )
 
-        native_tools = _build_native_tools(state, query_mode)
+        native_tools = _build_native_tools(state, query_mode, eval_mode)
         prompt = await _build_prompt(query_mode, eval_mode, task_data, budget, state)
 
         try:

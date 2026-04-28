@@ -68,51 +68,58 @@ def _slayer_client(state: TaskState):
     return state._slayer_client
 
 
-def _build_native_tools(state: TaskState, query_mode: str) -> list:
+def _build_native_tools(
+    state: TaskState, query_mode: str, eval_mode: str = "a-interact",
+) -> list:
     """Construct the native tool functions, closing over per-task state.
 
     Each tool is a plain async function — Agno auto-converts these into
     tool definitions from the docstring + signature. Bodies are
-    one-liners over the shared helpers in `_submit`.
+    one-liners over the shared helpers in `_submit`, which apply
+    budget gating + bookkeeping.
     """
 
     async def ask_user(question: str) -> str:
         """Ask the user a clarification question about their query."""
-        return await ask_user_impl(state, question)
+        return await ask_user_impl(state, question, query_mode)
 
     async def execute_sql(sql: str) -> str:
         """Execute a SQL query against the database and return results."""
-        return run_env_action(state, _BY_NAME["execute_sql"], sql=sql)
+        return run_env_action(state, _BY_NAME["execute_sql"], query_mode, sql=sql)
 
     async def get_schema() -> str:
         """Get the database schema (CREATE TABLE statements with sample data)."""
-        return run_env_action(state, _BY_NAME["get_schema"])
+        return run_env_action(state, _BY_NAME["get_schema"], query_mode)
 
     async def get_all_column_meanings() -> str:
         """Get the meanings/descriptions of all columns in the database."""
-        return run_env_action(state, _BY_NAME["get_all_column_meanings"])
+        return run_env_action(state, _BY_NAME["get_all_column_meanings"], query_mode)
 
     async def get_column_meaning(table_name: str, column_name: str) -> str:
         """Get the meaning of a specific column in a table."""
         return run_env_action(
-            state, _BY_NAME["get_column_meaning"],
+            state, _BY_NAME["get_column_meaning"], query_mode,
             table_name=table_name, column_name=column_name,
         )
 
     async def get_all_external_knowledge_names() -> str:
         """List all available external knowledge entry names for this database."""
-        return run_env_action(state, _BY_NAME["get_all_external_knowledge_names"])
+        return run_env_action(
+            state, _BY_NAME["get_all_external_knowledge_names"], query_mode,
+        )
 
     async def get_knowledge_definition(knowledge_name: str) -> str:
         """Get the definition of a specific external knowledge entry."""
         return run_env_action(
-            state, _BY_NAME["get_knowledge_definition"],
+            state, _BY_NAME["get_knowledge_definition"], query_mode,
             knowledge_name=knowledge_name,
         )
 
     async def get_all_knowledge_definitions() -> str:
         """Get all external knowledge definitions for this database."""
-        return run_env_action(state, _BY_NAME["get_all_knowledge_definitions"])
+        return run_env_action(
+            state, _BY_NAME["get_all_knowledge_definitions"], query_mode,
+        )
 
     async def submit_sql(sql: str) -> str:
         """Submit your final SQL query for evaluation. Only submit when confident."""
@@ -125,6 +132,8 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
         """
         return submit_slayer_query(state, query_json, _slayer_client)
 
+    if query_mode == "raw" and eval_mode == "c-interact":
+        return [ask_user, submit_sql]
     if query_mode == "raw":
         return [
             execute_sql,
@@ -250,7 +259,7 @@ class AgnoAgent:
             slayer_storage_dir=slayer_storage_dir,
         )
 
-        native_tools = _build_native_tools(state, query_mode)
+        native_tools = _build_native_tools(state, query_mode, eval_mode)
         prompt = await _build_prompt(query_mode, eval_mode, task_data, budget, state)
 
         async def _run_with_tools(tools_list: list) -> str:

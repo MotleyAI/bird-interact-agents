@@ -104,30 +104,28 @@ def _slayer_client(deps: TaskDeps):
     return deps._slayer_client
 
 
-def _register_bird_interact_tools(agent: Agent) -> None:
+def _register_bird_interact_tools(agent: Agent, query_mode: str) -> None:
     """Wire the seven raw-mode discovery tools onto a PydanticAI agent.
 
-    Each wrapper is a one-liner over the shared `run_env_action` helper;
-    only the framework-specific decoration (signature + @agent.tool)
-    lives here. Add a new tool by extending BIRD_INTERACT_TOOLS in
-    `_tool_specs.py` and adding a wrapper here that matches its
-    parameter shape.
+    Each wrapper is a one-liner over the shared `run_env_action` helper
+    (which applies budget gating + bookkeeping). Only the framework-
+    specific decoration (signature + @agent.tool) lives here.
     """
 
     @agent.tool
     async def execute_sql(ctx: RunContext[TaskDeps], sql: str) -> str:
         """Execute a SQL query against the database and return results."""
-        return run_env_action(ctx.deps, _BY_NAME["execute_sql"], sql=sql)
+        return run_env_action(ctx.deps, _BY_NAME["execute_sql"], query_mode, sql=sql)
 
     @agent.tool
     async def get_schema(ctx: RunContext[TaskDeps]) -> str:
         """Get the database schema (CREATE TABLE statements with sample data)."""
-        return run_env_action(ctx.deps, _BY_NAME["get_schema"])
+        return run_env_action(ctx.deps, _BY_NAME["get_schema"], query_mode)
 
     @agent.tool
     async def get_all_column_meanings(ctx: RunContext[TaskDeps]) -> str:
         """Get the meanings/descriptions of all columns in the database."""
-        return run_env_action(ctx.deps, _BY_NAME["get_all_column_meanings"])
+        return run_env_action(ctx.deps, _BY_NAME["get_all_column_meanings"], query_mode)
 
     @agent.tool
     async def get_column_meaning(
@@ -135,14 +133,16 @@ def _register_bird_interact_tools(agent: Agent) -> None:
     ) -> str:
         """Get the meaning of a specific column in a table."""
         return run_env_action(
-            ctx.deps, _BY_NAME["get_column_meaning"],
+            ctx.deps, _BY_NAME["get_column_meaning"], query_mode,
             table_name=table_name, column_name=column_name,
         )
 
     @agent.tool
     async def get_all_external_knowledge_names(ctx: RunContext[TaskDeps]) -> str:
         """List all available external knowledge entry names for this database."""
-        return run_env_action(ctx.deps, _BY_NAME["get_all_external_knowledge_names"])
+        return run_env_action(
+            ctx.deps, _BY_NAME["get_all_external_knowledge_names"], query_mode,
+        )
 
     @agent.tool
     async def get_knowledge_definition(
@@ -150,14 +150,16 @@ def _register_bird_interact_tools(agent: Agent) -> None:
     ) -> str:
         """Get the definition of a specific external knowledge entry."""
         return run_env_action(
-            ctx.deps, _BY_NAME["get_knowledge_definition"],
+            ctx.deps, _BY_NAME["get_knowledge_definition"], query_mode,
             knowledge_name=knowledge_name,
         )
 
     @agent.tool
     async def get_all_knowledge_definitions(ctx: RunContext[TaskDeps]) -> str:
         """Get all external knowledge definitions for this database."""
-        return run_env_action(ctx.deps, _BY_NAME["get_all_knowledge_definitions"])
+        return run_env_action(
+            ctx.deps, _BY_NAME["get_all_knowledge_definitions"], query_mode,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -165,11 +167,11 @@ def _register_bird_interact_tools(agent: Agent) -> None:
 # PydanticAI agents register tools at construction time.
 # ---------------------------------------------------------------------------
 
-def _register_ask_user(agent: Agent) -> None:
+def _register_ask_user(agent: Agent, query_mode: str) -> None:
     @agent.tool
     async def ask_user(ctx: RunContext[TaskDeps], question: str) -> str:
         """Ask the user a clarification question about their query."""
-        return await ask_user_impl(ctx.deps, question)
+        return await ask_user_impl(ctx.deps, question, query_mode)
 
 
 def _register_submit_sql(agent: Agent) -> None:
@@ -193,8 +195,8 @@ def _build_raw_a_agent(model: Any, strict_value: bool = False) -> Agent:
         model=model, deps_type=TaskDeps, retries=2,
         prepare_tools=_make_prepare_tools(strict_value),
     )
-    _register_bird_interact_tools(agent)
-    _register_ask_user(agent)
+    _register_bird_interact_tools(agent, "raw")
+    _register_ask_user(agent, "raw")
     _register_submit_sql(agent)
     return agent
 
@@ -204,7 +206,7 @@ def _build_raw_c_agent(model: Any, strict_value: bool = False) -> Agent:
         model=model, deps_type=TaskDeps, retries=2,
         prepare_tools=_make_prepare_tools(strict_value),
     )
-    _register_ask_user(agent)
+    _register_ask_user(agent, "raw")
     _register_submit_sql(agent)
     return agent
 
@@ -231,7 +233,7 @@ def _build_slayer_agent(
         model=model, deps_type=TaskDeps, retries=2, toolsets=[slayer_server],
         prepare_tools=_make_prepare_tools(strict_value),
     )
-    _register_ask_user(agent)
+    _register_ask_user(agent, "slayer")
     _register_submit_query(agent)
     return agent
 
