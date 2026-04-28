@@ -26,6 +26,7 @@ from bird_interact_agents.agents.claude_sdk.prompts import (
     SLAYER_A_INTERACT,
 )
 from bird_interact_agents.harness import (
+    ACTION_COSTS,
     SampleStatus,
     _schema_cache,
     build_user_decoder_prompt,
@@ -35,6 +36,7 @@ from bird_interact_agents.harness import (
     load_db_data_if_needed,
     parse_encoder_response,
     slayer_mcp_stdio_config,
+    update_budget,
 )
 
 logger = logging.getLogger(__name__)
@@ -97,76 +99,104 @@ async def _ask_user_impl(state: TaskState, question: str) -> str:
     return match.group(1).strip() if match else raw_response.strip()
 
 
-def _build_native_functions(state: TaskState, query_mode: str) -> list:
+def _budget_note(status: SampleStatus) -> str:
+    return (
+        f"\n\n[Remaining budget: {status.remaining_budget:.1f}"
+        f" / {status.total_budget:.1f}]"
+    )
+
+
+def _gate(action_name: str, status: SampleStatus, query_mode: str) -> str | None:
+    """Reject a non-submit tool call when budget would go below submit cost.
+
+    Mirrors `claude_sdk.agent._gate`. Honors `status.force_submit`.
+    """
+    if action_name.startswith("submit_"):
+        return None
+    submit_tool = "submit_query" if query_mode == "slayer" else "submit_sql"
+    submit_cost = ACTION_COSTS[submit_tool]
+    cost = ACTION_COSTS.get(action_name, 0)
+    if status.force_submit or status.remaining_budget < cost + submit_cost:
+        return (
+            f"Budget exhausted ({status.remaining_budget:.1f} remaining, "
+            f"{action_name} costs {cost}). You MUST call {submit_tool} now "
+            "with your best answer."
+        )
+    return None
+
+
+def _build_native_functions(
+    state: TaskState, query_mode: str, eval_mode: str = "a-interact"
+) -> list:
     """Construct the native tool functions, closing over per-task state."""
+
+    async def _run_env(action_name: str, action_str: str) -> str:
+        err = _gate(action_name, state.status, query_mode)
+        if err is not None:
+            return err
+        observation, _ = execute_env_action(
+            action_str, state.status, state.data_path_base
+        )
+        update_budget(state.status, action_name)
+        return str(observation) + _budget_note(state.status)
 
     async def ask_user(question: str) -> str:
         """Ask the user a clarification question about their query."""
-        return await _ask_user_impl(state, question)
+        err = _gate("ask_user", state.status, query_mode)
+        if err is not None:
+            return err
+        answer = await _ask_user_impl(state, question)
+        update_budget(state.status, "ask_user")
+        return answer + _budget_note(state.status)
 
     async def execute_sql(sql: str) -> str:
         """Execute a SQL query against the database and return results."""
-        observation, _ = execute_env_action(
-            f"execute({sql})", state.status, state.data_path_base
-        )
-        return str(observation)
+        return await _run_env("execute_sql", f"execute({sql})")
 
     async def get_schema() -> str:
         """Get the database schema (CREATE TABLE statements with sample data)."""
-        observation, _ = execute_env_action(
-            "get_schema()", state.status, state.data_path_base
-        )
-        return str(observation)
+        return await _run_env("get_schema", "get_schema()")
 
     async def get_all_column_meanings() -> str:
         """Get the meanings/descriptions of all columns in the database."""
-        observation, _ = execute_env_action(
-            "get_all_column_meanings()", state.status, state.data_path_base
-        )
-        return str(observation)
+        return await _run_env("get_all_column_meanings", "get_all_column_meanings()")
 
     async def get_column_meaning(table_name: str, column_name: str) -> str:
         """Get the meaning of a specific column in a table."""
         action = f"get_column_meaning('{table_name}', '{column_name}')"
-        observation, _ = execute_env_action(
-            action, state.status, state.data_path_base
-        )
-        return str(observation)
+        return await _run_env("get_column_meaning", action)
 
     async def get_all_external_knowledge_names() -> str:
         """List all available external knowledge entry names for this database."""
-        observation, _ = execute_env_action(
-            "get_all_external_knowledge_names()", state.status, state.data_path_base
+        return await _run_env(
+            "get_all_external_knowledge_names",
+            "get_all_external_knowledge_names()",
         )
-        return str(observation)
 
     async def get_knowledge_definition(knowledge_name: str) -> str:
         """Get the definition of a specific external knowledge entry."""
         action = f"get_knowledge_definition('{knowledge_name}')"
-        observation, _ = execute_env_action(
-            action, state.status, state.data_path_base
-        )
-        return str(observation)
+        return await _run_env("get_knowledge_definition", action)
 
     async def get_all_knowledge_definitions() -> str:
         """Get all external knowledge definitions for this database."""
-        observation, _ = execute_env_action(
-            "get_all_knowledge_definitions()", state.status, state.data_path_base
+        return await _run_env(
+            "get_all_knowledge_definitions", "get_all_knowledge_definitions()"
         )
-        return str(observation)
 
     async def submit_sql(sql: str) -> str:
         """Submit your final SQL query for evaluation. Only submit when confident."""
         observation, reward, p1, p2, finished = execute_submit_action(
             sql, state.status, state.data_path_base
         )
+        update_budget(state.status, "submit_sql")
         state.result = {
             "phase1_passed": p1,
             "phase2_passed": p2,
             "total_reward": reward if reward is not None else 0.0,
             "finished": finished,
         }
-        return str(observation)
+        return str(observation) + _budget_note(state.status)
 
     async def submit_query(query_json: str) -> str:
         """Submit your final SLayer query for evaluation. Translates to SQL
@@ -184,6 +214,7 @@ def _build_native_functions(state: TaskState, query_mode: str) -> list:
         observation, reward, p1, p2, finished = execute_submit_action(
             sql, state.status, state.data_path_base
         )
+        update_budget(state.status, "submit_query")
         state.result = {
             "phase1_passed": p1,
             "phase2_passed": p2,
@@ -191,8 +222,10 @@ def _build_native_functions(state: TaskState, query_mode: str) -> list:
             "finished": finished,
             "submitted_sql": sql,
         }
-        return f"Generated SQL:\n{sql}\n\nResult: {observation}"
+        return f"Generated SQL:\n{sql}\n\nResult: {observation}" + _budget_note(state.status)
 
+    if query_mode == "raw" and eval_mode == "c-interact":
+        return [ask_user, submit_sql]
     if query_mode == "raw":
         return [
             execute_sql,
@@ -361,7 +394,7 @@ class McpAgentAgent:
             slayer_storage_dir=slayer_storage_dir,
         )
 
-        functions = _build_native_functions(state, query_mode)
+        functions = _build_native_functions(state, query_mode, eval_mode)
         prompt = await _build_prompt(query_mode, eval_mode, task_data, budget, state)
         server_names = ["slayer"] if query_mode == "slayer" else []
 

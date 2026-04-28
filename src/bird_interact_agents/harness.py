@@ -104,9 +104,11 @@ def calculate_budget(
         turns + 1 submit) using the existing coin plumbing.
     """
     amb = _ambiguity_count(task_data)
+    if mode == "a-interact":
+        return 6 + 2 * amb + 2 * patience
     if mode == "c-interact":
         return ACTION_COSTS["ask_user"] * (amb + patience) + ACTION_COSTS["submit_sql"]
-    return 6 + 2 * amb + 2 * patience
+    raise ValueError(f"Unsupported budget mode: {mode}")
 
 
 def update_budget(status: "SampleStatus", action_name: str) -> tuple[float, bool]:
@@ -119,7 +121,7 @@ def update_budget(status: "SampleStatus", action_name: str) -> tuple[float, bool
     """
     cost = ACTION_COSTS.get(action_name, 0)
     status.remaining_budget = max(0.0, status.remaining_budget - cost)
-    if status.remaining_budget < ACTION_COSTS["submit_sql"]:
+    if status.remaining_budget <= ACTION_COSTS["submit_sql"]:
         status.force_submit = True
     return status.remaining_budget, status.force_submit
 

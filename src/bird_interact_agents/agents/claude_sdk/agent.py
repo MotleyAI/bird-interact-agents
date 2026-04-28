@@ -102,12 +102,16 @@ def _gate(action_name: str, status: SampleStatus) -> str | None:
     Mirrors the `force_submit` gating in the original mini_interact_agent
     and ADK before_tool_callback.
     """
+    if action_name.startswith("submit_"):
+        return None
+    submit_tool = "submit_query" if _ctx.get("query_mode") == "slayer" else "submit_sql"
+    submit_cost = ACTION_COSTS[submit_tool]
     cost = ACTION_COSTS.get(action_name, 0)
-    if status.remaining_budget < cost:
+    if status.force_submit or status.remaining_budget < cost + submit_cost:
         return (
             f"Budget exhausted ({status.remaining_budget:.1f} remaining, "
-            f"{action_name} costs {cost}). You MUST call submit_sql now "
-            "with your best SQL."
+            f"{action_name} costs {cost}). You MUST call {submit_tool} now "
+            "with your best answer."
         )
     return None
 
@@ -504,6 +508,7 @@ class ClaudeSDKAgent:
             "_slayer_storage": None,
             "result": None,
             "eval_mode": eval_mode,
+            "query_mode": query_mode,
             "max_asks": max_asks,
             "asks_used": 0,
         })

@@ -26,6 +26,7 @@ from bird_interact_agents.agents.claude_sdk.prompts import (
     SLAYER_A_INTERACT,
 )
 from bird_interact_agents.harness import (
+    ACTION_COSTS,
     SampleStatus,
     _schema_cache,
     build_user_decoder_prompt,
@@ -36,6 +37,7 @@ from bird_interact_agents.harness import (
     load_db_data_if_needed,
     parse_encoder_response,
     slayer_mcp_stdio_config,
+    update_budget,
 )
 
 
@@ -125,7 +127,35 @@ async def _ask_user_impl(state: TaskState, question: str) -> str:
     return match.group(1).strip() if match else raw_response.strip()
 
 
-def _build_native_tools(state: TaskState, query_mode: str) -> list:
+def _budget_note(status: SampleStatus) -> str:
+    return (
+        f"\n\n[Remaining budget: {status.remaining_budget:.1f}"
+        f" / {status.total_budget:.1f}]"
+    )
+
+
+def _gate(action_name: str, status: SampleStatus, query_mode: str) -> str | None:
+    """Reject a non-submit tool call when budget would go below submit cost.
+
+    Mirrors `claude_sdk.agent._gate`. Honors `status.force_submit`.
+    """
+    if action_name.startswith("submit_"):
+        return None
+    submit_tool = "submit_query" if query_mode == "slayer" else "submit_sql"
+    submit_cost = ACTION_COSTS[submit_tool]
+    cost = ACTION_COSTS.get(action_name, 0)
+    if status.force_submit or status.remaining_budget < cost + submit_cost:
+        return (
+            f"Budget exhausted ({status.remaining_budget:.1f} remaining, "
+            f"{action_name} costs {cost}). You MUST call {submit_tool} now "
+            "with your best answer."
+        )
+    return None
+
+
+def _build_native_tools(
+    state: TaskState, query_mode: str, eval_mode: str = "a-interact"
+) -> list:
     """Construct the native smolagents tools, closing over per-task state.
 
     smolagents' @tool decorator wraps a regular sync function. We use
@@ -135,6 +165,18 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
     """
     from smolagents import tool
 
+    db_name = state.status.original_data["selected_database"]
+
+    def _run_env(action_name: str, action_str: str) -> str:
+        err = _gate(action_name, state.status, query_mode)
+        if err is not None:
+            return err
+        observation, _ = execute_env_action(
+            action_str, state.status, state.data_path_base
+        )
+        update_budget(state.status, action_name)
+        return str(observation) + _budget_note(state.status)
+
     @tool
     def ask_user(question: str) -> str:
         """Ask the user a clarification question about their query.
@@ -142,9 +184,12 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
         Args:
             question: The clarification question to ask.
         """
-        return asyncio.run(_ask_user_impl(state, question))
-
-    db_name = state.status.original_data["selected_database"]
+        err = _gate("ask_user", state.status, query_mode)
+        if err is not None:
+            return err
+        answer = asyncio.run(_ask_user_impl(state, question))
+        update_budget(state.status, "ask_user")
+        return answer + _budget_note(state.status)
 
     @tool
     def execute_sql(sql: str) -> str:
@@ -154,26 +199,17 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
             sql: The SQL query to execute.
         """
         _ensure_thread_safe(db_name, state.data_path_base)
-        observation, _ = execute_env_action(
-            f"execute({sql})", state.status, state.data_path_base
-        )
-        return str(observation)
+        return _run_env("execute_sql", f"execute({sql})")
 
     @tool
     def get_schema() -> str:
         """Get the database schema (CREATE TABLE statements with sample data)."""
-        observation, _ = execute_env_action(
-            "get_schema()", state.status, state.data_path_base
-        )
-        return str(observation)
+        return _run_env("get_schema", "get_schema()")
 
     @tool
     def get_all_column_meanings() -> str:
         """Get the meanings/descriptions of all columns in the database."""
-        observation, _ = execute_env_action(
-            "get_all_column_meanings()", state.status, state.data_path_base
-        )
-        return str(observation)
+        return _run_env("get_all_column_meanings", "get_all_column_meanings()")
 
     @tool
     def get_column_meaning(table_name: str, column_name: str) -> str:
@@ -184,18 +220,15 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
             column_name: The column name.
         """
         action = f"get_column_meaning('{table_name}', '{column_name}')"
-        observation, _ = execute_env_action(
-            action, state.status, state.data_path_base
-        )
-        return str(observation)
+        return _run_env("get_column_meaning", action)
 
     @tool
     def get_all_external_knowledge_names() -> str:
         """List all available external knowledge entry names for this database."""
-        observation, _ = execute_env_action(
-            "get_all_external_knowledge_names()", state.status, state.data_path_base
+        return _run_env(
+            "get_all_external_knowledge_names",
+            "get_all_external_knowledge_names()",
         )
-        return str(observation)
 
     @tool
     def get_knowledge_definition(knowledge_name: str) -> str:
@@ -205,18 +238,14 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
             knowledge_name: The knowledge entry name.
         """
         action = f"get_knowledge_definition('{knowledge_name}')"
-        observation, _ = execute_env_action(
-            action, state.status, state.data_path_base
-        )
-        return str(observation)
+        return _run_env("get_knowledge_definition", action)
 
     @tool
     def get_all_knowledge_definitions() -> str:
         """Get all external knowledge definitions for this database."""
-        observation, _ = execute_env_action(
-            "get_all_knowledge_definitions()", state.status, state.data_path_base
+        return _run_env(
+            "get_all_knowledge_definitions", "get_all_knowledge_definitions()"
         )
-        return str(observation)
 
     @tool
     def submit_sql(sql: str) -> str:
@@ -229,13 +258,14 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
         observation, reward, p1, p2, finished = execute_submit_action(
             sql, state.status, state.data_path_base
         )
+        update_budget(state.status, "submit_sql")
         state.result = {
             "phase1_passed": p1,
             "phase2_passed": p2,
             "total_reward": reward if reward is not None else 0.0,
             "finished": finished,
         }
-        return str(observation)
+        return str(observation) + _budget_note(state.status)
 
     @tool
     def submit_query(query_json: str) -> str:
@@ -259,6 +289,7 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
         observation, reward, p1, p2, finished = execute_submit_action(
             sql, state.status, state.data_path_base
         )
+        update_budget(state.status, "submit_query")
         state.result = {
             "phase1_passed": p1,
             "phase2_passed": p2,
@@ -266,8 +297,10 @@ def _build_native_tools(state: TaskState, query_mode: str) -> list:
             "finished": finished,
             "submitted_sql": sql,
         }
-        return f"Generated SQL:\n{sql}\n\nResult: {observation}"
+        return f"Generated SQL:\n{sql}\n\nResult: {observation}" + _budget_note(state.status)
 
+    if query_mode == "raw" and eval_mode == "c-interact":
+        return [ask_user, submit_sql]
     if query_mode == "raw":
         return [
             execute_sql,
@@ -424,7 +457,7 @@ class SmolagentsAgent:
             slayer_storage_dir=slayer_storage_dir,
         )
 
-        native_tools = _build_native_tools(state, query_mode)
+        native_tools = _build_native_tools(state, query_mode, eval_mode)
         prompt = await _build_prompt(query_mode, eval_mode, task_data, budget, state)
 
         try:

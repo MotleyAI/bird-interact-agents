@@ -48,6 +48,7 @@ from bird_interact_agents.agents.claude_sdk.prompts import (
     SLAYER_A_INTERACT,
 )
 from bird_interact_agents.harness import (
+    ACTION_COSTS,
     SampleStatus,
     _schema_cache,
     build_user_decoder_prompt,
@@ -57,6 +58,7 @@ from bird_interact_agents.harness import (
     load_db_data_if_needed,
     parse_encoder_response,
     slayer_mcp_stdio_config,
+    update_budget,
 )
 
 logger = logging.getLogger(__name__)
@@ -126,6 +128,44 @@ async def _ask_user_impl(deps: TaskDeps, question: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Budget gate / bookkeeping — mirrors `claude_sdk.agent._gate`.
+# ---------------------------------------------------------------------------
+
+def _budget_note(status: SampleStatus) -> str:
+    return (
+        f"\n\n[Remaining budget: {status.remaining_budget:.1f}"
+        f" / {status.total_budget:.1f}]"
+    )
+
+
+def _gate(action_name: str, status: SampleStatus, query_mode: str) -> str | None:
+    """Reject a non-submit tool call when budget would go below submit cost."""
+    if action_name.startswith("submit_"):
+        return None
+    submit_tool = "submit_query" if query_mode == "slayer" else "submit_sql"
+    submit_cost = ACTION_COSTS[submit_tool]
+    cost = ACTION_COSTS.get(action_name, 0)
+    if status.force_submit or status.remaining_budget < cost + submit_cost:
+        return (
+            f"Budget exhausted ({status.remaining_budget:.1f} remaining, "
+            f"{action_name} costs {cost}). You MUST call {submit_tool} now "
+            "with your best answer."
+        )
+    return None
+
+
+def _run_env_sync(
+    deps: TaskDeps, action_name: str, action_str: str, query_mode: str
+) -> str:
+    err = _gate(action_name, deps.status, query_mode)
+    if err is not None:
+        return err
+    observation, _ = execute_env_action(action_str, deps.status, deps.data_path_base)
+    update_budget(deps.status, action_name)
+    return str(observation) + _budget_note(deps.status)
+
+
+# ---------------------------------------------------------------------------
 # Agent factory — one agent per (query_mode, eval_mode) combo, since
 # PydanticAI agents register tools at construction time.
 # ---------------------------------------------------------------------------
@@ -136,29 +176,27 @@ def _build_raw_a_agent(model: str, strict_value: bool = False) -> Agent:
         prepare_tools=_make_prepare_tools(strict_value),
     )
 
+    query_mode = "raw"
+
     @agent.tool
     async def execute_sql(ctx: RunContext[TaskDeps], sql: str) -> str:
         """Execute a SQL query against the database and return results."""
-        observation, _ = execute_env_action(
-            f"execute({sql})", ctx.deps.status, ctx.deps.data_path_base
-        )
-        return str(observation)
+        return _run_env_sync(ctx.deps, "execute_sql", f"execute({sql})", query_mode)
 
     @agent.tool
     async def get_schema(ctx: RunContext[TaskDeps]) -> str:
         """Get the database schema (CREATE TABLE statements with sample data)."""
-        observation, _ = execute_env_action(
-            "get_schema()", ctx.deps.status, ctx.deps.data_path_base
-        )
-        return str(observation)
+        return _run_env_sync(ctx.deps, "get_schema", "get_schema()", query_mode)
 
     @agent.tool
     async def get_all_column_meanings(ctx: RunContext[TaskDeps]) -> str:
         """Get the meanings/descriptions of all columns in the database."""
-        observation, _ = execute_env_action(
-            "get_all_column_meanings()", ctx.deps.status, ctx.deps.data_path_base
+        return _run_env_sync(
+            ctx.deps,
+            "get_all_column_meanings",
+            "get_all_column_meanings()",
+            query_mode,
         )
-        return str(observation)
 
     @agent.tool
     async def get_column_meaning(
@@ -166,18 +204,17 @@ def _build_raw_a_agent(model: str, strict_value: bool = False) -> Agent:
     ) -> str:
         """Get the meaning of a specific column in a table."""
         action = f"get_column_meaning('{table_name}', '{column_name}')"
-        observation, _ = execute_env_action(
-            action, ctx.deps.status, ctx.deps.data_path_base
-        )
-        return str(observation)
+        return _run_env_sync(ctx.deps, "get_column_meaning", action, query_mode)
 
     @agent.tool
     async def get_all_external_knowledge_names(ctx: RunContext[TaskDeps]) -> str:
         """List all available external knowledge entry names for this database."""
-        observation, _ = execute_env_action(
-            "get_all_external_knowledge_names()", ctx.deps.status, ctx.deps.data_path_base
+        return _run_env_sync(
+            ctx.deps,
+            "get_all_external_knowledge_names",
+            "get_all_external_knowledge_names()",
+            query_mode,
         )
-        return str(observation)
 
     @agent.tool
     async def get_knowledge_definition(
@@ -185,23 +222,27 @@ def _build_raw_a_agent(model: str, strict_value: bool = False) -> Agent:
     ) -> str:
         """Get the definition of a specific external knowledge entry."""
         action = f"get_knowledge_definition('{knowledge_name}')"
-        observation, _ = execute_env_action(
-            action, ctx.deps.status, ctx.deps.data_path_base
-        )
-        return str(observation)
+        return _run_env_sync(ctx.deps, "get_knowledge_definition", action, query_mode)
 
     @agent.tool
     async def get_all_knowledge_definitions(ctx: RunContext[TaskDeps]) -> str:
         """Get all external knowledge definitions for this database."""
-        observation, _ = execute_env_action(
-            "get_all_knowledge_definitions()", ctx.deps.status, ctx.deps.data_path_base
+        return _run_env_sync(
+            ctx.deps,
+            "get_all_knowledge_definitions",
+            "get_all_knowledge_definitions()",
+            query_mode,
         )
-        return str(observation)
 
     @agent.tool
     async def ask_user(ctx: RunContext[TaskDeps], question: str) -> str:
         """Ask the user a clarification question about their query."""
-        return await _ask_user_impl(ctx.deps, question)
+        err = _gate("ask_user", ctx.deps.status, query_mode)
+        if err is not None:
+            return err
+        answer = await _ask_user_impl(ctx.deps, question)
+        update_budget(ctx.deps.status, "ask_user")
+        return answer + _budget_note(ctx.deps.status)
 
     @agent.tool
     async def submit_sql(ctx: RunContext[TaskDeps], sql: str) -> str:
@@ -209,13 +250,14 @@ def _build_raw_a_agent(model: str, strict_value: bool = False) -> Agent:
         observation, reward, p1, p2, finished = execute_submit_action(
             sql, ctx.deps.status, ctx.deps.data_path_base
         )
+        update_budget(ctx.deps.status, "submit_sql")
         ctx.deps.result = {
             "phase1_passed": p1,
             "phase2_passed": p2,
             "total_reward": reward if reward is not None else 0.0,
             "finished": finished,
         }
-        return str(observation)
+        return str(observation) + _budget_note(ctx.deps.status)
 
     return agent
 
@@ -225,11 +267,17 @@ def _build_raw_c_agent(model: str, strict_value: bool = False) -> Agent:
         model=model, deps_type=TaskDeps, retries=2,
         prepare_tools=_make_prepare_tools(strict_value),
     )
+    query_mode = "raw"
 
     @agent.tool
     async def ask_user(ctx: RunContext[TaskDeps], question: str) -> str:
         """Ask the user a clarification question about their query."""
-        return await _ask_user_impl(ctx.deps, question)
+        err = _gate("ask_user", ctx.deps.status, query_mode)
+        if err is not None:
+            return err
+        answer = await _ask_user_impl(ctx.deps, question)
+        update_budget(ctx.deps.status, "ask_user")
+        return answer + _budget_note(ctx.deps.status)
 
     @agent.tool
     async def submit_sql(ctx: RunContext[TaskDeps], sql: str) -> str:
@@ -237,13 +285,14 @@ def _build_raw_c_agent(model: str, strict_value: bool = False) -> Agent:
         observation, reward, p1, p2, finished = execute_submit_action(
             sql, ctx.deps.status, ctx.deps.data_path_base
         )
+        update_budget(ctx.deps.status, "submit_sql")
         ctx.deps.result = {
             "phase1_passed": p1,
             "phase2_passed": p2,
             "total_reward": reward if reward is not None else 0.0,
             "finished": finished,
         }
-        return str(observation)
+        return str(observation) + _budget_note(ctx.deps.status)
 
     return agent
 
@@ -264,11 +313,17 @@ def _build_slayer_agent(
         model=model, deps_type=TaskDeps, retries=2, toolsets=[slayer_server],
         prepare_tools=_make_prepare_tools(strict_value),
     )
+    query_mode = "slayer"
 
     @agent.tool
     async def ask_user(ctx: RunContext[TaskDeps], question: str) -> str:
         """Ask the user a clarification question."""
-        return await _ask_user_impl(ctx.deps, question)
+        err = _gate("ask_user", ctx.deps.status, query_mode)
+        if err is not None:
+            return err
+        answer = await _ask_user_impl(ctx.deps, question)
+        update_budget(ctx.deps.status, "ask_user")
+        return answer + _budget_note(ctx.deps.status)
 
     @agent.tool
     async def submit_query(ctx: RunContext[TaskDeps], query_json: str) -> str:
@@ -289,6 +344,7 @@ def _build_slayer_agent(
         observation, reward, p1, p2, finished = execute_submit_action(
             sql, ctx.deps.status, ctx.deps.data_path_base
         )
+        update_budget(ctx.deps.status, "submit_query")
         ctx.deps.result = {
             "phase1_passed": p1,
             "phase2_passed": p2,
@@ -296,7 +352,7 @@ def _build_slayer_agent(
             "finished": finished,
             "submitted_sql": sql,
         }
-        return f"Generated SQL:\n{sql}\n\nResult: {observation}"
+        return f"Generated SQL:\n{sql}\n\nResult: {observation}" + _budget_note(ctx.deps.status)
 
     return agent
 
