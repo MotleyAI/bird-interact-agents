@@ -15,12 +15,13 @@ import logging
 import re
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from bird_interact_agents.agents._prompt_builders import (
     build_raw_c_interact_prompt,
     build_slayer_c_interact_prompt,
 )
+from bird_interact_agents.usage import TokenUsage, acompletion_tracked
 from bird_interact_agents.agents.claude_sdk.prompts import (
     RAW_A_INTERACT,
     SLAYER_A_INTERACT,
@@ -80,6 +81,7 @@ class TaskState(BaseModel):
     user_sim_prompt_version: str
     slayer_storage_dir: str = ""
     result: dict | None = None
+    usage: TokenUsage = Field(default_factory=TokenUsage)
     _slayer_client: Any = None
     _slayer_storage: Any = None
 
@@ -96,15 +98,15 @@ def _slayer_client(state: TaskState):
 
 
 async def _ask_user_impl(state: TaskState, question: str) -> str:
-    import litellm
-
     db_name = state.status.original_data["selected_database"]
     schema = _schema_cache.get(db_name, "")
 
     encoder_prompt = build_user_encoder_prompt(
         question, state.status, schema, state.user_sim_prompt_version
     )
-    encoder_resp = await litellm.acompletion(
+    encoder_resp = await acompletion_tracked(
+        state.usage,
+        scope="user_sim",
         model=state.user_sim_model,
         messages=[{"role": "user", "content": encoder_prompt}],
     )
@@ -115,7 +117,9 @@ async def _ask_user_impl(state: TaskState, question: str) -> str:
     decoder_prompt = build_user_decoder_prompt(
         question, encoder_action, state.status, schema, state.user_sim_prompt_version
     )
-    decoder_resp = await litellm.acompletion(
+    decoder_resp = await acompletion_tracked(
+        state.usage,
+        scope="user_sim",
         model=state.user_sim_model,
         messages=[{"role": "user", "content": decoder_prompt}],
     )
@@ -346,7 +350,8 @@ def _run_smolagents_sync(
     query_mode: str,
     slayer_storage_dir: str,
     model_id: str,
-    strict: bool = False,
+    strict: bool,
+    state: TaskState,
 ) -> str:
     """Synchronous helper that runs the smolagents loop. Called via to_thread."""
     from smolagents import ToolCallingAgent
@@ -380,6 +385,16 @@ def _run_smolagents_sync(
             max_tool_threads=1,
         )
         result = agent.run(user_query)
+
+    # smolagents accumulates token counts on agent.monitor across the run.
+    monitor = getattr(agent, "monitor", None)
+    if monitor is not None:
+        state.usage.add_call(
+            scope="agent",
+            model=model_id,
+            prompt=getattr(monitor, "total_input_token_count", 0) or 0,
+            completion=getattr(monitor, "total_output_token_count", 0) or 0,
+        )
     return str(result)
 
 
@@ -437,6 +452,7 @@ class SmolagentsAgent:
                 slayer_storage_dir,
                 self.model_id,
                 self.strict,
+                state,
             )
         except Exception as e:
             logger.error("Agent error on %s: %s", instance_id, e)
@@ -446,6 +462,7 @@ class SmolagentsAgent:
                 "phase1_passed": False, "phase2_passed": False,
                 "total_reward": 0.0, "trajectory": [],
                 "error": str(e),
+                "usage": state.usage.model_dump(),
             }
 
         result = state.result or {}
@@ -458,4 +475,5 @@ class SmolagentsAgent:
             "total_reward": result.get("total_reward", 0.0),
             "trajectory": [{"final_output": output[:500]}],
             "error": None,
+            "usage": state.usage.model_dump(),
         }

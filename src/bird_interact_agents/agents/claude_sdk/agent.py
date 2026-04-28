@@ -33,6 +33,7 @@ from bird_interact_agents.harness import (
     slayer_mcp_stdio_config,
     update_budget,
 )
+from bird_interact_agents.usage import TokenUsage, acompletion_tracked
 
 MAX_MODEL_TURNS = 60
 
@@ -199,11 +200,12 @@ async def _ask_user_impl(question: str) -> str:
     schema = _schema_cache.get(db_name, "")
     model = _ctx.get("user_sim_model", "anthropic/claude-haiku-4-5-20251001")
     prompt_version = _ctx.get("user_sim_prompt_version", "v2")
-
-    import litellm
+    accum: TokenUsage = _ctx["usage"]
 
     encoder_prompt = build_user_encoder_prompt(question, status, schema, prompt_version)
-    encoder_resp = await litellm.acompletion(
+    encoder_resp = await acompletion_tracked(
+        accum,
+        scope="user_sim",
         model=model,
         messages=[{"role": "user", "content": encoder_prompt}],
     )
@@ -214,7 +216,9 @@ async def _ask_user_impl(question: str) -> str:
     decoder_prompt = build_user_decoder_prompt(
         question, encoder_action, status, schema, prompt_version
     )
-    decoder_resp = await litellm.acompletion(
+    decoder_resp = await acompletion_tracked(
+        accum,
+        scope="user_sim",
         model=model,
         messages=[{"role": "user", "content": decoder_prompt}],
     )
@@ -494,6 +498,7 @@ class ClaudeSDKAgent:
 
         # Set the per-task context dict via contextvars — concurrent task
         # runs each get their own dict instance.
+        accum = TokenUsage()
         _ctx_var.set({
             "status": status,
             "data_path_base": data_path_base,
@@ -506,6 +511,7 @@ class ClaudeSDKAgent:
             "eval_mode": eval_mode,
             "max_asks": max_asks,
             "asks_used": 0,
+            "usage": accum,
         })
 
         tools = _select_tools(query_mode, eval_mode)
@@ -544,6 +550,20 @@ class ClaudeSDKAgent:
                     trajectory.append(
                         {"type": str(type(msg).__name__), "data": str(msg)[:500]}
                     )
+                    # Each assistant turn carries a `usage` block; capture
+                    # incrementally so we still record partial usage on
+                    # exception or early break.
+                    msg_usage = getattr(msg, "usage", None)
+                    if msg_usage is not None:
+                        accum.add_call(
+                            scope="agent",
+                            model=self.model,
+                            prompt=getattr(msg_usage, "input_tokens", 0) or 0,
+                            completion=getattr(msg_usage, "output_tokens", 0) or 0,
+                            cache_read=(
+                                getattr(msg_usage, "cache_read_input_tokens", 0) or 0
+                            ),
+                        )
                     # Count assistant model turns; cap at MAX_MODEL_TURNS to
                     # match the original mini_interact_agent (--max_turns=60)
                     # and ADK before_model_callback.
@@ -566,6 +586,7 @@ class ClaudeSDKAgent:
                 "total_reward": 0.0,
                 "trajectory": trajectory,
                 "error": str(e),
+                "usage": accum.model_dump(),
             }
 
         result = _ctx.get("result") or {}
@@ -578,4 +599,5 @@ class ClaudeSDKAgent:
             "total_reward": result.get("total_reward", 0.0),
             "trajectory": trajectory,
             "error": None,
+            "usage": accum.model_dump(),
         }

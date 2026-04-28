@@ -15,12 +15,13 @@ import logging
 import re
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from bird_interact_agents.agents._prompt_builders import (
     build_raw_c_interact_prompt,
     build_slayer_c_interact_prompt,
 )
+from bird_interact_agents.usage import TokenUsage, acompletion_tracked
 from bird_interact_agents.agents.claude_sdk.prompts import (
     RAW_A_INTERACT,
     SLAYER_A_INTERACT,
@@ -51,6 +52,7 @@ class TaskState(BaseModel):
     user_sim_prompt_version: str
     slayer_storage_dir: str = ""
     result: dict | None = None
+    usage: TokenUsage = Field(default_factory=TokenUsage)
     _slayer_client: Any = None
     _slayer_storage: Any = None
 
@@ -68,15 +70,15 @@ def _slayer_client(state: TaskState):
 
 async def _ask_user_impl(state: TaskState, question: str) -> str:
     """Encoder/decoder user simulator using LiteLLM."""
-    import litellm
-
     db_name = state.status.original_data["selected_database"]
     schema = _schema_cache.get(db_name, "")
 
     encoder_prompt = build_user_encoder_prompt(
         question, state.status, schema, state.user_sim_prompt_version
     )
-    encoder_resp = await litellm.acompletion(
+    encoder_resp = await acompletion_tracked(
+        state.usage,
+        scope="user_sim",
         model=state.user_sim_model,
         messages=[{"role": "user", "content": encoder_prompt}],
     )
@@ -87,7 +89,9 @@ async def _ask_user_impl(state: TaskState, question: str) -> str:
     decoder_prompt = build_user_decoder_prompt(
         question, encoder_action, state.status, schema, state.user_sim_prompt_version
     )
-    decoder_resp = await litellm.acompletion(
+    decoder_resp = await acompletion_tracked(
+        state.usage,
+        scope="user_sim",
         model=state.user_sim_model,
         messages=[{"role": "user", "content": decoder_prompt}],
     )
@@ -368,6 +372,12 @@ class McpAgentAgent:
         settings = _build_settings(query_mode, slayer_storage_dir, self.model)
         app = MCPApp(name="bird-interact-mcp-agent", settings=settings)
 
+        # mcp-agent's SDK does not expose per-call token counts — we still
+        # capture user-sim usage, but flag the whole run partial so the
+        # comparison report can footnote it instead of fabricating
+        # agent-leg numbers.
+        state.usage.partial = True
+
         try:
             async with app.run():
                 agent = Agent(
@@ -390,6 +400,7 @@ class McpAgentAgent:
                 "phase1_passed": False, "phase2_passed": False,
                 "total_reward": 0.0, "trajectory": [],
                 "error": str(e),
+                "usage": state.usage.model_dump(),
             }
 
         result = state.result or {}
@@ -402,4 +413,5 @@ class McpAgentAgent:
             "total_reward": result.get("total_reward", 0.0),
             "trajectory": [{"final_output": str(output)[:500]}],
             "error": None,
+            "usage": state.usage.model_dump(),
         }

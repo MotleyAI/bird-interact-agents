@@ -11,13 +11,14 @@ from typing import Any
 
 from dataclasses import replace
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.usage import UsageLimits
 
 from bird_interact_agents.agents.claude_sdk.agent import MAX_MODEL_TURNS
+from bird_interact_agents.usage import TokenUsage, acompletion_tracked
 
 
 def _make_prepare_tools(strict_value: bool):
@@ -74,6 +75,9 @@ class TaskDeps(BaseModel):
     slayer_storage_dir: str = ""
     # Mutable scratch space — recorded by submit tools, read by the runner.
     result: dict | None = None
+    # Token usage accumulator — written by the user-sim wrapper and the
+    # post-run capture in run_task.
+    usage: TokenUsage = Field(default_factory=TokenUsage)
     # SLayer client/storage cache (initialised lazily)
     _slayer_client: Any = None
     _slayer_storage: Any = None
@@ -96,15 +100,15 @@ def _slayer_client(deps: TaskDeps):
 
 
 async def _ask_user_impl(deps: TaskDeps, question: str) -> str:
-    import litellm
-
     db_name = deps.status.original_data["selected_database"]
     schema = _schema_cache.get(db_name, "")
 
     encoder_prompt = build_user_encoder_prompt(
         question, deps.status, schema, deps.user_sim_prompt_version
     )
-    encoder_resp = await litellm.acompletion(
+    encoder_resp = await acompletion_tracked(
+        deps.usage,
+        scope="user_sim",
         model=deps.user_sim_model,
         messages=[{"role": "user", "content": encoder_prompt}],
     )
@@ -115,7 +119,9 @@ async def _ask_user_impl(deps: TaskDeps, question: str) -> str:
     decoder_prompt = build_user_decoder_prompt(
         question, encoder_action, deps.status, schema, deps.user_sim_prompt_version
     )
-    decoder_resp = await litellm.acompletion(
+    decoder_resp = await acompletion_tracked(
+        deps.usage,
+        scope="user_sim",
         model=deps.user_sim_model,
         messages=[{"role": "user", "content": decoder_prompt}],
     )
@@ -322,6 +328,7 @@ class PydanticAIAgent:
         # to PydanticAI's `provider:model_id`. PydanticAI also accepts the
         # colon form natively, so this is idempotent for callers that
         # already pass that shape.
+        self.model_id = model  # litellm form, kept for cost lookup
         self.model = to_pydantic_ai(model) if "/" in model else model
         self.strict = strict
 
@@ -419,6 +426,14 @@ class PydanticAIAgent:
                 usage_limits=UsageLimits(request_limit=MAX_MODEL_TURNS * 2),
             )
             output_text = str(agent_run.output)
+            run_usage = agent_run.usage()
+            deps.usage.add_call(
+                scope="agent",
+                model=self.model_id,
+                prompt=getattr(run_usage, "input_tokens", 0) or 0,
+                completion=getattr(run_usage, "output_tokens", 0) or 0,
+                cache_read=getattr(run_usage, "cache_read_tokens", 0) or 0,
+            )
         except Exception as e:
             logger.error("Agent error on %s: %s", instance_id, e)
             return {
@@ -427,6 +442,7 @@ class PydanticAIAgent:
                 "phase1_passed": False, "phase2_passed": False,
                 "total_reward": 0.0, "trajectory": [],
                 "error": str(e),
+                "usage": deps.usage.model_dump(),
             }
 
         result = deps.result or {}
@@ -439,4 +455,5 @@ class PydanticAIAgent:
             "total_reward": result.get("total_reward", 0.0),
             "trajectory": [{"final_output": output_text[:500]}],
             "error": None,
+            "usage": deps.usage.model_dump(),
         }

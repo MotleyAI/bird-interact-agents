@@ -4,6 +4,8 @@ import argparse
 import asyncio
 import json
 import logging
+import statistics
+import time
 from pathlib import Path
 
 from bird_interact_agents.harness import (
@@ -13,6 +15,7 @@ from bird_interact_agents.harness import (
     load_tasks,
     SampleStatus,
 )
+from bird_interact_agents.usage import TokenUsage
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s"
@@ -173,6 +176,7 @@ async def run_evaluation(
         async with semaphore:
             instance_id = td["instance_id"]
             logger.info("Task %d/%d: %s", i + 1, len(tasks), instance_id)
+            t_start = time.perf_counter()
             try:
                 r = await run_one(td)
             except Exception as e:
@@ -187,6 +191,7 @@ async def run_evaluation(
                     "trajectory": [],
                     "error": str(e),
                 }
+            r["duration_s"] = time.perf_counter() - t_start
             results.append(r)
             total_reward += r.get("total_reward", 0)
             if r.get("phase1_passed"):
@@ -195,6 +200,22 @@ async def run_evaluation(
                 p2_count += 1
 
     await asyncio.gather(*[_run_with_sem(i, td) for i, td in enumerate(tasks)])
+
+    # Sum per-task usage blocks into a top-level total. Any task missing
+    # `usage` (e.g. oracle pre-instrumentation) is skipped without error.
+    total_usage = TokenUsage()
+    for r in results:
+        u_blob = r.get("usage")
+        if u_blob is not None:
+            total_usage.merge(TokenUsage.model_validate(u_blob))
+
+    durations = [float(r.get("duration_s") or 0.0) for r in results]
+    timing = {
+        "total_duration_s": sum(durations),
+        "avg_duration_s": (sum(durations) / len(durations)) if durations else 0.0,
+        "p50_duration_s": statistics.median(durations) if durations else 0.0,
+        "max_duration_s": max(durations) if durations else 0.0,
+    }
 
     # Build metrics
     n = len(tasks)
@@ -209,6 +230,8 @@ async def run_evaluation(
         "phase2_rate": p2_count / n if n else 0,
         "total_reward": total_reward,
         "average_reward": total_reward / n if n else 0,
+        "total_usage": total_usage.model_dump(),
+        **timing,
         "results": results,
     }
 
@@ -223,6 +246,24 @@ async def run_evaluation(
         (total_reward / n) if n else 0,
     )
     return metrics
+
+
+def _apply_price_overrides(path: str) -> None:
+    """Merge a JSON price-overrides file into litellm's built-in pricing
+    table. Entries are `{"name": str, "input_per_m": float, "output_per_m": float}`.
+
+    Per-million → per-token conversion happens here.
+    """
+    import litellm
+
+    with open(path) as f:
+        entries = json.load(f)
+
+    for e in entries:
+        litellm.model_cost[e["name"]] = {
+            "input_cost_per_token": float(e["input_per_m"]) / 1_000_000,
+            "output_cost_per_token": float(e["output_per_m"]) / 1_000_000,
+        }
 
 
 def main() -> None:
@@ -304,7 +345,20 @@ def main() -> None:
             "for it and exits with a clear error when --strict is given."
         ),
     )
+    parser.add_argument(
+        "--price-overrides",
+        default=None,
+        help=(
+            "Optional JSON file with price overrides merged into litellm's "
+            "built-in pricing table. Format: a list of "
+            '{"name": "<model>", "input_per_m": <float>, '
+            '"output_per_m": <float>} entries.'
+        ),
+    )
     args = parser.parse_args()
+
+    if args.price_overrides:
+        _apply_price_overrides(args.price_overrides)
 
     filter_ids: list[str] | None = None
     if args.filter_ids:

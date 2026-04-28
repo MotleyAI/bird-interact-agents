@@ -126,6 +126,8 @@ run_original() {
   local out_dir="$OUTPUT_DIR/original"
   mkdir -p "$out_dir"
   echo "[original] Running upstream main.py via uv run..."
+  local started ended total
+  started=$(date +%s)
   uv run python -m batch_run_bird_interact.main \
     --data_path "$DATA_PATH" \
     --output_path "$out_dir/results.jsonl" \
@@ -141,6 +143,36 @@ run_original() {
     --log_file "$out_dir/experiment.log" \
     --log_level WARNING \
     > "$out_dir/run.log" 2>&1 || echo "[original] returned non-zero — see $out_dir/run.log"
+  ended=$(date +%s)
+  total=$((ended - started))
+  # Per-task duration is not directly available from the upstream output;
+  # we record the leg-total + an `avg_duration_s` derived from --limit.
+  python3 -c "
+import json, sys
+total = $total
+n = $LIMIT
+avg = total / n if n else 0.0
+json.dump(
+    {
+        'total_duration_s': float(total),
+        'n_tasks': n,
+        'avg_duration_s': avg,
+        'agent_model': sys.argv[2],
+    },
+    open(sys.argv[1], 'w'), indent=2,
+)
+" "$out_dir/duration.json" "$AGENT_MODEL"
+
+  # Aggregate per-turn token_usage blobs into a single
+  # token_usage_<model>.json that compare_results.py can read. Slashes
+  # and dots in the model id make the filename ugly but we don't have
+  # to parse it later — the comparison script globs token_usage_*.json.
+  echo "[original] Running analyze_tokens to summarise token_usage..."
+  uv run python -m batch_run_bird_interact.analyze_tokens \
+    --output_dir "$out_dir" \
+    --model "$AGENT_MODEL" \
+    > "$out_dir/token_usage.log" 2>&1 || \
+      echo "[original] analyze_tokens returned non-zero — see $out_dir/token_usage.log (compare_results.py will fall back to per-turn JSONLs)"
 }
 
 run_ours() {
