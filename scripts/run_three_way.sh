@@ -18,6 +18,7 @@ AGENT_MODEL="anthropic/claude-sonnet-4-5"
 USER_SIM_MODEL="anthropic/claude-haiku-4-5-20251001"
 OUTPUT_DIR=""
 PARALLEL=false
+STRICT=false
 
 usage() {
   cat <<EOF
@@ -32,9 +33,18 @@ Usage: $0 [options]
                                     Claude Code session due to stdio
                                     contention with the spawned `claude`
                                     subprocess)
-  --agent-model MODEL               (default: anthropic/claude-sonnet-4-5)
+  --agent-model MODEL               LiteLLM-style PROVIDER/MODEL_ID
+                                    (default: anthropic/claude-sonnet-4-5).
+                                    Examples: cerebras/zai-glm-4.7,
+                                    openrouter/z-ai/glm-4.7-flash,
+                                    fireworks_ai/glm-4p7. The matching
+                                    API-key env var must be set.
   --user-sim-model MODEL            (default: anthropic/claude-haiku-4-5-20251001)
   --parallel                        Run the three versions concurrently
+  --strict / --no-strict            Force every tool definition to carry
+                                    strict=True (default: --no-strict).
+                                    Only honoured by pydantic_ai/smolagents/agno;
+                                    claude_sdk ignores; mcp_agent errors out.
   -h | --help
 EOF
 }
@@ -49,6 +59,8 @@ while [[ $# -gt 0 ]]; do
     --agent-model) AGENT_MODEL="$2"; shift 2 ;;
     --user-sim-model) USER_SIM_MODEL="$2"; shift 2 ;;
     --parallel) PARALLEL=true; shift ;;
+    --strict) STRICT=true; shift ;;
+    --no-strict) STRICT=false; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; usage; exit 1 ;;
   esac
@@ -56,7 +68,26 @@ done
 
 # ---- Env validation ----------------------------------------------------------
 : "${BIRD_BIRD_INTERACT_ROOT:?Set BIRD_BIRD_INTERACT_ROOT to the BIRD-Interact clone}"
-: "${ANTHROPIC_API_KEY:?Set ANTHROPIC_API_KEY}"
+
+# Check the API key for whichever provider the agent + user-sim models use.
+# (LiteLLM resolves the env var name from the prefix.)
+provider_env() {
+  case "${1%%/*}" in
+    anthropic)    echo ANTHROPIC_API_KEY ;;
+    cerebras)     echo CEREBRAS_API_KEY ;;
+    openrouter)   echo OPENROUTER_API_KEY ;;
+    fireworks_ai) echo FIREWORKS_API_KEY ;;
+    zhipu)        echo ZHIPU_API_KEY ;;
+    *)            echo "" ;;
+  esac
+}
+for m in "$AGENT_MODEL" "$USER_SIM_MODEL"; do
+  env_var="$(provider_env "$m")"
+  if [[ -n "$env_var" && -z "${!env_var:-}" ]]; then
+    echo "Error: $env_var is not set (needed for model '$m')." >&2
+    exit 1
+  fi
+done
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
@@ -126,7 +157,9 @@ run_ours() {
     --output "$out_dir/eval.json" \
     --concurrency "$CONCURRENCY" \
     --filter-ids "$IDS_FILE" \
+    --agent-model "$AGENT_MODEL" \
     --user-sim-model "$USER_SIM_MODEL" \
+    $($STRICT && echo "--strict" || echo "--no-strict") \
     > "$out_dir/run.log" 2>&1 || echo "[$query_mode] returned non-zero — see $out_dir/run.log"
 }
 
@@ -143,4 +176,4 @@ fi
 
 # ---- Step 4: compare ---------------------------------------------------------
 echo
-.venv/bin/python scripts/compare_results.py "$OUTPUT_DIR"
+uv run python scripts/compare_results.py "$OUTPUT_DIR"

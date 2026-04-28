@@ -325,6 +325,32 @@ async def _build_prompt(
     raise ValueError(f"Unknown mode combo: {query_mode}/{eval_mode}")
 
 
+def _build_strict_litellm_model_class():
+    """Subclass smolagents.LiteLLMModel so we can mutate the `tools` payload
+    after `_prepare_completion_kwargs` builds it. Returns the subclass.
+
+    smolagents itself never writes `strict` on tool definitions. To force
+    a uniform value we hook the prepare-then-complete path: each entry in
+    `kwargs["tools"]` is `{"type": "function", "function": {...}}`; we
+    inject `"strict": <value>` into every entry's `function` dict before
+    handing to `litellm.completion`.
+    """
+    from smolagents import LiteLLMModel
+
+    class _StrictLiteLLMModel(LiteLLMModel):
+        def __init__(self, *args, _strict_value: bool, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._strict_value = _strict_value
+
+        def _prepare_completion_kwargs(self, *args, **kwargs):
+            ck = super()._prepare_completion_kwargs(*args, **kwargs)
+            for tool in ck.get("tools") or []:
+                tool.setdefault("function", {})["strict"] = self._strict_value
+            return ck
+
+    return _StrictLiteLLMModel
+
+
 def _run_smolagents_sync(
     prompt: str,
     user_query: str,
@@ -332,11 +358,13 @@ def _run_smolagents_sync(
     query_mode: str,
     slayer_storage_dir: str,
     model_id: str,
+    strict: bool = False,
 ) -> str:
     """Synchronous helper that runs the smolagents loop. Called via to_thread."""
-    from smolagents import LiteLLMModel, ToolCallingAgent
+    from smolagents import ToolCallingAgent
 
-    model = LiteLLMModel(model_id=model_id)
+    StrictModel = _build_strict_litellm_model_class()
+    model = StrictModel(model_id=model_id, _strict_value=strict)
 
     # max_tool_threads=1 keeps every tool call on the same OS thread —
     # required because the BIRD-Interact harness caches sqlite3 connections
@@ -374,9 +402,11 @@ class SmolagentsAgent:
         self,
         slayer_storage_root: str | None = None,
         model_id: str = "anthropic/claude-sonnet-4-5",
+        strict: bool = False,
     ) -> None:
         self.slayer_storage_root = slayer_storage_root
         self.model_id = model_id
+        self.strict = strict
 
     async def run_task(
         self,
@@ -418,6 +448,7 @@ class SmolagentsAgent:
                 query_mode,
                 slayer_storage_dir,
                 self.model_id,
+                self.strict,
             )
         except Exception as e:
             logger.error("Agent error on %s: %s", instance_id, e)
