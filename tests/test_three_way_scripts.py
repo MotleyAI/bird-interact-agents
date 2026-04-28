@@ -82,6 +82,41 @@ def test_norm_orig_treats_none_as_missing():
     assert out["phase1_passed"] is True
 
 
+def test_norm_orig_drops_row_with_missing_instance_id():
+    """A row without any usable instance_id is dropped (returns None) rather
+    than collapsed under an empty string — otherwise multiple malformed
+    records would silently overwrite one another in the per-task merge."""
+    assert compare_results._norm_orig({"phase1_passed": True}) is None
+    assert compare_results._norm_orig({"original_data": {}, "task_id": ""}) is None
+
+
+def test_norm_ours_drops_row_with_missing_instance_id():
+    assert compare_results._norm_ours({"phase1_passed": True}) is None
+    assert compare_results._norm_ours({"task_id": None}) is None
+
+
+def test_load_original_raises_when_file_missing(tmp_path: Path):
+    """Default mode: missing expected file is a hard error so a misrouted
+    run can't masquerade as a 0% baseline."""
+    missing = tmp_path / "results.jsonl"
+    with pytest.raises(FileNotFoundError, match="--allow-missing"):
+        compare_results._load_original(missing, allow_missing=False)
+
+
+def test_load_ours_raises_when_file_missing(tmp_path: Path):
+    missing = tmp_path / "eval.json"
+    with pytest.raises(FileNotFoundError, match="--allow-missing"):
+        compare_results._load_ours(missing, allow_missing=False)
+
+
+def test_load_original_allows_missing_with_flag(tmp_path: Path):
+    assert compare_results._load_original(tmp_path / "x.jsonl", allow_missing=True) == []
+
+
+def test_load_ours_allows_missing_with_flag(tmp_path: Path):
+    assert compare_results._load_ours(tmp_path / "x.json", allow_missing=True) == []
+
+
 # ── select_tasks: record-based pagination + --out-jsonl ─────────────────
 
 
@@ -143,6 +178,41 @@ def test_select_tasks_emits_filtered_jsonl(tmp_path: Path):
     ]
     assert [r["instance_id"] for r in emitted] == selected_ids
     assert [r["payload"] for r in emitted] == [0, 1, 2]
+
+
+def test_select_tasks_rejects_negative_limit(tmp_path: Path):
+    """Negative --limit fails at parse time with a clear message rather
+    than silently producing an unintuitive selection."""
+    data = tmp_path / "tasks.jsonl"
+    data.write_text(json.dumps({"instance_id": "t0"}) + "\n")
+    proc = subprocess.run(
+        [
+            sys.executable, str(SCRIPTS_DIR / "select_tasks.py"),
+            "--data", str(data),
+            "--limit", "-1",
+            "--out", str(tmp_path / "ids.txt"),
+        ],
+        capture_output=True, text=True,
+    )
+    assert proc.returncode != 0
+    assert "non-negative" in proc.stderr
+
+
+def test_select_tasks_rejects_negative_start(tmp_path: Path):
+    data = tmp_path / "tasks.jsonl"
+    data.write_text(json.dumps({"instance_id": "t0"}) + "\n")
+    proc = subprocess.run(
+        [
+            sys.executable, str(SCRIPTS_DIR / "select_tasks.py"),
+            "--data", str(data),
+            "--start", "-5",
+            "--limit", "1",
+            "--out", str(tmp_path / "ids.txt"),
+        ],
+        capture_output=True, text=True,
+    )
+    assert proc.returncode != 0
+    assert "non-negative" in proc.stderr
 
 
 def test_select_tasks_no_jsonl_when_flag_omitted(tmp_path: Path):

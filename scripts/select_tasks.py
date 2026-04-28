@@ -19,12 +19,34 @@ import json
 from pathlib import Path
 
 
+def _non_negative_int(value: str) -> int:
+    """argparse type that rejects negative integers with a clear message.
+
+    The downstream pagination logic produces nonsensical selections for
+    negative offsets/limits (negative `--start` skips no records but also
+    drifts the record counter; negative `--limit` makes the take-while
+    branch never trigger), so fail fast at parse time instead.
+    """
+    try:
+        n = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"expected an integer, got {value!r}") from exc
+    if n < 0:
+        raise argparse.ArgumentTypeError(f"must be non-negative, got {n}")
+    return n
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data", required=True, help="Path to mini_interact.jsonl")
-    parser.add_argument("--limit", type=int, default=30, help="Number of tasks to take")
     parser.add_argument(
-        "--start", type=int, default=0, help="Start offset (0-based, in records)"
+        "--limit", type=_non_negative_int, default=30, help="Number of tasks to take"
+    )
+    parser.add_argument(
+        "--start",
+        type=_non_negative_int,
+        default=0,
+        help="Start offset (0-based, in records)",
     )
     parser.add_argument("--out", required=True, help="Where to write instance_ids.txt")
     parser.add_argument(

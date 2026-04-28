@@ -41,7 +41,10 @@ dev = ["pytest", "pytest-asyncio"]
 # Local editable source for the upstream `mini-interact-agent` harness.
 # Only resolved when installing the `original` or `all` extras (so the default
 # `uv sync` is unaffected). Requires the BIRD-Interact repo cloned as a
-# sibling of this one; see README for the expected layout.
+# sibling of this checkout — i.e. `<parent>/bird-interact-agents` and
+# `<parent>/BIRD-Interact` side by side. See README "Prerequisites" for the
+# layout and the workaround when running from a `git worktree` (where the
+# relative path resolves outside the worktree's parent).
 [tool.uv.sources]
 mini-interact-agent = { path = "../BIRD-Interact/mini_interact/knowledge_based/mini_interact_agent", editable = true }
 

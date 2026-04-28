@@ -34,22 +34,28 @@ def _first_present(row: dict, *keys: str, default: Any = None) -> Any:
     return default
 
 
-def _norm_orig(row: dict) -> dict:
+def _norm_orig(row: dict) -> dict | None:
     """Upstream main.py serialises the SampleStatus dataclass directly:
     instance_id is nested under `original_data`, phase status is reported
     via `phase1_completed` / `task_finished` (the latter signals the
     follow-up phase finished), reward via `last_reward`. We keep the
     bird-interact-agents-shaped fallbacks first so this also accepts
     ad-hoc rows in our own format.
+
+    Returns None when no `instance_id` can be recovered — caller drops the
+    row rather than collapsing it under an empty key (which would let one
+    malformed record overwrite another).
     """
     od = row.get("original_data") or {}
+    iid = (
+        row.get("instance_id")
+        or od.get("instance_id")
+        or row.get("task_id")
+    )
+    if not iid:
+        return None
     return {
-        "instance_id": (
-            row.get("instance_id")
-            or od.get("instance_id")
-            or row.get("task_id")
-            or ""
-        ),
+        "instance_id": iid,
         "phase1_passed": bool(
             _first_present(row, "phase1_passed", "phase1_completed", default=False)
         ),
@@ -63,9 +69,15 @@ def _norm_orig(row: dict) -> dict:
     }
 
 
-def _norm_ours(row: dict) -> dict:
+def _norm_ours(row: dict) -> dict | None:
+    """Like `_norm_orig` but for our own `eval.json` shape. Returns None on
+    missing instance_id so the caller drops the row instead of merging
+    multiple rows under the empty-string key."""
+    iid = row.get("instance_id") or row.get("task_id")
+    if not iid:
+        return None
     return {
-        "instance_id": row.get("instance_id") or row.get("task_id") or "",
+        "instance_id": iid,
         "phase1_passed": bool(row.get("phase1_passed")),
         "phase2_passed": bool(row.get("phase2_passed")),
         "total_reward": float(row.get("total_reward") or 0.0),
@@ -73,23 +85,51 @@ def _norm_ours(row: dict) -> dict:
     }
 
 
-def _load_original(path: Path) -> list[dict]:
+def _load_original(path: Path, *, allow_missing: bool) -> list[dict]:
     if not path.is_file():
-        return []
-    rows = []
+        if allow_missing:
+            return []
+        raise FileNotFoundError(
+            f"Expected results file not found: {path}. "
+            "Pass --allow-missing to treat absent files as empty results."
+        )
+    rows: list[dict] = []
+    skipped = 0
     with open(path) as f:
         for line in f:
             line = line.strip()
-            if line:
-                rows.append(_norm_orig(json.loads(line)))
+            if not line:
+                continue
+            norm = _norm_orig(json.loads(line))
+            if norm is None:
+                skipped += 1
+                continue
+            rows.append(norm)
+    if skipped:
+        print(f"[compare_results] {path}: skipped {skipped} row(s) with missing instance_id")
     return rows
 
 
-def _load_ours(path: Path) -> list[dict]:
+def _load_ours(path: Path, *, allow_missing: bool) -> list[dict]:
     if not path.is_file():
-        return []
+        if allow_missing:
+            return []
+        raise FileNotFoundError(
+            f"Expected results file not found: {path}. "
+            "Pass --allow-missing to treat absent files as empty results."
+        )
     blob = json.loads(path.read_text())
-    return [_norm_ours(r) for r in blob.get("results", [])]
+    rows: list[dict] = []
+    skipped = 0
+    for r in blob.get("results", []):
+        norm = _norm_ours(r)
+        if norm is None:
+            skipped += 1
+            continue
+        rows.append(norm)
+    if skipped:
+        print(f"[compare_results] {path}: skipped {skipped} row(s) with missing instance_id")
+    return rows
 
 
 def _aggregate(rows: list[dict]) -> dict:
@@ -106,13 +146,26 @@ def _aggregate(rows: list[dict]) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("dir", help="Directory containing original/, raw/, slayer/")
+    parser.add_argument(
+        "--allow-missing",
+        action="store_true",
+        help="Treat absent results files as empty datasets instead of failing. "
+        "Off by default so a misrouted/failed run doesn't silently turn into "
+        "a misleading 0%/0-reward report.",
+    )
     args = parser.parse_args()
 
     base = Path(args.dir)
     rows_by_version = {
-        "original": _load_original(base / "original" / "results.jsonl"),
-        "raw": _load_ours(base / "raw" / "eval.json"),
-        "slayer": _load_ours(base / "slayer" / "eval.json"),
+        "original": _load_original(
+            base / "original" / "results.jsonl", allow_missing=args.allow_missing
+        ),
+        "raw": _load_ours(
+            base / "raw" / "eval.json", allow_missing=args.allow_missing
+        ),
+        "slayer": _load_ours(
+            base / "slayer" / "eval.json", allow_missing=args.allow_missing
+        ),
     }
     by_id: dict[str, dict[str, dict]] = {}
     for v, rows in rows_by_version.items():
