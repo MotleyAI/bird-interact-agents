@@ -17,7 +17,7 @@ from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.usage import UsageLimits
 
-from bird_interact_agents.agents.claude_sdk.agent import MAX_MODEL_TURNS
+from bird_interact_agents.harness import MAX_MODEL_TURNS
 
 
 def _make_prepare_tools(strict_value: bool):

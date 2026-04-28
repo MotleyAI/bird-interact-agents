@@ -22,6 +22,7 @@ from bird_interact_agents.agents.claude_sdk.prompts import (
 )
 from bird_interact_agents.harness import (
     ACTION_COSTS,
+    MAX_MODEL_TURNS,
     SampleStatus,
     _schema_cache,
     build_user_decoder_prompt,
@@ -33,8 +34,6 @@ from bird_interact_agents.harness import (
     slayer_mcp_stdio_config,
     update_budget,
 )
-
-MAX_MODEL_TURNS = 60
 
 logger = logging.getLogger(__name__)
 

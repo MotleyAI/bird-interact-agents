@@ -40,6 +40,21 @@ def test_to_pydantic_ai_passes_through_unprefixed():
     assert to_pydantic_ai("claude-sonnet-4-5") == "claude-sonnet-4-5"
 
 
+def test_to_pydantic_ai_idempotent_for_colonized_openrouter():
+    """Already-colonized OpenRouter ids must not be mangled into
+    `openrouter:z-ai:glm-4.7-flash` — that broke PydanticAI lookups when
+    callers pre-converted the string before handing it to the adapter."""
+    assert (
+        to_pydantic_ai("openrouter:z-ai/glm-4.7-flash")
+        == "openrouter:z-ai/glm-4.7-flash"
+    )
+
+
+def test_to_pydantic_ai_idempotent_for_colonized_simple():
+    """Colon form without a slash also survives a redundant conversion."""
+    assert to_pydantic_ai("anthropic:claude-sonnet-4-5") == "anthropic:claude-sonnet-4-5"
+
+
 def test_native_model_id_strips_prefix():
     assert native_model_id("anthropic/claude-sonnet-4-5") == "claude-sonnet-4-5"
     assert native_model_id("cerebras/zai-glm-4.7") == "zai-glm-4.7"

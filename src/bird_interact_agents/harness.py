@@ -60,6 +60,10 @@ from batch_run_bird_interact.prompt_utils import (  # noqa: E402
 # Sample status dataclass
 from batch_run_bird_interact.sample_status import SampleStatus  # noqa: E402
 
+# Maximum number of assistant turns per task. Consumed by every adapter to
+# cap runaway loops independent of the bird-coin budget.
+MAX_MODEL_TURNS = 60
+
 # Budget calculation helpers
 ACTION_COSTS = {
     "execute_sql": 1,
@@ -176,7 +180,18 @@ def slayer_mcp_stdio_config(storage_dir: str) -> dict:
         command: absolute path to the slayer binary
         args:    [`mcp`]
         env:     full env dict with SLAYER_STORAGE pointing at the per-DB store
+
+    Raises:
+        ValueError: if storage_dir is empty/None. We refuse to silently fall
+            back to CWD because Path("").resolve() does — that would point
+            SLayer at whatever directory the run happens to start in.
     """
+    if not storage_dir:
+        raise ValueError(
+            "slayer_mcp_stdio_config requires a non-empty storage_dir; "
+            "set --slayer-storage-root (or pass slayer_storage_root explicitly) "
+            "when running slayer mode."
+        )
     env = os.environ.copy()
     env["SLAYER_STORAGE"] = str(Path(storage_dir).resolve())
     return {

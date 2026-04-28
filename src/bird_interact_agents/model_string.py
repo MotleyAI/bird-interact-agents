@@ -24,15 +24,22 @@ def is_anthropic(model: str) -> bool:
 def to_pydantic_ai(model: str) -> str:
     """Convert a LiteLLM-style string to PydanticAI's `provider:model_id` form.
 
-    Only the first slash is swapped to a colon — OpenRouter model ids
-    contain a slash themselves (e.g. `z-ai/glm-4.7-flash`).
+    Idempotent: an input already in PydanticAI form (provider contains a
+    colon before the first slash) is returned unchanged. Otherwise only the
+    first slash is swapped — OpenRouter model ids contain a slash themselves
+    (e.g. `z-ai/glm-4.7-flash`).
 
         cerebras/zai-glm-4.7              -> cerebras:zai-glm-4.7
         openrouter/z-ai/glm-4.7-flash     -> openrouter:z-ai/glm-4.7-flash
         anthropic/claude-sonnet-4-5       -> anthropic:claude-sonnet-4-5
+        openrouter:z-ai/glm-4.7-flash     -> openrouter:z-ai/glm-4.7-flash  (unchanged)
     """
     provider, sep, rest = model.partition("/")
-    return f"{provider}:{rest}" if sep else model
+    if not sep:
+        return model
+    if ":" in provider:
+        return model
+    return f"{provider}:{rest}"
 
 
 def native_model_id(model: str) -> str:
