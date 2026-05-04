@@ -167,6 +167,25 @@ any id is in zero or both sets.
 - **Don't recreate auto-ingested models.** Use `edit_model` to enrich
   what's already there. Only `create_model` for query-backed
   multistage models that have no host table.
+- **Peer-join limitation.** Auto-ingested joins go child → parent
+  (the table holding the FK reaches the referenced table). Two
+  per-aspect tables that both join to the *same* parent (e.g.
+  `thermalsolarwindandgrid` and `waterandwaste` both joining to
+  `equipment` in the polar DB) cannot reach each other through
+  bare `Column.sql` references. A composite metric that pulls
+  columns from both peers needs an R-MULTISTAGE encoding (a
+  query-backed model that joins both peers to the parent
+  separately, then composes). When this comes up, defer the
+  composite to the notes file with `Status: deferred to W4b
+  R-MULTISTAGE encoding` rather than try to inline it.
+- **KB ambiguity surfaces during sanity-queries, not in the
+  verifier.** The verifier checks KB-coverage, not semantic
+  correctness. If a sanity-query produces nonsense values
+  (negative scores, exploded ranges), the encoding has a
+  KB-interpretation bug — fix the formula, but the verifier will
+  still pass either way. Flag the issue in the notes file under
+  the KB id with `Status: encoded but value range is suspect; see
+  …` if you can't immediately resolve.
 - **Datasource name = DB name.** `mcp__slayer__create_datasource(name="<db>", …)`.
   The W4 fan-out depends on this — parallel agents pick distinct names
   this way.
