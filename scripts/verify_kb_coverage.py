@@ -54,17 +54,29 @@ def load_kb_ids(kb_path: Path) -> set[int]:
     return ids
 
 
-def _meta_kb_id(meta: dict | None) -> int | None:
+def _meta_kb_ids(meta: dict | None) -> set[int]:
+    """Pull every KB id stamped on an entity's ``meta``.
+
+    Supports both ``meta.kb_id`` (singular, for a 1:1 entity↔KB mapping)
+    and ``meta.kb_ids`` (list, for entities that cover multiple KB
+    entries — e.g. a JSON column that aggregates several
+    value_illustration descriptions). Both forms can coexist on the
+    same entity; ids are unioned.
+    """
     if not meta:
-        return None
-    raw = meta.get("kb_id")
-    if raw is None:
-        return None
-    return int(raw)
+        return set()
+    out: set[int] = set()
+    single = meta.get("kb_id")
+    if single is not None:
+        out.add(int(single))
+    multi = meta.get("kb_ids")
+    if multi:
+        out.update(int(x) for x in multi)
+    return out
 
 
 async def load_encoded_ids(db_dir: Path) -> set[int]:
-    """Load every meta.kb_id reachable through the YAML storage at *db_dir*.
+    """Load every KB id stamped on any entity in the YAML storage at *db_dir*.
 
     *db_dir* is a YAMLStorage ``base_dir``: it contains ``models/`` and
     ``datasources/`` sub-directories, populated by the export step in
@@ -77,9 +89,7 @@ async def load_encoded_ids(db_dir: Path) -> set[int]:
         if model is None:
             continue
         for owner in (model, *model.columns, *model.measures, *model.aggregations):
-            kb_id = _meta_kb_id(getattr(owner, "meta", None))
-            if kb_id is not None:
-                ids.add(kb_id)
+            ids |= _meta_kb_ids(getattr(owner, "meta", None))
     return ids
 
 

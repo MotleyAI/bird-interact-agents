@@ -48,11 +48,19 @@ the SLayer MCP. The user typically invokes by naming the DB
   Multiple sections in one file. The body of each section is free-form
   Markdown; only the header is parsed.
 
-## The mandatory `meta={"kb_id": <id>}` annotation
+## The mandatory `meta.kb_id` / `meta.kb_ids` annotation
 
 When invoking any recipe from `kb-to-slayer-models` to encode a KB
 entry, **always pass `meta={"kb_id": <id>}`** where `<id>` is the
-source entry's numeric id from `<db>_kb.jsonl`. This is non-optional:
+source entry's numeric id from `<db>_kb.jsonl`.
+
+If a single entity covers **multiple KB entries** (a common case: one
+JSON column whose description aggregates several `value_illustration`
+entries about distinct sub-fields), pass `meta={"kb_ids": [<id1>,
+<id2>, …]}` instead. The verifier accepts either form and unions
+them.
+
+This is non-optional:
 
 - The W1c verifier matches encoded entities to KB ids by walking
   `meta.kb_id` across every column / measure / aggregation / model.

@@ -67,7 +67,18 @@ async def _export_async(db: str, source_path: Path) -> int:
 
     n_models = 0
     for name in await src.list_models():
-        model = await src.get_model(name)
+        try:
+            model = await src.get_model(name)
+        except Exception as exc:
+            # Other DBs may have v1-shape models (e.g. demo data with
+            # dimension/measure name collisions) that fail v3 migration.
+            # We only care about models whose data_source matches *db*;
+            # log and skip the rest.
+            print(
+                f"  skip '{name}': {exc.__class__.__name__}: {exc}",
+                file=sys.stderr,
+            )
+            continue
         if model is None or model.data_source != db:
             continue
         await dest.save_model(model)
