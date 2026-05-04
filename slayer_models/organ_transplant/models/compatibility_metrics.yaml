@@ -1,0 +1,219 @@
+version: 3
+name: compatibility_metrics
+sql_table: compatibility_metrics
+query_variables: {}
+data_source: organ_transplant
+columns:
+- name: match_comp_registry
+  sql: match_comp_registry
+  type: string
+  primary_key: true
+  description: FK to transplant_matching.match_rec_registry.
+  hidden: false
+- name: hla_mis_count
+  sql: hla_mis_count
+  type: number
+  primary_key: false
+  description: Number of HLA antigen mismatches (0-6). KB HLA Mismatch Score / HLA
+    Mismatch Levels.
+  hidden: false
+  format:
+    type: integer
+  meta:
+    kb_ids:
+    - 4
+    - 44
+- name: blood_compat
+  sql: blood_compat
+  type: string
+  primary_key: false
+  description: ABO compatibility text (heavily case-noised). See blood_compat_norm.
+    KB ABO Blood Type Compatibility.
+  hidden: false
+  meta:
+    kb_id: 20
+- name: distance
+  sql: distance
+  type: string
+  primary_key: false
+  description: Donor-recipient geographic distance text (always 'NN miles').
+  hidden: false
+- name: exp_isch_time
+  sql: exp_isch_time
+  type: string
+  primary_key: false
+  description: Expected cold ischemia time text, e.g. '539 minutes ischemia'. See
+    exp_isch_minutes. KB Cold Ischemia.
+  hidden: false
+  meta:
+    kb_ids:
+    - 21
+- name: exp_time
+  sql: exp_time
+  type: string
+  primary_key: false
+  description: Expected transport time text, e.g. '142 minutes transport'.
+  hidden: false
+- name: cost_est
+  sql: cost_est
+  type: string
+  primary_key: false
+  description: Estimated transplant cost text (e.g. 'US$5210.53').
+  hidden: false
+- name: donor_ref_reg
+  sql: donor_ref_reg
+  type: string
+  primary_key: false
+  description: FK to demographics.contrib_registry.
+  hidden: false
+- name: recip_ref_reg
+  sql: recip_ref_reg
+  type: string
+  primary_key: false
+  description: FK to recipients_demographics.recip_registry.
+  hidden: false
+- name: compatscores
+  sql: compatscores
+  type: string
+  primary_key: false
+  description: 'JSON: {Hla_Score, Size_Score, Age_Score} sub-scores (provided by upstream
+    system).'
+  hidden: false
+- name: blood_compat_norm
+  sql: CASE WHEN lower(blood_compat) = 'compatible' THEN 'Compatible' WHEN lower(blood_compat)
+    = 'incompatible' THEN 'Incompatible' ELSE blood_compat END
+  type: string
+  primary_key: false
+  description: Normalized ABO compatibility (case-folded) -> 'Compatible'/'Incompatible'/NULL.
+  hidden: false
+  meta:
+    kb_ids:
+    - 20
+- name: is_blood_compatible
+  sql: CASE WHEN lower(blood_compat) = 'compatible' THEN 1 WHEN lower(blood_compat)
+    = 'incompatible' THEN 0 ELSE NULL END
+  type: boolean
+  primary_key: false
+  description: True/false ABO compatibility (NULL when blood_compat is NULL/missing).
+  hidden: false
+  meta:
+    kb_ids:
+    - 20
+- name: distance_miles
+  sql: CAST(substr(distance, 1, instr(distance, ' ') - 1) AS REAL)
+  type: number
+  primary_key: false
+  description: Distance in miles (parsed).
+  hidden: false
+- name: distance_km
+  sql: CAST(substr(distance, 1, instr(distance, ' ') - 1) AS REAL) * 1.609344
+  type: number
+  primary_key: false
+  description: Distance in km (miles * 1.609344).
+  hidden: false
+- name: exp_isch_minutes
+  sql: CAST(substr(exp_isch_time, 1, instr(exp_isch_time, ' ') - 1) AS REAL)
+  type: number
+  primary_key: false
+  description: Expected cold ischemia time in minutes (parsed).
+  hidden: false
+- name: exp_transport_minutes
+  sql: CAST(substr(exp_time, 1, instr(exp_time, ' ') - 1) AS REAL)
+  type: number
+  primary_key: false
+  description: Expected transport time in minutes (parsed).
+  hidden: false
+- name: total_ischemia_minutes
+  sql: CAST(substr(exp_isch_time, 1, instr(exp_isch_time, ' ') - 1) AS REAL) + CAST(substr(exp_time,
+    1, instr(exp_time, ' ') - 1) AS REAL)
+  type: number
+  primary_key: false
+  description: Total Ischemia Time = T_cold + T_warm (KB). Uses exp_isch_minutes (cold)
+    + exp_transport_minutes (warm).
+  hidden: false
+  meta:
+    kb_id: 2
+- name: cost_usd
+  sql: CAST(substr(cost_est, 4) AS REAL)
+  type: number
+  primary_key: false
+  description: Estimated cost in USD (numeric, parsed from 'US$NNN.NN').
+  hidden: false
+- name: compat_hla_score
+  sql: CAST(json_extract(compatscores, '$.Hla_Score') AS REAL)
+  type: number
+  primary_key: false
+  description: Pre-computed HLA sub-score (0-1).
+  hidden: false
+- name: compat_size_score
+  sql: CAST(json_extract(compatscores, '$.Size_Score') AS REAL)
+  type: number
+  primary_key: false
+  description: Pre-computed Size sub-score (0-1). KB Size Compatibility Score.
+  hidden: false
+  meta:
+    kb_ids:
+    - 6
+- name: compat_age_score
+  sql: CAST(json_extract(compatscores, '$.Age_Score') AS REAL)
+  type: number
+  primary_key: false
+  description: Pre-computed Age sub-score (0-1). KB Age Compatibility Score.
+  hidden: false
+  meta:
+    kb_ids:
+    - 7
+- name: logistical_feasibility_index
+  sql: (700.0 / (CAST(substr(distance, 1, instr(distance, ' ') - 1) AS REAL) * 1.609344))
+    + (300.0 / (CAST(substr(exp_isch_time, 1, instr(exp_isch_time, ' ') - 1) AS REAL)
+    + CAST(substr(exp_time, 1, instr(exp_time, ' ') - 1) AS REAL)))
+  type: number
+  primary_key: false
+  description: Logistical Feasibility Index = 700/distance_km + 300/total_ischemia_minutes
+    (KB).
+  hidden: false
+  meta:
+    kb_id: 8
+- name: immunological_compat_score
+  sql: 0.6 * (CASE WHEN lower(blood_compat) = 'compatible' THEN 1.0 ELSE 0.0 END)
+    + 0.4 * (1.0 - hla_mis_count / 6.0)
+  type: number
+  primary_key: false
+  description: Immunological Compatibility Score = 0.6*I_ABO + 0.4*(1 - HLA_mismatch/6)
+    (KB).
+  hidden: false
+  meta:
+    kb_id: 10
+- name: is_optimal_match
+  sql: CASE WHEN lower(blood_compat) = 'compatible' AND hla_mis_count = 0 AND CAST(json_extract(compatscores,
+    '$.Size_Score') AS REAL) BETWEEN 0.9 AND 1.1 THEN 1 ELSE 0 END
+  type: boolean
+  primary_key: false
+  description: 'Optimal Donor-Recipient Match (KB): full ABO compat AND HLA mismatch=0
+    AND Size_Score in [0.9, 1.1].'
+  hidden: false
+  meta:
+    kb_id: 31
+measures: []
+aggregations: []
+joins:
+- target_model: demographics
+  join_pairs:
+  - - donor_ref_reg
+    - contrib_registry
+  join_type: left
+- target_model: transplant_matching
+  join_pairs:
+  - - match_comp_registry
+    - match_rec_registry
+  join_type: left
+- target_model: recipients_demographics
+  join_pairs:
+  - - recip_ref_reg
+    - recip_registry
+  join_type: left
+filters: []
+description: 'Per-match compatibility scores: HLA mismatch count, ABO compatibility,
+  geographic distance, expected ischemia and transport times, cost estimate, and a
+  JSON compatscores (HLA/Size/Age sub-scores). One row per transplant_matching record.'
+hidden: false

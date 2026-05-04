@@ -1,0 +1,74 @@
+version: 3
+name: case_attorney
+sql_table: case_attorney
+query_variables: {}
+data_source: labor_certification_applications
+columns:
+- name: docketkey
+  sql: docketkey
+  type: string
+  primary_key: true
+  hidden: false
+- name: counselmail
+  sql: counselmail
+  type: string
+  primary_key: true
+  hidden: false
+- name: counselfor
+  sql: counselfor
+  type: string
+  primary_key: false
+  description: 'Attorney Representation Status (KB #9). ''Yes'' indicates the employer
+    has retained legal counsel for the visa application; otherwise self-represented.'
+  hidden: false
+  meta:
+    kb_id: 9
+- name: is_case_certified
+  sql: CASE WHEN LOWER(TRIM(cases.statustag)) = 'certified' THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: '1 if joined case is certified, else 0. Resolved via the cases join.
+    KB #24.'
+  hidden: false
+  meta:
+    kb_id: 24
+- name: visacls
+  sql: cases.visacls
+  type: string
+  primary_key: false
+  description: 'Visa class for the case (KB #1) via cases join, denormalized.'
+  hidden: false
+measures:
+- formula: docketkey:count_distinct
+  name: attorney_case_load
+  description: 'Attorney Case Load (KB #14): distinct cases handled. Group by counselmail.'
+- formula: cases.visacls:count_distinct
+  name: attorney_visa_types_handled
+  description: 'Number of distinct visa types handled by an attorney (component of
+    KB #34 ASI).'
+- formula: 1.0 - cases.visacls:count_distinct * 1.0 / 4.0
+  name: attorney_specialization_index
+  description: 'Attorney Specialization Index (KB #34).'
+- formula: is_case_certified:sum * 100.0 / *:count
+  name: attorney_success_rate
+  description: 'Attorney Success Rate (KB #24): % certified applications by attorney.
+    Group by counselmail.'
+- formula: is_case_certified:sum * 100.0 / *:count
+  name: attorney_performance_rating_helper
+  description: 'Helper for KB #52 Attorney Performance Rating tiers.'
+aggregations: []
+joins:
+- target_model: attorney
+  join_pairs:
+  - - counselmail
+    - lawmail
+  join_type: left
+- target_model: cases
+  join_pairs:
+  - - docketkey
+    - filekey
+  join_type: left
+filters: []
+description: Bridge table linking cases to attorneys (M:N). Each row indicates an
+  attorney represents a case.
+hidden: false

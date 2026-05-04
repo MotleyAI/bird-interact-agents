@@ -1,0 +1,53 @@
+version: 3
+name: vehicles
+sql_table: vehicles
+query_variables: {}
+data_source: cold_chain_pharma_compliance
+columns:
+- name: vehref
+  sql: vehref
+  type: string
+  primary_key: true
+  hidden: false
+- name: carrierbond
+  sql: carrierbond
+  type: string
+  primary_key: false
+  hidden: false
+- name: vehtype
+  sql: vehtype
+  type: string
+  primary_key: false
+  hidden: false
+- name: veh_qual
+  sql: veh_qual
+  type: string
+  primary_key: false
+  description: 'Cold Chain Vehicle Qualification Status (KB #24): ''Validated'' (fully
+    validated through performance and temperature mapping), ''Qualified'' (basic qualification),
+    ''Unqualified'' (not formally qualified for pharmaceutical transport).'
+  hidden: false
+  meta:
+    kb_id: 24
+- name: temp_mon_sys
+  sql: temp_mon_sys
+  type: string
+  primary_key: false
+  description: 'Vehicle Temperature Monitoring Type (KB #58): ''Continuous'' (uninterrupted),
+    ''Interval'' (periodic), ''None'' (no active monitoring). NULL means monitoring
+    type was not specified.'
+  hidden: false
+  meta:
+    kb_id: 58
+measures: []
+aggregations: []
+joins:
+- target_model: carriers
+  join_pairs:
+  - - carrierbond
+    - carriertag
+  join_type: left
+filters: []
+description: Vehicles used in pharmaceutical cold-chain transport, joined to their
+  owning carrier.
+hidden: false

@@ -1,0 +1,168 @@
+version: 3
+name: case_management
+sql_table: case_management
+query_variables: {}
+data_source: reverse_logistics
+columns:
+- name: casetie
+  sql: casetie
+  type: string
+  primary_key: true
+  hidden: false
+- name: satisfscore
+  sql: satisfscore
+  type: number
+  primary_key: false
+  description: "Satisfaction Scores \u2014 5-point ordinal scale: 1=Very Dissatisfied,\
+    \ 2=Dissatisfied, 3=Neutral, 4=Satisfied, 5=Very Satisfied. Larger = more satisfied."
+  hidden: false
+  format:
+    type: integer
+  meta:
+    kb_id: 26
+- name: commstate
+  sql: commstate
+  type: string
+  primary_key: false
+  hidden: false
+- name: resptime
+  sql: resptime
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: resolsatis
+  sql: resolsatis
+  type: string
+  primary_key: false
+  hidden: false
+- name: hasfeedback
+  sql: hasfeedback
+  type: string
+  primary_key: false
+  hidden: false
+- name: feedbacktype
+  sql: feedbacktype
+  type: string
+  primary_key: false
+  hidden: false
+- name: vendornotice
+  sql: vendornotice
+  type: string
+  primary_key: false
+  hidden: false
+- name: vendoraction
+  sql: vendoraction
+  type: string
+  primary_key: false
+  hidden: false
+- name: preventopp
+  sql: preventopp
+  type: string
+  primary_key: false
+  hidden: false
+- name: actionident
+  sql: actionident
+  type: string
+  primary_key: false
+  hidden: false
+- name: actionstate
+  sql: actionstate
+  type: string
+  primary_key: false
+  hidden: false
+- name: kbupdated
+  sql: kbupdated
+  type: string
+  primary_key: false
+  hidden: false
+- name: trainident
+  sql: trainident
+  type: string
+  primary_key: false
+  hidden: false
+- name: needsprocimprove
+  sql: needsprocimprove
+  type: string
+  primary_key: false
+  hidden: false
+- name: needsdocupdate
+  sql: needsdocupdate
+  type: string
+  primary_key: false
+  hidden: false
+- name: needssysupdate
+  sql: needssysupdate
+  type: string
+  primary_key: false
+  hidden: false
+- name: reportstate
+  sql: reportstate
+  type: string
+  primary_key: false
+  hidden: false
+- name: analysisstate
+  sql: analysisstate
+  type: string
+  primary_key: false
+  hidden: false
+- name: hastrendanalysis
+  sql: hastrendanalysis
+  type: string
+  primary_key: false
+  hidden: false
+- name: hascostanalysis
+  sql: hascostanalysis
+  type: string
+  primary_key: false
+  hidden: false
+- name: recstate
+  sql: recstate
+  type: string
+  primary_key: false
+  hidden: false
+- name: actioncount
+  sql: actioncount
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: needsfollowup
+  sql: needsfollowup
+  type: string
+  primary_key: false
+  hidden: false
+- name: nextreview
+  sql: nextreview
+  type: string
+  primary_key: false
+  hidden: false
+- name: closestate
+  sql: closestate
+  type: string
+  primary_key: false
+  hidden: false
+- name: closedate
+  sql: closedate
+  type: string
+  primary_key: false
+  hidden: false
+- name: closenotes
+  sql: closenotes
+  type: string
+  primary_key: false
+  hidden: false
+measures: []
+aggregations: []
+joins:
+- target_model: returns
+  join_pairs:
+  - - casetie
+    - casenum
+  join_type: left
+filters: []
+description: 'Customer-facing case state for a return: communication, satisfaction,
+  follow-up, closure. One row per return case (joined to returns via casetie = casenum).'
+hidden: false

@@ -1,0 +1,167 @@
+version: 3
+name: qualitycompliance
+sql_table: qualitycompliance
+query_variables: {}
+data_source: cold_chain_pharma_compliance
+columns:
+- name: reckeyqc
+  sql: reckeyqc
+  type: string
+  primary_key: true
+  hidden: false
+- name: qc_checklist
+  sql: qc_checklist
+  type: string
+  primary_key: false
+  description: JSON blob bundling seal integrity, product/pack condition, documentation
+    and regulatory checks plus release status.
+  hidden: false
+- name: seal_status
+  sql: json_extract(qc_checklist, '$.security.seal_status')
+  type: string
+  primary_key: false
+  description: 'Security seal status: Intact / Broken / Suspicious. NULL means seal
+    status not captured.'
+  hidden: false
+- name: security_incident
+  sql: json_extract(qc_checklist, '$.security.security_incident')
+  type: string
+  primary_key: false
+  description: 'Security incident severity (KB #39, Security Incident Severity Scale):
+    0 (no concerns), 1 (minor procedural deviation), 2 (moderate), 3 (clear evidence
+    of attempted tampering), 4 (confirmed breach with product access). NULL means
+    security assessment not performed.'
+  hidden: false
+  meta:
+    kb_id: 39
+- name: product_intact_check
+  sql: json_extract(qc_checklist, '$.product_integrity.product_intact_check')
+  type: string
+  primary_key: false
+  description: 'Product-integrity check result: Passed/Conditional/Failed.'
+  hidden: false
+- name: pack_condition
+  sql: json_extract(qc_checklist, '$.product_integrity.pack_condition')
+  type: string
+  primary_key: false
+  description: 'Packaging condition assessment: Good/Damaged/Compromised.'
+  hidden: false
+- name: label_condition
+  sql: json_extract(qc_checklist, '$.product_integrity.label_condition')
+  type: string
+  primary_key: false
+  description: 'Label condition assessment: Clear/Damaged/Illegible.'
+  hidden: false
+- name: documentation_complete
+  sql: json_extract(qc_checklist, '$.documentation.documentation_complete')
+  type: string
+  primary_key: false
+  description: 'Documentation completeness status: Complete/Partial/Incomplete.'
+  hidden: false
+- name: certification_status
+  sql: json_extract(qc_checklist, '$.documentation.certification_status')
+  type: string
+  primary_key: false
+  description: 'Certification status at reception: Complete/Expired/Missing.'
+  hidden: false
+- name: custom_clearance_status
+  sql: json_extract(qc_checklist, '$.customs_and_regulatory.custom_clearance_status')
+  type: string
+  primary_key: false
+  description: 'Customs-clearance status: Cleared/Pending/Delayed.'
+  hidden: false
+- name: import_permit_status
+  sql: json_extract(qc_checklist, '$.customs_and_regulatory.import_permit_status')
+  type: string
+  primary_key: false
+  description: 'Import-permit compliance status: Valid/Pending/Not Required.'
+  hidden: false
+- name: regulatory_compliance_status
+  sql: json_extract(qc_checklist, '$.customs_and_regulatory.regulatory_compliance_status')
+  type: string
+  primary_key: false
+  description: 'Regulatory Compliance Status (KB #21): ''Compliant'' (meets all regulatory
+    requirements), ''Non-compliant'' (fails one or more critical requirements), ''Under
+    Review'' (compliance being assessed). NULL means status not yet determined.'
+  hidden: false
+  meta:
+    kb_id: 21
+- name: sop_compliance
+  sql: json_extract(qc_checklist, '$.gdp_quality.sop_compliance')
+  type: string
+  primary_key: false
+  description: 'Standard operating procedure compliance status: Full/Partial/Non-compliant.'
+  hidden: false
+- name: gdp_compliance
+  sql: json_extract(qc_checklist, '$.gdp_quality.gdp_compliance')
+  type: string
+  primary_key: false
+  description: 'Good distribution practice compliance status: Full/Partial/Non-compliant.'
+  hidden: false
+- name: quality_agreement_status
+  sql: json_extract(qc_checklist, '$.gdp_quality.quality_agreement_status')
+  type: string
+  primary_key: false
+  description: 'Quality Agreement Status (KB #14): ''Active'' (current agreement in
+    force), ''Expired'' (lapsed), ''Pending'' (under review), or null (no formal agreement).'
+  hidden: false
+  meta:
+    kb_id: 14
+- name: quality_review_status
+  sql: json_extract(qc_checklist, '$.gdp_quality.quality_review_status')
+  type: string
+  primary_key: false
+  description: 'Quality review status: Approved/Pending/Rejected.'
+  hidden: false
+- name: responsible_person
+  sql: json_extract(qc_checklist, '$.gdp_quality.responsible_person')
+  type: string
+  primary_key: false
+  description: Responsible quality person.
+  hidden: false
+- name: quality_approval_ts
+  sql: json_extract(qc_checklist, '$.gdp_quality.quality_approval_ts')
+  type: time
+  primary_key: false
+  description: Timestamp of quality approval.
+  hidden: false
+- name: product_release_status
+  sql: json_extract(qc_checklist, '$.release.product_release_status')
+  type: string
+  primary_key: false
+  description: 'Product release decision (KB #34, Product Release Decision Framework).
+    ''Released'' (meets all criteria), ''Released with CAPA'' (essential criteria
+    met but corrective action required), ''Quarantined'' (further investigation required),
+    ''Rejected'' (failed critical criteria). KB #51 (Batch Release Critical Path Elements)
+    lists prerequisites for the Released decision.'
+  hidden: false
+  meta:
+    kb_ids:
+    - 34
+    - 51
+- name: release_ts
+  sql: json_extract(qc_checklist, '$.release.release_ts')
+  type: time
+  primary_key: false
+  description: Product release timestamp.
+  hidden: false
+- name: quarantine_reason
+  sql: json_extract(qc_checklist, '$.release.quarantine_reason')
+  type: string
+  primary_key: false
+  description: 'Reason for quarantine if applicable: Damage / Documentation / Temperature
+    Deviation. NULL means product not quarantined.'
+  hidden: false
+measures: []
+aggregations: []
+joins:
+- target_model: shipments
+  join_pairs:
+  - - reckeyqc
+    - reckey
+  join_type: left
+filters: []
+description: Per-shipment quality-compliance checklist. Holds the qc_checklist JSON
+  blob with seal/security, product integrity, documentation, customs and regulatory,
+  GDP/quality and release sub-objects.
+hidden: false

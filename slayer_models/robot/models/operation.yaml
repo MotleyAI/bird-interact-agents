@@ -1,0 +1,142 @@
+version: 3
+name: operation
+sql_table: operation
+query_variables: {}
+data_source: robot
+columns:
+- name: operreg
+  sql: operreg
+  type: string
+  primary_key: true
+  hidden: false
+- name: operbotdetref
+  sql: operbotdetref
+  type: string
+  primary_key: false
+  hidden: false
+- name: operrecref
+  sql: operrecref
+  type: string
+  primary_key: false
+  hidden: false
+- name: totopshrval
+  sql: totopshrval
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: apptypeval
+  sql: apptypeval
+  type: string
+  primary_key: false
+  hidden: false
+- name: opermodeval
+  sql: opermodeval
+  type: string
+  primary_key: false
+  hidden: false
+- name: currprogval
+  sql: currprogval
+  type: string
+  primary_key: false
+  hidden: false
+- name: progcyclecount
+  sql: progcyclecount
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: cycletimesecval
+  sql: cycletimesecval
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: axiscountval
+  sql: axiscountval
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+measures:
+- formula: totopshrval:max
+  name: toh
+  label: TOH
+  description: "Total Operating Hours (TOH) (KB #7) \u2014 max totopshrval across\
+    \ operation rows. Group by operbotdetref for per-robot."
+- formula: '*:count'
+  name: 'no'
+  label: 'NO'
+  description: "Number of Operations (NO) (KB #8) \u2014 count of operation rows.\
+    \ Group by operbotdetref for per-robot."
+- formula: progcyclecount:sum
+  name: tpc
+  label: TPC
+  description: "Total Program Cycles (TPC) (KB #9) \u2014 sum of progcyclecount across\
+    \ operation rows. Group by operbotdetref for per-robot."
+- formula: cycletimesecval:avg
+  name: average_cycle_time
+  label: Avg Cycle Time
+  description: "Average Cycle Time (KB #51) \u2014 mean cycletimesecval per robot.\
+    \ Group by operbotdetref."
+- formula: progcyclecount:sum / cycletimesecval:sum
+  name: oce
+  label: OCE
+  description: "Operation Cycle Efficiency (KB #33) \u2014 TPC / sum(cycletimesecval).\
+    \ Group by operbotdetref for per-robot."
+- formula: totopshrval:max > 10000
+  name: is_heavily_used
+  label: Heavily Used Robot
+  description: "Heavily Used Robot (KB #17) \u2014 true if TOH > 10000 hours. Group\
+    \ by operbotdetref for per-robot."
+- formula: '*:count > 1'
+  name: is_multi_operation
+  label: Multi-Operation Robot
+  description: "Multi-Operation Robot (KB #18) \u2014 true if NO > 1. Group by operbotdetref\
+    \ for per-robot."
+- formula: progcyclecount:sum > 1000000
+  name: is_high_cycle_count
+  label: High Cycle Count Robot
+  description: "High Cycle Count Robot (KB #19) \u2014 true if TPC > 1000000. Group\
+    \ by operbotdetref for per-robot."
+- formula: (progcyclecount:sum / cycletimesecval:sum) < 100 and progcyclecount:sum
+    > 500000
+  name: is_low_efficiency
+  label: 'Low Efficiency (KB #43 bucket)'
+  description: "Cycle Efficiency Category (KB #43) \u2014 'Low Efficiency' bucket:\
+    \ OCE<100 AND TPC>500000."
+- formula: (not ((progcyclecount:sum / cycletimesecval:sum) < 100 and progcyclecount:sum
+    > 500000)) and ((progcyclecount:sum / cycletimesecval:sum) < 150 or progcyclecount:sum
+    > 300000)
+  name: is_medium_efficiency
+  label: 'Medium Efficiency (KB #43 bucket)'
+  description: "Cycle Efficiency Category (KB #43) \u2014 'Medium Efficiency' bucket:\
+    \ not Low AND (OCE<150 OR TPC>300000)."
+- formula: (not ((progcyclecount:sum / cycletimesecval:sum) < 100 and progcyclecount:sum
+    > 500000)) and (not ((progcyclecount:sum / cycletimesecval:sum) < 150 or progcyclecount:sum
+    > 300000))
+  name: is_high_efficiency
+  label: 'High Efficiency (KB #43 bucket)'
+  description: "Cycle Efficiency Category (KB #43) \u2014 'High Efficiency' bucket:\
+    \ neither Low nor Medium."
+aggregations: []
+joins:
+- target_model: robot_details
+  join_pairs:
+  - - operbotdetref
+    - botdetreg
+  join_type: left
+- target_model: robot_record
+  join_pairs:
+  - - operrecref
+    - recreg
+  join_type: left
+filters: []
+description: 'Per-operation record of robot activity: total operating hours so far,
+  application type, mode, current program, cycle count, cycle time, axis count. Joined
+  to robot_details via operbotdetref.'
+hidden: false

@@ -1,0 +1,23 @@
+version: 3
+name: bond_ratings
+sql_table: bond_ratings
+query_variables: {}
+data_source: exchange_traded_funds
+columns:
+- name: ratekey
+  sql: ratekey
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: creditmark
+  sql: creditmark
+  type: string
+  primary_key: false
+  hidden: false
+measures: []
+aggregations: []
+joins: []
+filters: []
+hidden: false

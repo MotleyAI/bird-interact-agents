@@ -1,0 +1,176 @@
+version: 3
+name: shipments
+sql_table: shipments
+query_variables: {}
+data_source: cold_chain_pharma_compliance
+columns:
+- name: reckey
+  sql: reckey
+  type: string
+  primary_key: true
+  hidden: false
+- name: log_ts
+  sql: log_ts
+  type: string
+  primary_key: false
+  hidden: false
+- name: shiptok
+  sql: shiptok
+  type: string
+  primary_key: false
+  hidden: false
+- name: shipment_overview
+  sql: shipment_overview
+  type: string
+  primary_key: false
+  description: JSON column bundling routing, timing and risk-performance metadata
+    for one shipment.
+  hidden: false
+  meta:
+    kb_ids:
+    - 16
+- name: origin_hub
+  sql: json_extract(shipment_overview, '$.route.origin.hub')
+  type: string
+  primary_key: false
+  description: Origin logistics hub name (extracted from shipment_overview.route.origin.hub).
+  hidden: false
+- name: origin_nation
+  sql: json_extract(shipment_overview, '$.route.origin.nation')
+  type: string
+  primary_key: false
+  description: Origin country/nation (extracted from shipment_overview.route.origin.nation).
+  hidden: false
+- name: origin_address
+  sql: json_extract(shipment_overview, '$.route.origin.address')
+  type: string
+  primary_key: false
+  description: Origin street address (extracted from shipment_overview.route.origin.address).
+  hidden: false
+- name: destination_hub
+  sql: json_extract(shipment_overview, '$.route.destination.hub')
+  type: string
+  primary_key: false
+  description: Destination logistics hub name (extracted from shipment_overview.route.destination.hub).
+  hidden: false
+- name: destination_nation
+  sql: json_extract(shipment_overview, '$.route.destination.nation')
+  type: string
+  primary_key: false
+  description: 'Destination country/nation. KB #16 (Major Pharmaceutical Markets)
+    names the principal destinations for cold-chain distribution: United States, EU
+    (Germany, France, Italy, Spain, UK), Japan, China, Brazil, India, Russia. Use
+    this column to filter shipments to/from those markets. KB #42 (Primary Cold Chain
+    Monitoring Authorities) lists the regulators (FDA, EMA, MHRA, Health Canada, TGA,
+    PMDA, WHO) that govern these markets.'
+  hidden: false
+  meta:
+    kb_ids:
+    - 16
+    - 42
+- name: destination_address
+  sql: json_extract(shipment_overview, '$.route.destination.address')
+  type: string
+  primary_key: false
+  description: Destination street address (extracted from shipment_overview.route.destination.address).
+  hidden: false
+- name: route_string
+  sql: json_extract(shipment_overview, '$.route.route_string')
+  type: string
+  primary_key: false
+  description: Encoded planned route (origin -> destination) string.
+  hidden: false
+- name: risk_note
+  sql: json_extract(shipment_overview, '$.route.risk_note')
+  type: string
+  primary_key: false
+  description: 'Qualitative route-risk note: ''Low'', ''Medium'', or ''High''. KB
+    #3 (Route Risk Classification) defines the same categories quantitatively as 0-1
+    / 2-4 / 5+ historical excursion events per 10 shipments. The pre-computed risk_note
+    value is the schema''s encoding of that classification per shipment.'
+  hidden: false
+  meta:
+    kb_id: 3
+- name: go_time_ts
+  sql: json_extract(shipment_overview, '$.timing_performance.go_time_ts')
+  type: time
+  primary_key: false
+  description: Planned departure timestamp.
+  hidden: false
+- name: end_time_ts
+  sql: json_extract(shipment_overview, '$.timing_performance.end_time_ts')
+  type: time
+  primary_key: false
+  description: Actual arrival timestamp.
+  hidden: false
+- name: planned_eta_hrs
+  sql: json_extract(shipment_overview, '$.timing_performance.planned_eta_hrs')
+  type: number
+  primary_key: false
+  description: Estimated/planned transit time in hours.
+  hidden: false
+- name: actual_duration_hrs
+  sql: json_extract(shipment_overview, '$.timing_performance.actual_duration_hrs')
+  type: number
+  primary_key: false
+  description: "Actual transit time in hours. NULL means actual hours not yet recorded.\
+    \ KB #38 (Last Mile Delivery Risk) describes the special risks of the final delivery\
+    \ stage \u2014 lack of temp-controlled vehicles, multiple stops, variable handling,\
+    \ inconsistent receiving, limited monitoring \u2014 that contribute to longer-than-expected\
+    \ actual_duration_hrs vs planned_eta_hrs."
+  hidden: false
+  meta:
+    kb_id: 38
+- name: distance_km
+  sql: json_extract(shipment_overview, '$.timing_performance.distance_km')
+  type: number
+  primary_key: false
+  description: Total distance travelled (km).
+  hidden: false
+- name: otdp
+  sql: CAST(json_extract(shipment_overview, '$.timing_performance.actual_duration_hrs')
+    AS REAL) * 100.0 / NULLIF(CAST(json_extract(shipment_overview, '$.timing_performance.planned_eta_hrs')
+    AS REAL), 0)
+  type: number
+  primary_key: false
+  description: 'On-Time Delivery Performance (OTDP, KB #12): actual_duration_hrs /
+    planned_eta_hrs * 100. <100 = early, 100 = on-time, >100 = late.'
+  hidden: false
+  meta:
+    kb_id: 12
+- name: delivery_performance_class
+  sql: CASE WHEN CAST(json_extract(shipment_overview, '$.timing_performance.actual_duration_hrs')
+    AS REAL) - CAST(json_extract(shipment_overview, '$.timing_performance.planned_eta_hrs')
+    AS REAL) < -2 THEN 'Early' WHEN CAST(json_extract(shipment_overview, '$.timing_performance.actual_duration_hrs')
+    AS REAL) - CAST(json_extract(shipment_overview, '$.timing_performance.planned_eta_hrs')
+    AS REAL) <= 2 THEN 'On-Time' WHEN CAST(json_extract(shipment_overview, '$.timing_performance.actual_duration_hrs')
+    AS REAL) - CAST(json_extract(shipment_overview, '$.timing_performance.planned_eta_hrs')
+    AS REAL) <= 24 THEN 'Delayed' ELSE 'Severely Delayed' END
+  type: string
+  primary_key: false
+  description: 'Delivery Performance Classification (KB #13): based on (actual - planned)
+    hours. Early <-2h, On-Time within +-2h, Delayed 2-24h late, Severely Delayed >24h
+    late.'
+  hidden: false
+  meta:
+    kb_id: 13
+- name: is_high_risk_lane
+  sql: json_extract(shipment_overview, '$.route.risk_note') = 'High'
+  type: boolean
+  primary_key: false
+  description: 'High-Risk Shipping Origin-Destination Pair indicator (KB #17, partial).
+    Source data only carries the qualitative risk_note tag set per shipment; the four
+    KB criteria (>3 climate zones, >2 carrier transfers, >48h customs delay, >15%
+    historical excursion rate) are not present in the schema, so this proxies via
+    risk_note=''High''.'
+  hidden: false
+  meta:
+    kb_id: 17
+measures: []
+aggregations: []
+joins: []
+filters: []
+description: "Cold-chain pharmaceutical shipments \u2014 one row per logged shipment.\
+  \ Holds the JSON shipment_overview blob with route (origin/destination/risk_note/route_string)\
+  \ and timing_performance (planned vs. actual hours, distance) sub-objects."
+hidden: false

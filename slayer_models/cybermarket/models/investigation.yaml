@@ -1,0 +1,170 @@
+version: 3
+name: investigation
+sql_table: investigation
+query_variables: {}
+data_source: cybermarket
+columns:
+- name: investregistry
+  sql: investregistry
+  type: string
+  primary_key: true
+  hidden: false
+- name: investstat
+  sql: investstat
+  type: string
+  primary_key: false
+  hidden: false
+- name: lawinterest
+  sql: lawinterest
+  type: string
+  primary_key: false
+  hidden: false
+- name: regrisklvl
+  sql: regrisklvl
+  type: string
+  primary_key: false
+  hidden: false
+- name: compliancescore
+  sql: compliancescore
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: investpriority
+  sql: investpriority
+  type: string
+  primary_key: false
+  hidden: false
+- name: resptimemins
+  sql: resptimemins
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: escalationlevel
+  sql: escalationlevel
+  type: string
+  primary_key: false
+  hidden: false
+- name: casestatus
+  sql: casestatus
+  type: string
+  primary_key: false
+  hidden: false
+- name: resolutiontimehours
+  sql: resolutiontimehours
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: actiontaken
+  sql: actiontaken
+  type: string
+  primary_key: false
+  hidden: false
+- name: followuprequired
+  sql: followuprequired
+  type: string
+  primary_key: false
+  hidden: false
+- name: reviewfrequency
+  sql: reviewfrequency
+  type: string
+  primary_key: false
+  hidden: false
+- name: nextreviewdate
+  sql: nextreviewdate
+  type: string
+  primary_key: false
+  hidden: false
+- name: notescount
+  sql: notescount
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: dataretentionstatus
+  sql: dataretentionstatus
+  type: string
+  primary_key: false
+  hidden: false
+- name: lastupdated
+  sql: lastupdated
+  type: string
+  primary_key: false
+  hidden: false
+- name: updatefrequencyhours
+  sql: updatefrequencyhours
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: secref
+  sql: secref
+  type: string
+  primary_key: false
+  hidden: false
+- name: riskref
+  sql: riskref
+  type: string
+  primary_key: false
+  hidden: false
+- name: lawinterest_numeric
+  sql: CASE lawinterest WHEN 'Low' THEN 1 WHEN 'Medium' THEN 2 WHEN 'High' THEN 3
+    WHEN 'Unknown' THEN 2 ELSE 2 END
+  type: number
+  primary_key: false
+  description: 'Numeric mapping of lawinterest used by IPS: Low=1, Medium=2, High=3,
+    Unknown=2.'
+  hidden: false
+  meta:
+    kb_ids:
+    - 8
+- name: regrisklvl_numeric
+  sql: CASE regrisklvl WHEN 'Low' THEN 1 WHEN 'Medium' THEN 2 WHEN 'High' THEN 3 WHEN
+    'Unknown' THEN 2 ELSE 2 END
+  type: number
+  primary_key: false
+  description: 'Numeric mapping of regrisklvl used by IPS: Low=1, Medium=2, High=3,
+    Unknown=2.'
+  hidden: false
+  meta:
+    kb_ids:
+    - 8
+- name: ips
+  sql: ((CASE lawinterest WHEN 'Low' THEN 1 WHEN 'Medium' THEN 2 WHEN 'High' THEN
+    3 WHEN 'Unknown' THEN 2 ELSE 2 END) * 30) + ((CASE regrisklvl WHEN 'Low' THEN
+    1 WHEN 'Medium' THEN 2 WHEN 'High' THEN 3 WHEN 'Unknown' THEN 2 ELSE 2 END) *
+    20) + (riskanalysis.fraudprob * 100) - (compliancescore * 0.5) + (notescount *
+    2)
+  type: number
+  primary_key: false
+  description: 'Investigation Priority Score (IPS): 30*lawinterest_numeric + 20*regrisklvl_numeric
+    + 100*fraudprob (from linked riskanalysis via riskref) - 0.5*compliancescore +
+    2*notescount. Higher = higher priority.'
+  hidden: false
+  meta:
+    kb_id: 18
+measures: []
+aggregations: []
+joins:
+- target_model: riskanalysis
+  join_pairs:
+  - - riskref
+    - riskregistry
+  join_type: left
+- target_model: securitymonitoring
+  join_pairs:
+  - - secref
+    - secmonregistry
+  join_type: left
+filters: []
+description: Investigation case records, tied to a security-monitoring record (secref)
+  and a risk profile (riskref). Captures status, law-enforcement / regulatory interest,
+  compliance score, escalation, action taken, and review cadence.
+hidden: false

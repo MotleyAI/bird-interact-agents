@@ -1,0 +1,68 @@
+version: 3
+name: lightandradiationreadings
+sql_table: lightandradiationreadings
+query_variables: {}
+data_source: museum
+columns:
+- name: lightradregistry
+  sql: lightradregistry
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: envreadref
+  sql: envreadref
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: lightlux
+  sql: lightlux
+  type: number
+  primary_key: false
+  description: 'Visible light intensity in lux. KB #29: typical indoor 300-500 lux;
+    standards: 50 lux for highly sensitive (textiles, paper), 150-200 for paintings/wood,
+    up to 300 for stone/metal; daylight >10000 should be filtered. Light Exposure
+    Thresholds (KB #53): high-sensitivity artifacts (textiles, paper) <=50 lux; medium-sensitivity
+    (paintings, wood) <=200 lux. Based on conservation research about light-induced
+    deterioration rates.'
+  hidden: false
+  format:
+    type: integer
+  meta:
+    kb_ids:
+    - 29
+    - 53
+- name: uvuwcm2
+  sql: uvuwcm2
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: irwm2
+  sql: irwm2
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: visibleexplxh
+  sql: visibleexplxh
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+measures: []
+aggregations: []
+joins:
+- target_model: environmentalreadingscore
+  join_pairs:
+  - - envreadref
+    - envreadregistry
+  join_type: left
+filters: []
+hidden: false

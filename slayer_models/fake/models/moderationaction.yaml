@@ -1,0 +1,677 @@
+version: 3
+name: moderationaction
+sql_table: moderationaction
+query_variables: {}
+data_source: fake
+columns:
+- name: modactkey
+  sql: modactkey
+  type: string
+  primary_key: true
+  hidden: false
+- name: masedetref
+  sql: masedetref
+  type: string
+  primary_key: false
+  hidden: false
+- name: macntref
+  sql: macntref
+  type: string
+  primary_key: false
+  hidden: false
+- name: abuserepnum
+  sql: abuserepnum
+  type: number
+  primary_key: false
+  description: Number of abuse reports filed against the account.
+  hidden: false
+  format:
+    type: integer
+- name: violtypedist
+  sql: violtypedist
+  type: string
+  primary_key: false
+  hidden: false
+- name: susphist
+  sql: susphist
+  type: string
+  primary_key: false
+  description: Suspension history count (enum 0-5).
+  hidden: false
+- name: warnnum
+  sql: warnnum
+  type: number
+  primary_key: false
+  description: Number of warnings issued.
+  hidden: false
+  format:
+    type: integer
+- name: appealnum
+  sql: appealnum
+  type: string
+  primary_key: false
+  hidden: false
+- name: linkacctnum
+  sql: linkacctnum
+  type: number
+  primary_key: false
+  description: Linked / sockpuppet account count.
+  hidden: false
+  format:
+    type: integer
+- name: clustsize
+  sql: clustsize
+  type: number
+  primary_key: false
+  description: Size of the related account cluster.
+  hidden: false
+  format:
+    type: integer
+- name: clustrole
+  sql: clustrole
+  type: string
+  primary_key: false
+  description: User's cluster role (Isolated / Follower / Leader / Amplifier).
+  hidden: false
+- name: netinflscore
+  sql: netinflscore
+  type: number
+  primary_key: false
+  description: Network influence score.
+  hidden: false
+  format:
+    type: float
+- name: coordscore
+  sql: coordscore
+  type: number
+  primary_key: false
+  description: 'Coordination score (KB #21). KB documents [0,1] range; observed data
+    is on a 0-100 scale. KB #82 ''max coordscore'' = MAX(coordscore) per cluster.'
+  hidden: false
+  format:
+    type: float
+  meta:
+    kb_ids:
+    - 21
+    - 82
+- name: authenscore
+  sql: authenscore
+  type: number
+  primary_key: false
+  description: Authenticity score (component of CAS / Content Authenticity).
+  hidden: false
+  format:
+    type: float
+- name: credscore
+  sql: credscore
+  type: number
+  primary_key: false
+  description: Credibility score (component of PCI).
+  hidden: false
+  format:
+    type: float
+- name: reputscore
+  sql: reputscore
+  type: number
+  primary_key: false
+  description: Reputation score (component of PCI; underlies RVI).
+  hidden: false
+  format:
+    type: float
+- name: trustval
+  sql: trustval
+  type: number
+  primary_key: false
+  description: 'Trust value (KB #27). KB documents the [0,1] range; observed data
+    is on a 0-10 scale. Higher = more trusted.'
+  hidden: false
+  format:
+    type: float
+  meta:
+    kb_id: 27
+- name: impactval
+  sql: impactval
+  type: number
+  primary_key: false
+  description: 'Impact value of the violation (KB #28). KB documents the [0,1] range;
+    observed data extends beyond 1.'
+  hidden: false
+  format:
+    type: float
+  meta:
+    kb_id: 28
+- name: monitorpriority
+  sql: monitorpriority
+  type: string
+  primary_key: false
+  hidden: false
+- name: investstatus
+  sql: investstatus
+  type: string
+  primary_key: false
+  hidden: false
+- name: actiontaken
+  sql: actiontaken
+  type: string
+  primary_key: false
+  hidden: false
+- name: reviewfreq
+  sql: reviewfreq
+  type: string
+  primary_key: false
+  hidden: false
+- name: lastrevdate
+  sql: lastrevdate
+  type: string
+  primary_key: false
+  hidden: false
+- name: nextrevdate
+  sql: nextrevdate
+  type: string
+  primary_key: false
+  hidden: false
+- name: aaf
+  sql: CAST(contentbehavior__sessionbehavior.sesscount AS REAL) / NULLIF(contentbehavior__sessionbehavior__profile__account.acctagespan,
+    0)
+  type: number
+  primary_key: false
+  description: 'Account Activity Frequency (AAF) = sesscount / acctagespan. KB #0.'
+  hidden: false
+  meta:
+    kb_id: 0
+- name: cas_authenticity
+  sql: 0.3 * authenscore + 0.3 * contentbehavior.cntuniqscore + 0.4 * securitydetection__technicalinfo__messaginganalysis.convnatval
+  type: number
+  primary_key: false
+  description: 'Content Authenticity Score (KB #1). Defined as 0.3*authenscore + 0.3*cntuniqscore
+    + 0.4*convnatval. KB says values are normalized to [0,1]; observed scales may
+    differ.'
+  hidden: false
+  meta:
+    kb_id: 1
+- name: ngv
+  sql: sqrt((CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.connection_metrics.followgrowrate') AS REAL)) * (CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.connection_metrics.followgrowrate') AS REAL)) + (CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.connection_metrics.followinggrowrate') AS REAL)) * (CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.connection_metrics.followinggrowrate') AS REAL)))
+  type: number
+  primary_key: false
+  description: 'Network Growth Velocity (KB #2): sqrt(followgrowrate^2 + followinggrowrate^2).
+    Joined networkmetrics row reached via securitydetection->technicalinfo->networkmetrics.'
+  hidden: false
+  meta:
+    kb_id: 2
+- name: bbi
+  sql: 0.4 * json_extract(securitydetection.detection_score_profile, '$.behavior_scores.botlikscore')
+    + 0.3 * json_extract(securitydetection.detection_score_profile, '$.behavior_scores.autobehavscore')
+    + 0.3 * (1 - securitydetection__technicalinfo__messaginganalysis.convnatval)
+  type: number
+  primary_key: false
+  description: 'Bot Behavior Index (KB #3): 0.4*botlikscore + 0.3*autobehavscore +
+    0.3*(1-convnatval). botlikscore observed in 0-100; KB-implied composite assumes
+    0-1, so values may exceed 1.'
+  hidden: false
+  meta:
+    kb_id: 3
+- name: srs
+  sql: 0.4 * json_extract(securitydetection.detection_score_profile, '$.overall.riskval')
+    + 0.3 * (1 - trustval) + 0.3 * impactval
+  type: number
+  primary_key: false
+  description: 'Security Risk Score (KB #4): 0.4*riskval + 0.3*(1-trustval) + 0.3*impactval.'
+  hidden: false
+  meta:
+    kb_id: 4
+- name: pci
+  sql: 0.3 * credscore + 0.3 * reputscore + 0.4 * json_extract(contentbehavior__sessionbehavior__profile.profile_composition,
+    '$.completeness')
+  type: number
+  primary_key: false
+  description: 'Profile Credibility Index (KB #5): 0.3*credscore + 0.3*reputscore
+    + 0.4*completeness.'
+  hidden: false
+  meta:
+    kb_id: 5
+- name: cas_coordinated
+  sql: 0.5 * coordscore + 0.3 * netinflscore + 0.2 * (CAST(clustsize AS REAL) / 100)
+  type: number
+  primary_key: false
+  description: 'Coordinated Activity Score (KB #6): 0.5*coordscore + 0.3*netinflscore
+    + 0.2*clustsize/100.'
+  hidden: false
+  meta:
+    kb_id: 6
+- name: tei
+  sql: 0.4 * securitydetection__technicalinfo.vpnratio + 0.3 * (CAST(securitydetection__technicalinfo.proxycount
+    AS REAL) / 10) + 0.3 * (CAST(securitydetection__technicalinfo.ipcountrynum AS
+    REAL) / 20)
+  type: number
+  primary_key: false
+  description: 'Technical Evasion Index (KB #7): 0.4*vpnratio + 0.3*proxycount/10
+    + 0.3*ipcountrynum/20.'
+  hidden: false
+  meta:
+    kb_id: 7
+- name: cms
+  sql: 0.4 * (1 - contentbehavior.cntuniqscore) + 0.3 * contentbehavior.mediareratio
+    + 0.3 * (1 - securitydetection__technicalinfo__messaginganalysis.txtuniq)
+  type: number
+  primary_key: false
+  description: 'Content Manipulation Score (KB #8): 0.4*(1-cntuniqscore) + 0.3*mediareratio
+    + 0.3*(1-txtuniq).'
+  hidden: false
+  meta:
+    kb_id: 8
+- name: mps
+  sql: 0.3 * (CAST(abuserepnum AS REAL) / 1000) + 0.4 * impactval + 0.3 * json_extract(securitydetection.detection_score_profile,
+    '$.overall.riskval')
+  type: number
+  primary_key: false
+  description: 'Moderation Priority Score (KB #9): 0.3*abuserepnum/1000 + 0.4*impactval
+    + 0.3*riskval.'
+  hidden: false
+  meta:
+    kb_id: 9
+- name: cpri
+  sql: (0.4 * json_extract(securitydetection.detection_score_profile, '$.overall.riskval')
+    + 0.3 * (1 - trustval) + 0.3 * impactval) * (1 + 0.2 * securitydetection__technicalinfo.ipcountrynum)
+  type: number
+  primary_key: false
+  description: 'Cross-Platform Risk Index (KB #30): SRS * (1 + 0.2 * ipcountrynum).
+    Inlines SRS to avoid cross-column reference inside Column.sql.'
+  hidden: false
+  meta:
+    kb_id: 30
+- name: nmi
+  sql: 0.6 * (0.4 * json_extract(securitydetection.detection_score_profile, '$.behavior_scores.botlikscore')
+    + 0.3 * json_extract(securitydetection.detection_score_profile, '$.behavior_scores.autobehavscore')
+    + 0.3 * (1 - securitydetection__technicalinfo__messaginganalysis.convnatval))
+    + 0.4 * (0.5 * coordscore + 0.3 * netinflscore + 0.2 * (CAST(clustsize AS REAL)
+    / 100))
+  type: number
+  primary_key: false
+  description: 'Network Manipulation Index (KB #31): 0.6*BBI + 0.4*CAS-coord. BBI
+    and CAS-coord inlined.'
+  hidden: false
+  meta:
+    kb_id: 31
+- name: ets
+  sql: 0.5 * (0.3 * credscore + 0.3 * reputscore + 0.4 * json_extract(contentbehavior__sessionbehavior__profile.profile_composition,
+    '$.completeness')) + 0.5 * (0.3 * authenscore + 0.3 * contentbehavior.cntuniqscore
+    + 0.4 * securitydetection__technicalinfo__messaginganalysis.convnatval)
+  type: number
+  primary_key: false
+  description: 'Enhanced Trust Score (KB #32): 0.5*PCI + 0.5*CAS-authenticity. PCI
+    and CAS inlined.'
+  hidden: false
+  meta:
+    kb_id: 32
+- name: cbr
+  sql: (0.4 * json_extract(securitydetection.detection_score_profile, '$.behavior_scores.botlikscore')
+    + 0.3 * json_extract(securitydetection.detection_score_profile, '$.behavior_scores.autobehavscore')
+    + 0.3 * (1 - securitydetection__technicalinfo__messaginganalysis.convnatval))
+    * (0.5 * coordscore + 0.3 * netinflscore + 0.2 * (CAST(clustsize AS REAL) / 100))
+    * (CAST(clustsize AS REAL) / 100)
+  type: number
+  primary_key: false
+  description: 'Coordinated Bot Risk (KB #33): BBI * CAS-coord * clustsize/100.'
+  hidden: false
+  meta:
+    kb_id: 33
+- name: csi
+  sql: 0.7 * (1 - (0.4 * (1 - contentbehavior.cntuniqscore) + 0.3 * contentbehavior.mediareratio
+    + 0.3 * (1 - securitydetection__technicalinfo__messaginganalysis.txtuniq))) +
+    0.3 * (0.3 * authenscore + 0.3 * contentbehavior.cntuniqscore + 0.4 * securitydetection__technicalinfo__messaginganalysis.convnatval)
+  type: number
+  primary_key: false
+  description: 'Content Security Index (KB #34): 0.7*(1-CMS) + 0.3*CAS-authenticity.'
+  hidden: false
+  meta:
+    kb_id: 34
+- name: abs_score
+  sql: 0.4 * (0.4 * json_extract(securitydetection.detection_score_profile, '$.behavior_scores.botlikscore')
+    + 0.3 * json_extract(securitydetection.detection_score_profile, '$.behavior_scores.autobehavscore')
+    + 0.3 * (1 - securitydetection__technicalinfo__messaginganalysis.convnatval))
+    + 0.3 * (0.4 * securitydetection__technicalinfo.vpnratio + 0.3 * (CAST(securitydetection__technicalinfo.proxycount
+    AS REAL) / 10) + 0.3 * (CAST(securitydetection__technicalinfo.ipcountrynum AS
+    REAL) / 20)) + 0.3 * (1 - (0.3 * authenscore + 0.3 * contentbehavior.cntuniqscore
+    + 0.4 * securitydetection__technicalinfo__messaginganalysis.convnatval))
+  type: number
+  primary_key: false
+  description: 'Automated Behavior Score (KB #35): 0.4*BBI + 0.3*TEI + 0.3*(1-CAS-authenticity).'
+  hidden: false
+  meta:
+    kb_id: 35
+- name: nts
+  sql: (0.3 * credscore + 0.3 * reputscore + 0.4 * json_extract(contentbehavior__sessionbehavior__profile.profile_composition,
+    '$.completeness')) * (1 - sqrt((CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.connection_metrics.followgrowrate') AS REAL)) * (CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.connection_metrics.followgrowrate') AS REAL)) + (CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.connection_metrics.followinggrowrate') AS REAL)) * (CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.connection_metrics.followinggrowrate') AS REAL)))) * (1 - ((0.4 * json_extract(securitydetection.detection_score_profile,
+    '$.behavior_scores.botlikscore') + 0.3 * json_extract(securitydetection.detection_score_profile,
+    '$.behavior_scores.autobehavscore') + 0.3 * (1 - securitydetection__technicalinfo__messaginganalysis.convnatval))
+    * (0.5 * coordscore + 0.3 * netinflscore + 0.2 * (CAST(clustsize AS REAL) / 100))
+    * (CAST(clustsize AS REAL) / 100)))
+  type: number
+  primary_key: false
+  description: 'Network Trust Score (KB #36): PCI * (1-NGV) * (1-CBR). All inlined.'
+  hidden: false
+  meta:
+    kb_id: 36
+- name: cis
+  sql: (0.4 * (1 - contentbehavior.cntuniqscore) + 0.3 * contentbehavior.mediareratio
+    + 0.3 * (1 - securitydetection__technicalinfo__messaginganalysis.txtuniq)) * (0.3
+    * (CAST(abuserepnum AS REAL) / 1000) + 0.4 * impactval + 0.3 * json_extract(securitydetection.detection_score_profile,
+    '$.overall.riskval')) * (CAST(netinflscore AS REAL) / 100)
+  type: number
+  primary_key: false
+  description: 'Content Impact Score (KB #37): CMS * MPS * netinflscore/100.'
+  hidden: false
+  meta:
+    kb_id: 37
+- name: ars
+  sql: 0.5 * (0.4 * securitydetection__technicalinfo.vpnratio + 0.3 * (CAST(securitydetection__technicalinfo.proxycount
+    AS REAL) / 10) + 0.3 * (CAST(securitydetection__technicalinfo.ipcountrynum AS
+    REAL) / 20)) + 0.3 * (1 - (0.3 * credscore + 0.3 * reputscore + 0.4 * json_extract(contentbehavior__sessionbehavior__profile.profile_composition,
+    '$.completeness'))) + 0.2 * (0.4 * json_extract(securitydetection.detection_score_profile,
+    '$.overall.riskval') + 0.3 * (1 - trustval) + 0.3 * impactval)
+  type: number
+  primary_key: false
+  description: 'Authentication Risk Score (KB #38): 0.5*TEI + 0.3*(1-PCI) + 0.2*SRS.'
+  hidden: false
+  meta:
+    kb_id: 38
+- name: bas
+  sql: 0.4 * (0.4 * json_extract(securitydetection.detection_score_profile, '$.behavior_scores.botlikscore')
+    + 0.3 * json_extract(securitydetection.detection_score_profile, '$.behavior_scores.autobehavscore')
+    + 0.3 * (1 - securitydetection__technicalinfo__messaginganalysis.convnatval))
+    + 0.4 * (CAST(contentbehavior__sessionbehavior.sesscount AS REAL) / NULLIF(contentbehavior__sessionbehavior__profile__account.acctagespan,
+    0)) + 0.2 * sqrt((CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.connection_metrics.followgrowrate') AS REAL)) * (CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.connection_metrics.followgrowrate') AS REAL)) + (CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.connection_metrics.followinggrowrate') AS REAL)) * (CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.connection_metrics.followinggrowrate') AS REAL)))
+  type: number
+  primary_key: false
+  description: 'Behavioral Anomaly Score (KB #39): 0.4*BBI + 0.4*AAF + 0.2*NGV.'
+  hidden: false
+  meta:
+    kb_id: 39
+- name: nic
+  sql: 0.4 * CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.connection_metrics.connqualscore') AS REAL) + 0.3 * netinflscore + 0.3 * CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.interaction_metrics.interactdiv') AS REAL)
+  type: number
+  primary_key: false
+  description: 'Network Influence Centrality (KB #51): 0.4*connqualscore + 0.3*netinflscore
+    + 0.3*interactdiv.'
+  hidden: false
+  meta:
+    kb_id: 51
+- name: cae
+  sql: (0.4 * (1 - contentbehavior.cntuniqscore) + 0.3 * contentbehavior.mediareratio
+    + 0.3 * (1 - securitydetection__technicalinfo__messaginganalysis.txtuniq)) * (0.3
+    * (CAST(abuserepnum AS REAL) / 1000) + 0.4 * impactval + 0.3 * json_extract(securitydetection.detection_score_profile,
+    '$.overall.riskval')) * (CAST(netinflscore AS REAL) / 100) * (0.4 * CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.connection_metrics.connqualscore') AS REAL) + 0.3 * netinflscore + 0.3 * CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.interaction_metrics.interactdiv') AS REAL)) * ln(1 + COALESCE(linkacctnum,
+    0))
+  type: number
+  primary_key: false
+  description: 'Content Amplification Effect (KB #57): CIS * NIC * ln(1 + resharecount).
+    resharecount is not in schema; using linkacctnum as a best-effort proxy for cascade
+    size. CIS and NIC inlined.'
+  hidden: false
+  meta:
+    kb_id: 57
+- name: is_high_risk_account
+  sql: CASE WHEN (0.4 * json_extract(securitydetection.detection_score_profile, '$.overall.riskval')
+    + 0.3 * (1 - trustval) + 0.3 * impactval) > 0.8 AND json_extract(securitydetection.detection_score_profile,
+    '$.overall.threatlvl') = 'Critical' THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'High-Risk Account predicate (KB #10): SRS > 0.8 AND threatlvl=''Critical''.
+    1=true.'
+  hidden: false
+  meta:
+    kb_id: 10
+- name: is_dormant_bot
+  sql: CASE WHEN contentbehavior__sessionbehavior__profile__account.acctstatus = 'Dormant'
+    THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Dormant Bot predicate (KB #15): acctstatus=''Dormant''. 1=true.'
+  hidden: false
+  meta:
+    kb_id: 15
+- name: is_vpn_abuser
+  sql: CASE WHEN (0.4 * securitydetection__technicalinfo.vpnratio + 0.3 * (CAST(securitydetection__technicalinfo.proxycount
+    AS REAL) / 10) + 0.3 * (CAST(securitydetection__technicalinfo.ipcountrynum AS
+    REAL) / 20)) > 0.8 AND securitydetection__technicalinfo.ipcountrynum >= 3 THEN
+    1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'VPN Abuser predicate (KB #16): TEI > 0.8 AND ipcountrynum >= 3 (proxy
+    for ''3+ different countries in login locations''). 1=true.'
+  hidden: false
+  meta:
+    kb_id: 16
+- name: is_engagement_manipulator
+  sql: CASE WHEN CAST(json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.engagement_metrics.engauth') AS REAL) < 0.3 AND json_extract(securitydetection__technicalinfo__networkmetrics.network_engagement_metrics,
+    '$.interaction_metrics.tempinteractpat') = 'Automated' THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Engagement Manipulator predicate (KB #17): engauth < 0.3 AND tempinteractpat=''Automated''.
+    1=true.'
+  hidden: false
+  meta:
+    kb_id: 17
+- name: is_serial_violator
+  sql: CASE WHEN CAST(susphist AS INTEGER) > 2 AND warnnum > 5 THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Serial Violator predicate (KB #18): susphist > 2 AND warnnum > 5.
+    1=true.'
+  hidden: false
+  meta:
+    kb_id: 18
+- name: is_amplifier_in_amplification_network
+  sql: CASE WHEN clustrole = 'Amplifier' AND coordscore > 0.8 THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Amplification Network predicate (KB #19): clustrole=''Amplifier''
+    AND coordscore > 0.8. 1=true.'
+  hidden: false
+  meta:
+    kb_id: 19
+- name: is_high_impact_amplifier
+  sql: CASE WHEN netinflscore > 80 AND contentbehavior.postfreq > 30 THEN 1 ELSE 0
+    END
+  type: number
+  primary_key: false
+  description: 'High-Impact Amplifier predicate (KB #73): netinflscore > 80 AND postfreq
+    > 30.'
+  hidden: false
+  meta:
+    kb_id: 73
+- name: is_content_farm
+  sql: CASE WHEN (0.4 * (1 - contentbehavior.cntuniqscore) + 0.3 * contentbehavior.mediareratio
+    + 0.3 * (1 - securitydetection__technicalinfo__messaginganalysis.txtuniq)) > 0.7
+    AND contentbehavior.postfreq > 50 THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Content Farm predicate (KB #13): CMS > 0.7 AND postfreq > 50.'
+  hidden: false
+  meta:
+    kb_id: 13
+- name: is_sockpuppet_member
+  sql: CASE WHEN linkacctnum > 5 AND (0.5 * coordscore + 0.3 * netinflscore + 0.2
+    * (CAST(clustsize AS REAL) / 100)) > 0.8 THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Sockpuppet Network member predicate (KB #14): linkacctnum > 5 AND
+    CAS_coord > 0.8.'
+  hidden: false
+  meta:
+    kb_id: 14
+- name: is_trusted_content_creator
+  sql: CASE WHEN (0.5 * (0.3 * credscore + 0.3 * reputscore + 0.4 * json_extract(contentbehavior__sessionbehavior__profile.profile_composition,
+    '$.completeness')) + 0.5 * (0.3 * authenscore + 0.3 * contentbehavior.cntuniqscore
+    + 0.4 * securitydetection__technicalinfo__messaginganalysis.convnatval)) > 0.8
+    AND ((0.4 * (1 - contentbehavior.cntuniqscore) + 0.3 * contentbehavior.mediareratio
+    + 0.3 * (1 - securitydetection__technicalinfo__messaginganalysis.txtuniq)) * (0.3
+    * (CAST(abuserepnum AS REAL) / 1000) + 0.4 * impactval + 0.3 * json_extract(securitydetection.detection_score_profile,
+    '$.overall.riskval')) * (CAST(netinflscore AS REAL) / 100)) < 0.2 THEN 1 ELSE
+    0 END
+  type: number
+  primary_key: false
+  description: 'Trusted Content Creator predicate (KB #41): ETS > 0.8 AND CIS < 0.2.'
+  hidden: false
+  meta:
+    kb_id: 41
+- name: is_authentication_risk_account
+  sql: CASE WHEN (0.5 * (0.4 * securitydetection__technicalinfo.vpnratio + 0.3 * (CAST(securitydetection__technicalinfo.proxycount
+    AS REAL) / 10) + 0.3 * (CAST(securitydetection__technicalinfo.ipcountrynum AS
+    REAL) / 20)) + 0.3 * (1 - (0.3 * credscore + 0.3 * reputscore + 0.4 * json_extract(contentbehavior__sessionbehavior__profile.profile_composition,
+    '$.completeness'))) + 0.2 * (0.4 * json_extract(securitydetection.detection_score_profile,
+    '$.overall.riskval') + 0.3 * (1 - trustval) + 0.3 * impactval)) > 0.7 AND (0.4
+    * securitydetection__technicalinfo.vpnratio + 0.3 * (CAST(securitydetection__technicalinfo.proxycount
+    AS REAL) / 10) + 0.3 * (CAST(securitydetection__technicalinfo.ipcountrynum AS
+    REAL) / 20)) > 0.8 AND securitydetection__technicalinfo.ipcountrynum >= 3 THEN
+    1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Authentication Risk Account predicate (KB #42): ARS > 0.7 AND has
+    VPN-Abuser detection (TEI > 0.8 AND ipcountrynum >= 3 on this row).'
+  hidden: false
+  meta:
+    kb_id: 42
+- name: is_reputational_risk
+  sql: CASE WHEN reputscore < 30 THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Reputational Risk predicate (KB #72): reputscore < 30 (with ''high
+    abuserepnum'' as descriptive context). The ''top quartile of abuse reports'' priority
+    component is a windowing concern deferred to W4b R-MULTISTAGE.'
+  hidden: false
+  meta:
+    kb_id: 72
+- name: is_high_activity_account
+  sql: CASE WHEN contentbehavior__sessionbehavior.sesscount > 1000 OR contentbehavior.postfreq
+    > 50 THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'High-Activity Account predicate (KB #74 / #77): session_count > 1000
+    OR total_post_frequency > 50. Per-row proxy; for true per-account aggregates use
+    the SC (KB #75) and TPF (KB #76) measures instead.'
+  hidden: false
+  meta:
+    kb_ids:
+    - 74
+    - 77
+measures:
+- formula: aaf:avg
+  name: aaf_avg
+  description: 'Account Activity Frequency averaged over moderationaction rows. KB
+    #0.'
+- formula: cas_authenticity:avg
+  name: cas_authenticity_avg
+  description: 'Avg Content Authenticity Score (KB #1) over moderationaction rows.'
+- formula: ngv:avg
+  name: ngv_avg
+  description: 'Avg Network Growth Velocity (KB #2).'
+- formula: bbi:avg
+  name: bbi_avg
+  description: 'Avg Bot Behavior Index (KB #3).'
+- formula: srs:avg
+  name: srs_avg
+  description: 'Avg Security Risk Score (KB #4).'
+- formula: pci:avg
+  name: pci_avg
+  description: 'Avg Profile Credibility Index (KB #5).'
+- formula: cas_coordinated:avg
+  name: cas_coordinated_avg
+  description: 'Avg Coordinated Activity Score (KB #6).'
+- formula: tei:avg
+  name: tei_avg
+  description: 'Avg Technical Evasion Index (KB #7).'
+- formula: cms:avg
+  name: cms_avg
+  description: 'Avg Content Manipulation Score (KB #8).'
+- formula: mps:avg
+  name: mps_avg
+  description: 'Avg Moderation Priority Score (KB #9).'
+- formula: cpri:avg
+  name: cpri_avg
+  description: 'Avg Cross-Platform Risk Index (KB #30).'
+- formula: nmi:avg
+  name: nmi_avg
+  description: 'Avg Network Manipulation Index (KB #31).'
+- formula: ets:avg
+  name: ets_avg
+  description: 'Avg Enhanced Trust Score (KB #32).'
+- formula: cbr:avg
+  name: cbr_avg
+  description: 'Avg Coordinated Bot Risk (KB #33).'
+- formula: csi:avg
+  name: csi_avg
+  description: 'Avg Content Security Index (KB #34).'
+- formula: abs_score:avg
+  name: abs_score_avg
+  description: 'Avg Automated Behavior Score (KB #35).'
+- formula: nts:avg
+  name: nts_avg
+  description: 'Avg Network Trust Score (KB #36).'
+- formula: cis:avg
+  name: cis_avg
+  description: 'Avg Content Impact Score (KB #37).'
+- formula: ars:avg
+  name: ars_avg
+  description: 'Avg Authentication Risk Score (KB #38).'
+- formula: bas:avg
+  name: bas_avg
+  description: 'Avg Behavioral Anomaly Score (KB #39).'
+- formula: nic:avg
+  name: nic_avg
+  description: 'Avg Network Influence Centrality (KB #51).'
+- formula: cae:avg
+  name: cae_avg
+  description: 'Avg Content Amplification Effect (KB #57); resharecount proxied by
+    linkacctnum.'
+- formula: contentbehavior.sessionbehavior.profile.account.accindex:count_distinct
+  name: member_count
+  description: 'Member Count (KB #81)'
+- formula: coordscore:max
+  name: max_coordscore
+  description: 'Maximum Coordination Score in a cluster (KB #82).'
+- formula: contentbehavior.sessionbehavior.profile.account.accindex:list_distinct
+  name: member_account_ids
+  description: 'Member Account IDs (KB #83): comma-separated distinct account indexes.'
+aggregations:
+- name: list_distinct
+  formula: GROUP_CONCAT(DISTINCT {value})
+  params: []
+  description: 'Comma-separated list of distinct values, used for member account ID
+    enumeration (KB #83).'
+joins:
+- target_model: contentbehavior
+  join_pairs:
+  - - macntref
+    - cntref
+  join_type: left
+- target_model: securitydetection
+  join_pairs:
+  - - masedetref
+    - secdetkey
+  join_type: left
+filters: []
+description: Moderation actions and review records. Hosts most KB composite scores
+  (CAS, BBI, SRS, PCI, CAS-coordinated, MPS, TEI, NMI, ETS, CBR, ABS, ARS, BAS, NIC,
+  NMI etc.) because it joins to both securitydetection (reaching technicalinfo + securitydetection
+  JSON scores) and contentbehavior (reaching messaginganalysis + sessionbehavior +
+  profile + account). Each row is one moderation-action; KB metrics are per-account,
+  so queries group by contentbehavior.sessionbehavior.profile.account.accindex.
+hidden: false

@@ -1,0 +1,110 @@
+version: 3
+name: technicalinfo
+sql_table: technicalinfo
+query_variables: {}
+data_source: fake
+columns:
+- name: techkey
+  sql: techkey
+  type: string
+  primary_key: true
+  hidden: false
+- name: technetref
+  sql: technetref
+  type: string
+  primary_key: false
+  hidden: false
+- name: techmsgref
+  sql: techmsgref
+  type: string
+  primary_key: false
+  hidden: false
+- name: regip
+  sql: regip
+  type: string
+  primary_key: false
+  hidden: false
+- name: iprepscore
+  sql: iprepscore
+  type: number
+  primary_key: false
+  description: 'IP reputation score (KB #25). Range 0-1; >0.8 trusted IPs; <0.3 malicious
+    / compromised.'
+  hidden: false
+  format:
+    type: float
+  meta:
+    kb_id: 25
+- name: ipcountrynum
+  sql: ipcountrynum
+  type: number
+  primary_key: false
+  description: 'Number of distinct countries the registration IP is associated with.
+    Component of TEI (KB #7): 0.3 * ipcountrynum/20. KB #16 (VPN Abuser) checks ipcountrynum
+    >= 3.'
+  hidden: false
+  format:
+    type: integer
+- name: vpnratio
+  sql: vpnratio
+  type: number
+  primary_key: false
+  description: 'Fraction of sessions where VPN was detected. Component of TEI (KB
+    #7): 0.4 * vpnratio.'
+  hidden: false
+  format:
+    type: float
+- name: proxycount
+  sql: proxycount
+  type: number
+  primary_key: false
+  description: 'Number of proxy detections. Component of TEI (KB #7): 0.3 * proxycount/10.'
+  hidden: false
+  format:
+    type: integer
+- name: torflag
+  sql: torflag
+  type: string
+  primary_key: false
+  hidden: false
+- name: devtotal
+  sql: devtotal
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: devtypedist
+  sql: devtypedist
+  type: string
+  primary_key: false
+  hidden: false
+- name: browserdiv
+  sql: browserdiv
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: uaconsval
+  sql: uaconsval
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+measures: []
+aggregations: []
+joins:
+- target_model: messaginganalysis
+  join_pairs:
+  - - techmsgref
+    - msgkey
+  join_type: left
+- target_model: networkmetrics
+  join_pairs:
+  - - technetref
+    - netkey
+  join_type: left
+filters: []
+hidden: false

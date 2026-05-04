@@ -1,0 +1,478 @@
+version: 3
+name: cases
+sql_table: cases
+query_variables: {}
+data_source: labor_certification_applications
+columns:
+- name: filekey
+  sql: filekey
+  type: string
+  primary_key: true
+  hidden: false
+- name: statustag
+  sql: statustag
+  type: string
+  primary_key: false
+  hidden: false
+- name: recvday
+  sql: recvday
+  type: string
+  primary_key: false
+  hidden: false
+- name: decisionday
+  sql: decisionday
+  type: string
+  primary_key: false
+  hidden: false
+- name: origcertday
+  sql: origcertday
+  type: string
+  primary_key: false
+  hidden: false
+- name: visacls
+  sql: visacls
+  type: string
+  primary_key: false
+  description: 'Visa classification (KB #1). Possible values include H-1B (specialty
+    occupations), H-1B1 Singapore, H-1B1 Chile, E-3 Australian.'
+  hidden: false
+  meta:
+    kb_id: 1
+- name: jobtag
+  sql: jobtag
+  type: string
+  primary_key: false
+  hidden: false
+- name: soccd
+  sql: soccd
+  type: string
+  primary_key: false
+  description: 'Standard Occupational Classification (SOC) code (KB #7). E.g. 15-1253.00
+    = Software Quality Assurance Analysts and Testers; 29-1141.00 = Registered Nurses.'
+  hidden: false
+  meta:
+    kb_id: 7
+- name: soctitle
+  sql: soctitle
+  type: string
+  primary_key: false
+  hidden: false
+- name: fulltimeind
+  sql: fulltimeind
+  type: string
+  primary_key: false
+  description: "Full-Time Position Indicator (KB #4). 'Y'/'1' = full-time (\u2265\
+    35 hours/week), 'N'/'0' = part-time. May vary by employer."
+  hidden: false
+  meta:
+    kb_id: 4
+- name: beginday
+  sql: beginday
+  type: string
+  primary_key: false
+  hidden: false
+- name: endday
+  sql: endday
+  type: string
+  primary_key: false
+  hidden: false
+- name: headct
+  sql: headct
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: newemp
+  sql: newemp
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: contemp
+  sql: contemp
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: changeprev
+  sql: changeprev
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: concurrentlynew
+  sql: concurrentlynew
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: changefirm
+  sql: changefirm
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: amendflag
+  sql: amendflag
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: siteslots
+  sql: siteslots
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: agreelc
+  sql: agreelc
+  type: string
+  primary_key: false
+  hidden: false
+- name: h1bdep
+  sql: h1bdep
+  type: string
+  primary_key: false
+  description: "H-1B Dependency Status (KB #2). 'Yes' indicates the employer is H-1B\
+    \ dependent (proportion of H-1B workers exceeds thresholds: >15% for >50 employees,\
+    \ 8 workers for 26-50, 4 workers for \u226425)."
+  hidden: false
+  meta:
+    kb_id: 2
+- name: willfulv
+  sql: willfulv
+  type: string
+  primary_key: false
+  description: 'Willful Violator status (KB #3). ''Yes'' indicates the employer was
+    found by DOL to have committed a willful failure to meet LCA conditions or material
+    misrepresentation in the past 5 years.'
+  hidden: false
+  meta:
+    kb_id: 3
+- name: supporth
+  sql: supporth
+  type: string
+  primary_key: false
+  hidden: false
+- name: statbasis
+  sql: statbasis
+  type: string
+  primary_key: false
+  hidden: false
+- name: appa
+  sql: appa
+  type: string
+  primary_key: false
+  hidden: false
+- name: pubdisc
+  sql: pubdisc
+  type: string
+  primary_key: false
+  description: 'Public Disclosure Options (KB #10). ''Disclose Business'' indicates
+    employer consents to public disclosure of business info; other options may restrict
+    to protect confidential business info.'
+  hidden: false
+  meta:
+    kb_id: 10
+- name: homefirm
+  sql: homefirm
+  type: string
+  primary_key: false
+  hidden: false
+- name: homezip
+  sql: homezip
+  type: string
+  primary_key: false
+  hidden: false
+- name: preplink
+  sql: preplink
+  type: string
+  primary_key: false
+  hidden: false
+- name: status_norm
+  sql: LOWER(TRIM(statustag))
+  type: string
+  primary_key: false
+  description: Lowercased+trimmed statustag for case-insensitive matching ('certified',
+    'denied', 'withdrawn', 'certified-withdrawn').
+  hidden: false
+  meta:
+    kb_id: 47
+- name: is_certified
+  sql: CASE WHEN LOWER(TRIM(statustag)) = 'certified' THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: '1 if statustag=''certified'' (case-insensitive), else 0. Used for
+    approval rate (KB #13).'
+  hidden: false
+  meta:
+    kb_id: 13
+- name: is_denied
+  sql: CASE WHEN LOWER(TRIM(statustag)) = 'denied' THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: '1 if denied else 0 (KB #47).'
+  hidden: false
+  meta:
+    kb_id: 47
+- name: is_withdrawn
+  sql: CASE WHEN LOWER(TRIM(statustag)) = 'withdrawn' THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: '1 if withdrawn else 0 (KB #47).'
+  hidden: false
+  meta:
+    kb_id: 47
+- name: is_certified_withdrawn
+  sql: CASE WHEN LOWER(TRIM(statustag)) = 'certified-withdrawn' THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: '1 if certified-withdrawn else 0 (KB #47).'
+  hidden: false
+  meta:
+    kb_id: 47
+- name: is_h1b
+  sql: CASE WHEN visacls = 'H-1B' THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: '1 if visa class = H-1B else 0. KB #15.'
+  hidden: false
+  meta:
+    kb_id: 15
+- name: is_continuation
+  sql: CASE WHEN contemp > 0 THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: '1 if continuation petition (contemp>0). KB #25.'
+  hidden: false
+  meta:
+    kb_id: 25
+- name: has_attorney
+  sql: CASE WHEN filekey IN (SELECT docketkey FROM case_attorney) THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: '1 if case has at least one attorney. KB #26.'
+  hidden: false
+  meta:
+    kb_id: 26
+- name: is_premium_processing
+  sql: CASE WHEN supporth = 'Yes' THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: '1 if supporth=''Yes''; proxy for premium processing (no explicit column).
+    KB #39.'
+  hidden: false
+  meta:
+    kb_id: 39
+- name: recv_date
+  sql: DATE(REPLACE(recvday, '/', '-'))
+  type: date
+  primary_key: false
+  description: Receipt date as a real DATE (input is '2023/12/21').
+  hidden: false
+- name: decision_date
+  sql: DATE(decisionday)
+  type: date
+  primary_key: false
+  description: Decision date as a real DATE (input '2023-12-29').
+  hidden: false
+- name: application_processing_time
+  sql: CAST(julianday(decisionday) - julianday(REPLACE(recvday, '/', '-')) AS INTEGER)
+  type: number
+  primary_key: false
+  description: 'Application Processing Time (APT, KB #12): days between recvday and
+    decisionday.'
+  hidden: false
+  meta:
+    kb_id: 12
+- name: recv_month
+  sql: CAST(SUBSTR(recvday, 6, 2) AS INTEGER)
+  type: number
+  primary_key: false
+  description: 'Month of receipt (1-12), parsed from recvday ''YYYY/MM/DD''. Used
+    for KB #23/50 seasonal analysis.'
+  hidden: false
+  meta:
+    kb_id: 23
+- name: is_amended
+  sql: CASE WHEN amendflag > 0 THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: '1 if amended petition. KB #37 component.'
+  hidden: false
+  meta:
+    kb_id: 37
+- name: is_new_employment
+  sql: CASE WHEN newemp > 0 THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: '1 if new-employment petition. KB #37 component.'
+  hidden: false
+  meta:
+    kb_id: 37
+- name: is_h1b_dependent_yes
+  sql: CASE WHEN h1bdep = 'Yes' THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: '1 if h1bdep=''Yes''. KB #2 / KB #37 component.'
+  hidden: false
+  meta:
+    kb_id: 37
+- name: is_willful_violator_yes
+  sql: CASE WHEN willfulv = 'Yes' THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: '1 if willfulv=''Yes''. KB #3 / KB #37 component.'
+  hidden: false
+  meta:
+    kb_id: 37
+- name: complexity_score
+  sql: CAST(CASE WHEN h1bdep = 'Yes' THEN 1 ELSE 0 END + CASE WHEN willfulv = 'Yes'
+    THEN 1 ELSE 0 END + CASE WHEN newemp > 0 THEN 1 ELSE 0 END + CASE WHEN amendflag
+    > 0 THEN 1 ELSE 0 END AS INTEGER)
+  type: number
+  primary_key: false
+  description: 'Application Complexity Score (KB #37): unweighted sum of binary factors
+    h1bdep=''Yes'', willfulv=''Yes'', newemp>0, amendflag>0. Range 0-4. KB doesn''t
+    pin weights so equal weights are used.'
+  hidden: false
+  meta:
+    kb_id: 37
+- name: complexity_tier
+  sql: CASE WHEN h1bdep = 'Yes' OR willfulv = 'Yes' OR statbasis IS NOT NULL AND statbasis
+    <> '' THEN 'Complex' ELSE 'Standard' END
+  type: string
+  primary_key: false
+  description: 'Application Complexity Tier (KB #51): Complex if h1bdep=''Yes'' OR
+    willfulv=''Yes'' OR statbasis present (special attestation), else Standard.'
+  hidden: false
+  meta:
+    kb_id: 51
+- name: delay_risk_profile
+  sql: CASE WHEN willfulv = 'Yes' OR (CAST(CASE WHEN h1bdep = 'Yes' THEN 1 ELSE 0
+    END + CASE WHEN willfulv = 'Yes' THEN 1 ELSE 0 END + CASE WHEN newemp > 0 THEN
+    1 ELSE 0 END + CASE WHEN amendflag > 0 THEN 1 ELSE 0 END AS INTEGER)) >= 3 THEN
+    'High Risk' WHEN (CAST(CASE WHEN h1bdep = 'Yes' THEN 1 ELSE 0 END + CASE WHEN
+    willfulv = 'Yes' THEN 1 ELSE 0 END + CASE WHEN newemp > 0 THEN 1 ELSE 0 END +
+    CASE WHEN amendflag > 0 THEN 1 ELSE 0 END AS INTEGER)) BETWEEN 1 AND 2 THEN 'Moderate
+    Risk' ELSE 'Low Risk' END
+  type: string
+  primary_key: false
+  description: "Application Delay Risk Profile (KB #57): High Risk if willfulv='Yes'\
+    \ OR ACS\u22653; Moderate if ACS in 1-2; else Low."
+  hidden: false
+  meta:
+    kb_id: 57
+- name: visa_filing_window
+  sql: CASE WHEN beginday IS NULL OR recvday IS NULL THEN NULL WHEN CAST(julianday(REPLACE(SUBSTR(beginday,7,4)||'-'||SUBSTR(beginday,4,2)||'-'||SUBSTR(beginday,1,2),
+    '/','-')) - julianday(REPLACE(recvday, '/', '-')) AS INTEGER) > 180 THEN 'Early
+    Filing' WHEN CAST(julianday(REPLACE(SUBSTR(beginday,7,4)||'-'||SUBSTR(beginday,4,2)||'-'||SUBSTR(beginday,1,2),
+    '/','-')) - julianday(REPLACE(recvday, '/', '-')) AS INTEGER) BETWEEN 120 AND
+    180 THEN 'Optimal Window (4-6 Months)' WHEN CAST(julianday(REPLACE(SUBSTR(beginday,7,4)||'-'||SUBSTR(beginday,4,2)||'-'||SUBSTR(beginday,1,2),
+    '/','-')) - julianday(REPLACE(recvday, '/', '-')) AS INTEGER) BETWEEN 30 AND 119
+    THEN '1-3 Months Before' WHEN CAST(julianday(REPLACE(SUBSTR(beginday,7,4)||'-'||SUBSTR(beginday,4,2)||'-'||SUBSTR(beginday,1,2),
+    '/','-')) - julianday(REPLACE(recvday, '/', '-')) AS INTEGER) BETWEEN 0 AND 29
+    THEN 'Same Month' ELSE 'After Start Date' END
+  type: string
+  primary_key: false
+  description: 'Visa Filing Window (KB #41): Early Filing (>6mo), Optimal Window (4-6mo),
+    1-3 Months Before, Same Month, After Start Date. beginday is in DD/MM/YYYY format.'
+  hidden: false
+  meta:
+    kb_id: 41
+- name: naics_code
+  sql: CAST(employer.employer_contact_info ->> '$.naics_code' AS INTEGER)
+  type: number
+  primary_key: false
+  description: 'Employer NAICS code (KB #6) resolved via the employer join.'
+  hidden: false
+- name: naics_2digit
+  sql: SUBSTR(CAST(CAST(employer.employer_contact_info ->> '$.naics_code' AS INTEGER)
+    AS TEXT), 1, 2)
+  type: string
+  primary_key: false
+  description: First 2 digits of NAICS (industry sector) via employer join.
+  hidden: false
+measures:
+- formula: is_certified:sum * 100.0 / *:count
+  name: approval_rate
+  description: 'Approval Rate AR (KB #13). Use globally or per group (employer, attorney,
+    state).'
+- formula: is_certified:sum * 100.0 / *:count
+  name: application_success_rate
+  description: 'Application Success Rate by employer (KB #18). Same formula as AR;
+    group by homefirm.'
+- formula: is_h1b:sum * 100.0 / *:count
+  name: employer_h1b_concentration
+  description: 'Employer H-1B Concentration within-group share (KB #15). Group by
+    homefirm.'
+- formula: is_continuation:sum * 100.0 / *:count
+  name: employer_retention_rate
+  description: 'Employer Retention Rate (KB #25). Group by homefirm.'
+- formula: has_attorney:sum * 100.0 / *:count
+  name: external_counsel_rate
+  description: 'External Counsel Rate (KB #26).'
+- formula: is_premium_processing:sum * 100.0 / *:count
+  name: premium_processing_rate
+  description: 'Premium Processing Rate (KB #39).'
+- formula: '*:count'
+  name: visa_class_distribution
+  description: 'Visa Class Distribution (KB #29): query as count by visacls; the percentage
+    is computed by the agent against the total. Use group_by visacls.'
+- formula: '*:count'
+  name: state_application_distribution
+  description: 'State Application Distribution (KB #19): count of cases per state;
+    distribution computed as count / total. Group by case_worksite.wsstate (or worksite.wstate).'
+- formula: '*:count'
+  name: industry_application_distribution
+  description: 'Industry Application Distribution (KB #20): count by NAICS-derived
+    industry. Group by employer.naics_code.'
+- formula: '*:count'
+  name: occupational_demand_index_count
+  description: "Occupational Demand Index per SOC \u2014 numerator only (KB #21).\
+    \ ODI = (apps for SOC) / (avg apps per SOC); compute the avg in a follow-up query."
+- formula: application_processing_time:avg
+  name: average_processing_time
+  description: 'Average APT (component of KB #32 PER).'
+- formula: '*:count'
+  name: attorney_case_load
+  description: 'Attorney Case Load (KB #14): rows are cases; group by case_attorney.counselmail.
+    Reachable via case_attorney join.'
+- formula: '*:count'
+  name: employer_scale
+  description: 'Employer Scale (KB #30 numerator): count of applications per employer.
+    ESI = employer_count / avg_employer_count; compute the avg in a follow-up query.'
+- formula: '*:count'
+  name: seasonal_application_index_numer
+  description: 'Seasonal Application Index numerator (KB #23): count of applications
+    per receipt month. Divide by avg monthly apps.'
+aggregations: []
+joins:
+- target_model: employer
+  join_pairs:
+  - - homefirm
+    - corphandle
+  join_type: left
+- target_model: employer
+  join_pairs:
+  - - homezip
+    - zipref
+  join_type: left
+- target_model: preparer
+  join_pairs:
+  - - preplink
+    - prepmail
+  join_type: left
+filters: []
+description: Labor Certification Application cases. Each row represents one labor
+  certification application case (LCA / H-1B etc.) with status, dates, visa class,
+  job, headcount, employer flags, and links to employer + preparer.
+hidden: false

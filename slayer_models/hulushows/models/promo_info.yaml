@@ -1,0 +1,132 @@
+version: 3
+name: promo_info
+sql_table: promo_info
+query_variables: {}
+data_source: hulushows
+columns:
+- name: content_key
+  sql: content_key
+  type: number
+  primary_key: true
+  description: "PK \u2014 1:1 with core.content_key."
+  hidden: false
+  format:
+    type: integer
+- name: tiernotices
+  sql: tiernotices
+  type: string
+  primary_key: false
+  description: "JSONB column with free_tier and member_tier objects, each holding\
+    \ 4 promo-message fields (Alert_Note, Avail_Note, Promo_Note, Expire_Note) \u2014\
+    \ 8 max promotional slots total."
+  hidden: false
+- name: free_alert_note
+  sql: tiernotices ->> '$.free_tier.Alert_Note'
+  type: string
+  primary_key: false
+  hidden: false
+- name: free_avail_note
+  sql: tiernotices ->> '$.free_tier.Avail_Note'
+  type: string
+  primary_key: false
+  hidden: false
+- name: free_promo_note
+  sql: tiernotices ->> '$.free_tier.Promo_Note'
+  type: string
+  primary_key: false
+  hidden: false
+- name: free_expire_note
+  sql: tiernotices ->> '$.free_tier.Expire_Note'
+  type: string
+  primary_key: false
+  hidden: false
+- name: member_alert_note
+  sql: tiernotices ->> '$.member_tier.Alert_Note'
+  type: string
+  primary_key: false
+  hidden: false
+- name: member_avail_note
+  sql: tiernotices ->> '$.member_tier.Avail_Note'
+  type: string
+  primary_key: false
+  hidden: false
+- name: member_promo_note
+  sql: tiernotices ->> '$.member_tier.Promo_Note'
+  type: string
+  primary_key: false
+  hidden: false
+- name: member_expire_note
+  sql: tiernotices ->> '$.member_tier.Expire_Note'
+  type: string
+  primary_key: false
+  hidden: false
+- name: promotional_message_count
+  sql: (CASE WHEN (tiernotices ->> '$.free_tier.Alert_Note') IS NOT NULL AND TRIM(tiernotices
+    ->> '$.free_tier.Alert_Note') <> '' THEN 1 ELSE 0 END) + (CASE WHEN (tiernotices
+    ->> '$.free_tier.Avail_Note') IS NOT NULL AND TRIM(tiernotices ->> '$.free_tier.Avail_Note')
+    <> '' THEN 1 ELSE 0 END) + (CASE WHEN (tiernotices ->> '$.free_tier.Promo_Note')
+    IS NOT NULL AND TRIM(tiernotices ->> '$.free_tier.Promo_Note') <> '' THEN 1 ELSE
+    0 END) + (CASE WHEN (tiernotices ->> '$.free_tier.Expire_Note') IS NOT NULL AND
+    TRIM(tiernotices ->> '$.free_tier.Expire_Note') <> '' THEN 1 ELSE 0 END) + (CASE
+    WHEN (tiernotices ->> '$.member_tier.Alert_Note') IS NOT NULL AND TRIM(tiernotices
+    ->> '$.member_tier.Alert_Note') <> '' THEN 1 ELSE 0 END) + (CASE WHEN (tiernotices
+    ->> '$.member_tier.Avail_Note') IS NOT NULL AND TRIM(tiernotices ->> '$.member_tier.Avail_Note')
+    <> '' THEN 1 ELSE 0 END) + (CASE WHEN (tiernotices ->> '$.member_tier.Promo_Note')
+    IS NOT NULL AND TRIM(tiernotices ->> '$.member_tier.Promo_Note') <> '' THEN 1
+    ELSE 0 END) + (CASE WHEN (tiernotices ->> '$.member_tier.Expire_Note') IS NOT
+    NULL AND TRIM(tiernotices ->> '$.member_tier.Expire_Note') <> '' THEN 1 ELSE 0
+    END)
+  type: number
+  primary_key: false
+  description: 'Promotional Message Count (PMC, KB 25) and Promotional Intensity Summary
+    (KB 80): count of non-null/non-empty promo fields across the 8 slots (4 per tier).'
+  hidden: false
+  meta:
+    kb_ids:
+    - 25
+    - 80
+- name: promo_saturation_ratio
+  sql: ((CASE WHEN (tiernotices ->> '$.free_tier.Alert_Note') IS NOT NULL AND TRIM(tiernotices
+    ->> '$.free_tier.Alert_Note') <> '' THEN 1 ELSE 0 END) + (CASE WHEN (tiernotices
+    ->> '$.free_tier.Avail_Note') IS NOT NULL AND TRIM(tiernotices ->> '$.free_tier.Avail_Note')
+    <> '' THEN 1 ELSE 0 END) + (CASE WHEN (tiernotices ->> '$.free_tier.Promo_Note')
+    IS NOT NULL AND TRIM(tiernotices ->> '$.free_tier.Promo_Note') <> '' THEN 1 ELSE
+    0 END) + (CASE WHEN (tiernotices ->> '$.free_tier.Expire_Note') IS NOT NULL AND
+    TRIM(tiernotices ->> '$.free_tier.Expire_Note') <> '' THEN 1 ELSE 0 END) + (CASE
+    WHEN (tiernotices ->> '$.member_tier.Alert_Note') IS NOT NULL AND TRIM(tiernotices
+    ->> '$.member_tier.Alert_Note') <> '' THEN 1 ELSE 0 END) + (CASE WHEN (tiernotices
+    ->> '$.member_tier.Avail_Note') IS NOT NULL AND TRIM(tiernotices ->> '$.member_tier.Avail_Note')
+    <> '' THEN 1 ELSE 0 END) + (CASE WHEN (tiernotices ->> '$.member_tier.Promo_Note')
+    IS NOT NULL AND TRIM(tiernotices ->> '$.member_tier.Promo_Note') <> '' THEN 1
+    ELSE 0 END) + (CASE WHEN (tiernotices ->> '$.member_tier.Expire_Note') IS NOT
+    NULL AND TRIM(tiernotices ->> '$.member_tier.Expire_Note') <> '' THEN 1 ELSE 0
+    END)) / 8.0
+  type: number
+  primary_key: false
+  description: 'Promo Saturation Ratio (PSR, KB 82): non-null promo fields / 8.'
+  hidden: false
+  meta:
+    kb_id: 82
+measures:
+- formula: promo_saturation_ratio:max
+  name: max_promo_saturation_ratio
+  description: 'Maximum Promo Saturation Ratio (KB 82): the most saturated show''s
+    PSR.'
+- formula: promotional_message_count:avg
+  name: average_promotional_message_count
+  description: Average promo-message count per content row (KB 80 summary).
+- formula: promotional_message_count:sum
+  name: total_promotional_messages
+  description: Total non-null promo notes across all rows in scope (KB 80 summary).
+aggregations: []
+joins:
+- target_model: core
+  join_pairs:
+  - - content_key
+    - content_key
+  join_type: left
+filters: []
+description: One row per content_key with promotional / notification messages, organized
+  by tier (free / member). The tiernotices JSON has 4 message slots per tier (Avail/Promo/Alert/Expire)
+  for 8 total slots.
+hidden: false

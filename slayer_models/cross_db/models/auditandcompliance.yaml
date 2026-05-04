@@ -1,0 +1,443 @@
+version: 3
+name: auditandcompliance
+sql_table: auditandcompliance
+query_variables: {}
+data_source: cross_db
+columns:
+- name: audittrace
+  sql: audittrace
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: profjoin
+  sql: profjoin
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: compjoin
+  sql: compjoin
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: vendjoin
+  sql: vendjoin
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: recordregistry
+  sql: recordregistry
+  type: string
+  primary_key: false
+  hidden: false
+- name: audtrailstate
+  sql: audtrailstate
+  type: string
+  primary_key: false
+  hidden: false
+- name: findtally
+  sql: findtally
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: critfindnum
+  sql: critfindnum
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: remedstate
+  sql: remedstate
+  type: string
+  primary_key: false
+  hidden: false
+- name: remeddue
+  sql: remeddue
+  type: string
+  primary_key: false
+  hidden: false
+- name: authnotify
+  sql: authnotify
+  type: string
+  primary_key: false
+  hidden: false
+- name: bordermech
+  sql: bordermech
+  type: string
+  primary_key: false
+  hidden: false
+- name: transimpassess
+  sql: transimpassess
+  type: string
+  primary_key: false
+  hidden: false
+- name: localreqs
+  sql: localreqs
+  type: string
+  primary_key: false
+  hidden: false
+- name: datamapstate
+  sql: datamapstate
+  type: string
+  primary_key: false
+  hidden: false
+- name: sysintstate
+  sql: sysintstate
+  type: string
+  primary_key: false
+  hidden: false
+- name: accreqnum
+  sql: accreqnum
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: delreqnum
+  sql: delreqnum
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: rectreqnum
+  sql: rectreqnum
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: portreqnum
+  sql: portreqnum
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: resptimeday
+  sql: resptimeday
+  type: number
+  primary_key: false
+  description: 'Average/allowed response time in days for data subject requests. KB
+    #26: 1.5 = quick; >7 indicates delays.'
+  hidden: false
+  format:
+    type: float
+  meta:
+    kb_id: 26
+- name: afs
+  sql: critfindnum * 1.0 / (findtally + 1)
+  type: number
+  primary_key: false
+  description: "Audit Finding Severity (AFS) \u2014 KB #7: CritFindNum / (FindTally\
+    \ + 1)."
+  hidden: false
+  meta:
+    kb_id: 7
+- name: dsrl
+  sql: accreqnum + delreqnum + rectreqnum + portreqnum
+  type: number
+  primary_key: false
+  description: "Data Subject Request Load (DSRL) \u2014 KB #8: AccReqNum + DelReqNum\
+    \ + RectReqNum + PortReqNum."
+  hidden: false
+  meta:
+    kb_id: 8
+- name: vcb
+  sql: (critfindnum * 1.0 / (findtally + 1)) * (5 - (CASE vendormanagement.vendsecrate
+    WHEN 'A' THEN 4 WHEN 'B' THEN 3 WHEN 'C' THEN 2 WHEN 'D' THEN 1 ELSE 1 END))
+  type: number
+  primary_key: false
+  description: "Vendor Compliance Burden (VCB) \u2014 KB #32: AFS \xD7 (5 \u2212 VendSecRate\
+    \ value)."
+  hidden: false
+  meta:
+    kb_id: 32
+- name: dsrp
+  sql: (accreqnum + delreqnum + rectreqnum + portreqnum) * resptimeday
+  type: number
+  primary_key: false
+  description: "Data Subject Request Pressure (DSRP) \u2014 KB #34: DSRL \xD7 RespTimeDay."
+  hidden: false
+  meta:
+    kb_id: 34
+- name: arl
+  sql: (critfindnum * 1.0 / (findtally + 1)) * (accreqnum + delreqnum + rectreqnum
+    + portreqnum)
+  type: number
+  primary_key: false
+  description: "Audit Remediation Load (ARL) \u2014 KB #36: AFS \xD7 DSRL."
+  hidden: false
+  meta:
+    kb_id: 36
+- name: cor
+  sql: ((accreqnum + delreqnum + rectreqnum + portreqnum) * resptimeday) * 1.0 / (compliance__riskmanagement.costusd
+    + 1)
+  type: number
+  primary_key: false
+  description: "Compliance Overhead Ratio (COR) \u2014 KB #51: DSRP / (CostUSD + 1)."
+  hidden: false
+  meta:
+    kb_id: 51
+- name: acp
+  sql: ((critfindnum * 1.0 / (findtally + 1)) * (accreqnum + delreqnum + rectreqnum
+    + portreqnum)) * (critfindnum * 1.0 / (findtally + 1))
+  type: number
+  primary_key: false
+  description: "Audit Compliance Pressure (ACP) \u2014 KB #57: ARL \xD7 AFS."
+  hidden: false
+  meta:
+    kb_id: 57
+- name: request_breakdown
+  sql: '''Access: '' || accreqnum || '', Deletion: '' || delreqnum || '', Rectification:
+    '' || rectreqnum || '', Portability: '' || portreqnum'
+  type: string
+  primary_key: false
+  description: 'Request Breakdown (KB #71): comma-separated list of subject-request
+    types and counts.'
+  hidden: false
+  meta:
+    kb_id: 71
+- name: is_critical_audit_issue
+  sql: (critfindnum * 1.0 / (findtally + 1)) > 0.5
+  type: boolean
+  primary_key: false
+  description: 'Critical Audit Issue (KB #13): AFS > 0.5.'
+  hidden: false
+  meta:
+    kb_id: 13
+- name: days_until_remed
+  sql: CAST(julianday(remeddue) - julianday(date('now')) AS INTEGER)
+  type: number
+  primary_key: false
+  description: 'Days until RemedDue from today (helper for KB #76 / #77).'
+  hidden: false
+  meta: {}
+- name: is_slow_remediation
+  sql: julianday(date('now')) - julianday(remeddue) > 0
+  type: boolean
+  primary_key: false
+  description: "Slow Remediation Timeline (KB #76): CURRENT_DATE \u2212 RemedDue >\
+    \ 0 (deadline passed)."
+  hidden: false
+  meta:
+    kb_id: 76
+- name: is_nearing_remediation
+  sql: (julianday(date('now')) - julianday(remeddue)) BETWEEN -5 AND 0
+  type: boolean
+  primary_key: false
+  description: "Nearing Remediation Deadline (KB #77): (CURRENT_DATE \u2212 RemedDue)\
+    \ between -5 and 0."
+  hidden: false
+  meta:
+    kb_id: 77
+- name: cbce
+  sql: ((dataprofile__riskmanagement.riskassess * 1.0 / NULLIF(dataprofile__riskmanagement.ctrleff,
+    0)) * CASE WHEN dataprofile__riskmanagement__dataflow.orignation != dataprofile__riskmanagement__dataflow.destnation
+    THEN 2 ELSE 1 END * dataprofile.volgb) * CASE WHEN compliance.gdprcomp = 'Non-compliant'
+    THEN 2 ELSE 1 END
+  type: number
+  primary_key: false
+  description: "Cross-Border Compliance Exposure (CBCE) \u2014 KB #54: CDVR \xD7 (2\
+    \ if GdprComp='Non-compliant' else 1)."
+  hidden: false
+  meta:
+    kb_id: 54
+- name: bcr
+  sql: ((dataprofile__dataflow.bwidthpct * dataprofile__dataflow.datasizemb * 1.0
+    / NULLIF(dataprofile__dataflow.durmin, 0)) * (dataprofile.volgb * CASE dataprofile.datasense
+    WHEN 'High' THEN 3 WHEN 'Medium' THEN 2 WHEN 'Low' THEN 1 ELSE 1 END)) * CASE
+    compliance.gdprcomp WHEN 'Partial' THEN 1.5 WHEN 'Non-compliant' THEN 2 ELSE 1
+    END
+  type: number
+  primary_key: false
+  description: "Bandwidth Compliance Risk (BCR) \u2014 KB #58: BRF \xD7 (1.5 if GdprComp='Partial',\
+    \ 2 if 'Non-compliant', else 1)."
+  hidden: false
+  meta:
+    kb_id: 58
+- name: vsci
+  sql: ((critfindnum * 1.0 / (findtally + 1)) * (5 - (CASE vendormanagement.vendsecrate
+    WHEN 'A' THEN 4 WHEN 'B' THEN 3 WHEN 'C' THEN 2 WHEN 'D' THEN 1 ELSE 1 END)))
+    * 1.0 / ((((CASE WHEN vendormanagement__securityprofile.encstate = 'Full' AND
+    vendormanagement__securityprofile.aclstate = 'Strong' THEN 3 WHEN vendormanagement__securityprofile.encstate
+    = 'Full' OR vendormanagement__securityprofile.aclstate = 'Adequate' THEN 2 ELSE
+    1 END) * 1.0 / (vendormanagement__securityprofile__riskmanagement.costusd + 1)))
+    + 1)
+  type: number
+  primary_key: false
+  description: "Vendor Security Cost Index (VSCI) \u2014 KB #59: VCB / (SCCR + 1)."
+  hidden: false
+  meta:
+    kb_id: 59
+- name: is_overburdened_compliance_flow
+  sql: (compliance__riskmanagement.costusd * 1.0 / (compliance__riskmanagement.penusd
+    + 1)) > 0.8 AND ((critfindnum * 1.0 / (findtally + 1)) * (accreqnum + delreqnum
+    + rectreqnum + portreqnum)) > 10
+  type: boolean
+  primary_key: false
+  description: 'Overburdened Compliance Flow (KB #40): CCR > 0.8 AND ARL > 10.'
+  hidden: false
+  meta:
+    kb_id: 40
+- name: is_high_pressure_data_flow
+  sql: ((accreqnum + delreqnum + rectreqnum + portreqnum) * resptimeday) > 50 AND
+    (dataprofile__dataflow.bwidthpct * dataprofile__dataflow.datasizemb * 1.0 / NULLIF(dataprofile__dataflow.durmin,
+    0)) > 50
+  type: boolean
+  primary_key: false
+  description: 'High-Pressure Data Flow (KB #42): DSRP > 50 AND BSI > 50.'
+  hidden: false
+  meta:
+    kb_id: 42
+- name: is_vendor_driven_risk_flow
+  sql: (((CASE vendormanagement.vendsecrate WHEN 'A' THEN 4 WHEN 'B' THEN 3 WHEN 'C'
+    THEN 2 WHEN 'D' THEN 1 ELSE 1 END) * CASE WHEN vendormanagement.contrstate = 'Active'
+    THEN 1 ELSE 0.5 END) * (vendormanagement__riskmanagement.riskassess * 1.0 / NULLIF(vendormanagement__riskmanagement.ctrleff,
+    0))) > 3 AND ((critfindnum * 1.0 / (findtally + 1)) * (5 - (CASE vendormanagement.vendsecrate
+    WHEN 'A' THEN 4 WHEN 'B' THEN 3 WHEN 'C' THEN 2 WHEN 'D' THEN 1 ELSE 1 END)))
+    > 2
+  type: boolean
+  primary_key: false
+  description: 'Vendor-Driven Risk Flow (KB #43): VRA > 3 AND VCB > 2.'
+  hidden: false
+  meta:
+    kb_id: 43
+- name: is_cross_border_audit_risk
+  sql: ((dataprofile__riskmanagement.riskassess * 1.0 / NULLIF(dataprofile__riskmanagement.ctrleff,
+    0)) * CASE WHEN dataprofile__riskmanagement__dataflow.orignation != dataprofile__riskmanagement__dataflow.destnation
+    THEN 2 ELSE 1 END * dataprofile.volgb) > 1000 AND (critfindnum * 1.0 / (findtally
+    + 1)) > 0.5
+  type: boolean
+  primary_key: false
+  description: 'Cross-Border Audit Risk (KB #44): CDVR > 1000 AND AFS > 0.5.'
+  hidden: false
+  meta:
+    kb_id: 44
+- name: is_overloaded_security_flow
+  sql: (((CASE WHEN vendormanagement__securityprofile.encstate = 'Full' AND vendormanagement__securityprofile.aclstate
+    = 'Strong' THEN 3 WHEN vendormanagement__securityprofile.encstate = 'Full' OR
+    vendormanagement__securityprofile.aclstate = 'Adequate' THEN 2 ELSE 1 END) * (vendormanagement__securityprofile__dataprofile.volgb
+    * CASE vendormanagement__securityprofile__dataprofile.datasense WHEN 'High' THEN
+    3 WHEN 'Medium' THEN 2 WHEN 'Low' THEN 1 ELSE 1 END)) * (vendormanagement__securityprofile.logretdays
+    * 1.0 / 365)) < 1 AND (((dataprofile__riskmanagement.riskassess * 1.0 / NULLIF(dataprofile__riskmanagement.ctrleff,
+    0)) * CASE WHEN dataprofile__riskmanagement__dataflow.orignation != dataprofile__riskmanagement__dataflow.destnation
+    THEN 2 ELSE 1 END * dataprofile.volgb) * CASE WHEN compliance.gdprcomp = 'Non-compliant'
+    THEN 2 ELSE 1 END) > 100
+  type: boolean
+  primary_key: false
+  description: 'Overloaded Security Flow (KB #61): SPM < 1 AND CBCE > 100.'
+  hidden: false
+  meta:
+    kb_id: 61
+- name: is_vendor_compliance_risk_cluster
+  sql: ((((CASE vendormanagement.vendsecrate WHEN 'A' THEN 4 WHEN 'B' THEN 3 WHEN
+    'C' THEN 2 WHEN 'D' THEN 1 ELSE 1 END) * CASE WHEN vendormanagement.contrstate
+    = 'Active' THEN 1 ELSE 0.5 END) * (vendormanagement__riskmanagement.riskassess
+    * 1.0 / NULLIF(vendormanagement__riskmanagement.ctrleff, 0))) * (1 - ((CASE vendormanagement.vendsecrate
+    WHEN 'A' THEN 4 WHEN 'B' THEN 3 WHEN 'C' THEN 2 WHEN 'D' THEN 1 ELSE 1 END) *
+    CASE WHEN vendormanagement.contrstate = 'Active' THEN 1 ELSE 0.5 END))) > 2 AND
+    ((critfindnum * 1.0 / (findtally + 1)) * (5 - (CASE vendormanagement.vendsecrate
+    WHEN 'A' THEN 4 WHEN 'B' THEN 3 WHEN 'C' THEN 2 WHEN 'D' THEN 1 ELSE 1 END)))
+    > 2
+  type: boolean
+  primary_key: false
+  description: 'Vendor Compliance Risk Cluster (KB #63): VRC > 2 AND VCB > 2.'
+  hidden: false
+  meta:
+    kb_id: 63
+- name: is_audit_stressed_data_flow
+  sql: (((critfindnum * 1.0 / (findtally + 1)) * (accreqnum + delreqnum + rectreqnum
+    + portreqnum)) * (critfindnum * 1.0 / (findtally + 1))) > 5 AND (((accreqnum +
+    delreqnum + rectreqnum + portreqnum) * resptimeday) * 1.0 / (compliance__riskmanagement.costusd
+    + 1)) > 0.5
+  type: boolean
+  primary_key: false
+  description: 'Audit-Stressed Data Flow (KB #65): ACP > 5 AND COR > 0.5.'
+  hidden: false
+  meta:
+    kb_id: 65
+- name: is_bandwidth_limited_compliance_risk
+  sql: (((dataprofile__dataflow.bwidthpct * dataprofile__dataflow.datasizemb * 1.0
+    / NULLIF(dataprofile__dataflow.durmin, 0)) * (dataprofile.volgb * CASE dataprofile.datasense
+    WHEN 'High' THEN 3 WHEN 'Medium' THEN 2 WHEN 'Low' THEN 1 ELSE 1 END)) * CASE
+    compliance.gdprcomp WHEN 'Partial' THEN 1.5 WHEN 'Non-compliant' THEN 2 ELSE 1
+    END) > 50 AND (compliance.gdprcomp = 'Non-compliant' OR (compliance.loclawcomp
+    = 'Non-compliant' AND dataprofile__dataflow.orignation != dataprofile__dataflow.destnation))
+  type: boolean
+  primary_key: false
+  description: 'Bandwidth-Limited Compliance Risk (KB #66): BCR > 50 AND Cross-Border
+    Compliance Gap.'
+  hidden: false
+  meta:
+    kb_id: 66
+- name: is_costly_vendor_risk_flow
+  sql: (((critfindnum * 1.0 / (findtally + 1)) * (5 - (CASE vendormanagement.vendsecrate
+    WHEN 'A' THEN 4 WHEN 'B' THEN 3 WHEN 'C' THEN 2 WHEN 'D' THEN 1 ELSE 1 END)))
+    * 1.0 / ((((CASE WHEN vendormanagement__securityprofile.encstate = 'Full' AND
+    vendormanagement__securityprofile.aclstate = 'Strong' THEN 3 WHEN vendormanagement__securityprofile.encstate
+    = 'Full' OR vendormanagement__securityprofile.aclstate = 'Adequate' THEN 2 ELSE
+    1 END) * 1.0 / (vendormanagement__securityprofile__riskmanagement.costusd + 1)))
+    + 1)) > 1 AND (((CASE vendormanagement.vendsecrate WHEN 'A' THEN 4 WHEN 'B' THEN
+    3 WHEN 'C' THEN 2 WHEN 'D' THEN 1 ELSE 1 END) * CASE WHEN vendormanagement.contrstate
+    = 'Active' THEN 1 ELSE 0.5 END) * (vendormanagement__riskmanagement.riskassess
+    * 1.0 / NULLIF(vendormanagement__riskmanagement.ctrleff, 0))) > 3
+  type: boolean
+  primary_key: false
+  description: 'Costly Vendor Risk Flow (KB #67): VSCI > 1 AND VRA > 3.'
+  hidden: false
+  meta:
+    kb_id: 67
+- name: is_high_impact_audit_risk_flow
+  sql: (((compliance__riskmanagement.riskassess * 1.0 / NULLIF(compliance__riskmanagement.ctrleff,
+    0)) * CASE WHEN compliance__riskmanagement__dataflow.orignation != compliance__riskmanagement__dataflow.destnation
+    THEN 2 ELSE 1 END) > 1.5 AND (compliance.gdprcomp = 'Non-compliant' OR (compliance.loclawcomp
+    = 'Non-compliant' AND compliance__riskmanagement__dataflow.orignation != compliance__riskmanagement__dataflow.destnation)))
+    AND (((critfindnum * 1.0 / (findtally + 1)) * (accreqnum + delreqnum + rectreqnum
+    + portreqnum)) * (critfindnum * 1.0 / (findtally + 1))) > 5
+  type: boolean
+  primary_key: false
+  description: 'High-Impact Audit Risk Flow (KB #69): Regulatory Risk Exposure AND
+    ACP > 5.'
+  hidden: false
+  meta:
+    kb_id: 69
+- name: is_high_audit_compliance_pressure
+  sql: (((critfindnum * 1.0 / (findtally + 1)) * (accreqnum + delreqnum + rectreqnum
+    + portreqnum)) * (critfindnum * 1.0 / (findtally + 1))) > 5
+  type: boolean
+  primary_key: false
+  description: 'High Audit Compliance Pressure (KB #74): ACP > 5.'
+  hidden: false
+  meta:
+    kb_id: 74
+measures: []
+aggregations: []
+joins:
+- target_model: compliance
+  join_pairs:
+  - - compjoin
+    - compliancetrace
+  join_type: left
+- target_model: dataprofile
+  join_pairs:
+  - - profjoin
+    - profiletrace
+  join_type: left
+- target_model: vendormanagement
+  join_pairs:
+  - - vendjoin
+    - vendortrace
+  join_type: left
+filters: []
+hidden: false

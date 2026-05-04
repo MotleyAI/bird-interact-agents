@@ -1,0 +1,85 @@
+version: 3
+name: monitoringdevices
+sql_table: monitoringdevices
+query_variables: {}
+data_source: cold_chain_pharma_compliance
+columns:
+- name: mondevref
+  sql: mondevref
+  type: string
+  primary_key: true
+  hidden: false
+- name: calibts
+  sql: calibts
+  type: time
+  primary_key: false
+  description: 'Timestamp of last calibration. KB #55 (Monitoring Device Calibration
+    Status): ''Current'' (within ~12 months), ''Expired'' (period elapsed), ''Exempt''
+    (single-use factory-calibrated), with null indicating unknown/undocumented. The
+    calibration_status column derives this label from this timestamp.'
+  hidden: false
+  meta:
+    kb_id: 55
+- name: devacc
+  sql: devacc
+  type: string
+  primary_key: false
+  hidden: false
+- name: recintmin
+  sql: recintmin
+  type: number
+  primary_key: false
+  description: 'Recording interval in minutes (KB #44, Risk-Based Monitoring Intensity):
+    high-risk products require 5-minute intervals, medium 15, low 30. NULL means unplanned
+    or non-standardised monitoring approaches.'
+  hidden: false
+  format:
+    type: integer
+  meta:
+    kb_id: 44
+- name: temppts
+  sql: temppts
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: devacc_num
+  sql: CAST(devacc AS REAL)
+  type: number
+  primary_key: false
+  description: "Device accuracy specification (\xB0C), parsed numerically. Used as\
+    \ the 'A' parameter in Temperature Accuracy Impact Factor (KB #57). KB #48 (Data\
+    \ Logger Reliability Score) further references device-error rates which are not\
+    \ present in this schema."
+  hidden: false
+- name: calibration_status
+  sql: CASE WHEN calibts IS NULL THEN NULL WHEN julianday('now') - julianday(calibts)
+    < 365 THEN 'Current' ELSE 'Expired' END
+  type: string
+  primary_key: false
+  description: 'Calibration Status (KB #55) derived from calibts: ''Current'' if calibrated
+    within the last 365 days, ''Expired'' otherwise. NULL when calibts is not recorded.
+    The ''Exempt'' value is not derivable from this schema.'
+  hidden: false
+  meta:
+    kb_id: 55
+measures: []
+aggregations: []
+joins: []
+filters: []
+description: "Temperature/environment monitoring devices. KB #52 (Electronic Monitoring\
+  \ System Tiers) classifies these systems Tier 1-4 by capabilities (Tier 1: basic\
+  \ data loggers with manual download, Tier 2: enhanced loggers with USB/Bluetooth,\
+  \ Tier 3: network-connected real-time, Tier 4: full IoT with predictive analytics).\
+  \ KB #33 (Package Integrity Monitoring Systems) lists shock/tilt/electronic-impact/pressure\
+  \ indicators as adjacent device classes. KB #35 (Qualification Status of Temperature\
+  \ Monitoring Devices) describes 'Fully Qualified' / 'Partially Qualified' / 'Unqualified'\
+  \ \u2014 the schema does not carry this status as a distinct column; devacc and\
+  \ calibts together act as a partial proxy."
+hidden: false
+meta:
+  kb_ids:
+  - 35
+  - 52
+  - 33

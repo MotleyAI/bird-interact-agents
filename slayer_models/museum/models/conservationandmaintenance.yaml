@@ -1,0 +1,134 @@
+version: 3
+name: conservationandmaintenance
+sql_table: conservationandmaintenance
+query_variables: {}
+data_source: museum
+columns:
+- name: conservemaintregistry
+  sql: conservemaintregistry
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: artrefmaintained
+  sql: artrefmaintained
+  type: string
+  primary_key: false
+  hidden: false
+- name: hallrefmaintained
+  sql: hallrefmaintained
+  type: string
+  primary_key: false
+  hidden: false
+- name: surfreadrefobserved
+  sql: surfreadrefobserved
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: conservetreatstatus
+  sql: conservetreatstatus
+  type: string
+  primary_key: false
+  hidden: false
+- name: treatpriority
+  sql: treatpriority
+  type: string
+  primary_key: false
+  hidden: false
+- name: lastcleaningdate
+  sql: lastcleaningdate
+  type: string
+  primary_key: false
+  hidden: false
+- name: nextcleaningdue
+  sql: nextcleaningdue
+  type: string
+  primary_key: false
+  hidden: false
+- name: cleanintervaldays
+  sql: cleanintervaldays
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: maintlog
+  sql: maintlog
+  type: string
+  primary_key: false
+  hidden: false
+- name: incidentreportstatus
+  sql: incidentreportstatus
+  type: string
+  primary_key: false
+  hidden: false
+- name: emergencydrillstatus
+  sql: emergencydrillstatus
+  type: string
+  primary_key: false
+  hidden: false
+- name: stafftrainstatus
+  sql: stafftrainstatus
+  type: string
+  primary_key: false
+  hidden: false
+- name: budgetallocstatus
+  sql: budgetallocstatus
+  type: string
+  primary_key: false
+  hidden: false
+- name: maintbudgetstatus
+  sql: maintbudgetstatus
+  type: string
+  primary_key: false
+  hidden: false
+- name: conservefreq
+  sql: conservefreq
+  type: string
+  primary_key: false
+  hidden: false
+- name: intervhistory
+  sql: intervhistory
+  type: string
+  primary_key: false
+  hidden: false
+- name: prevtreatments
+  sql: prevtreatments
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: treateffectiveness
+  sql: treateffectiveness
+  type: string
+  primary_key: false
+  hidden: false
+- name: reversibilitypotential
+  sql: reversibilitypotential
+  type: string
+  primary_key: false
+  hidden: false
+measures: []
+aggregations: []
+joins:
+- target_model: artifactscore
+  join_pairs:
+  - - artrefmaintained
+    - artregistry
+  join_type: left
+- target_model: exhibitionhalls
+  join_pairs:
+  - - hallrefmaintained
+    - hallrecord
+  join_type: left
+- target_model: surfaceandphysicalreadings
+  join_pairs:
+  - - surfreadrefobserved
+    - surfphysregistry
+  join_type: left
+filters: []
+hidden: false

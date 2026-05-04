@@ -1,0 +1,130 @@
+version: 3
+name: planets
+sql_table: planets
+query_variables: {}
+data_source: planets_data
+columns:
+- name: planetref
+  sql: planetref
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: hostlink
+  sql: hostlink
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: completter
+  sql: completter
+  type: string
+  primary_key: false
+  description: Planet designation letter within its system following IAU conventions
+    ('b' = first discovered, then 'c', 'd', ...).
+  hidden: false
+  meta: {}
+- name: notecount
+  sql: notecount
+  type: number
+  primary_key: false
+  description: Number of literature references for this planet record.
+  hidden: false
+  format:
+    type: integer
+  meta: {}
+- name: discmethod
+  sql: discmethod
+  type: string
+  primary_key: false
+  description: 'Discovery method as recorded by the source (raw labels). KB #51 lists
+    the standardization mapping; see discovery_method_standard for the unified label.'
+  hidden: false
+  meta: {}
+- name: discovery_method_standard
+  sql: "CASE WHEN discmethod IN ('RadVel', 'RV', 'RV Method', 'Radial Velocity', 'Doppler')\
+    \ THEN 'Radial Velocity' WHEN discmethod IN ('Transit', 'TR', 'Transit Method',\
+    \ 'Photometry', 'Photometric') THEN 'Transit' WHEN discmethod IN ('Direct Imaging',\
+    \ 'DI', 'Imaging', 'IMG', 'Direct') THEN 'Imaging' WHEN discmethod IN ('TTV',\
+    \ 'Transit Timing Variations', 'Transit Timing', 'TTV Method', 'Timing Var') THEN\
+    \ 'TTV' WHEN discmethod IN ('Microlensing', 'ML', '\xB5Lens', 'Lensing', 'Gravitational')\
+    \ THEN 'Microlensing' ELSE 'Other' END"
+  type: string
+  primary_key: false
+  description: 'Standardized discovery method (KB #51). Maps the raw discmethod variants
+    into ''Radial Velocity'', ''Transit'', ''Imaging'', ''TTV'', ''Microlensing'',
+    or ''Other''.'
+  hidden: false
+  meta:
+    kb_id: 51
+- name: is_transit_discovery
+  sql: discmethod IN ('Transit', 'TR', 'Transit Method', 'Photometry', 'Photometric')
+  type: boolean
+  primary_key: false
+  description: 'Discovery via Transit Method (KB #36): discmethod is one of Transit,
+    TR, Transit Method, Photometry, Photometric.'
+  hidden: false
+  meta:
+    kb_id: 36
+- name: is_radial_velocity_discovery
+  sql: discmethod IN ('RadVel', 'RV', 'RV Method', 'Radial Velocity', 'Doppler')
+  type: boolean
+  primary_key: false
+  description: 'Discovery via Radial Velocity (KB #37): discmethod is one of RadVel,
+    RV, RV Method, Radial Velocity, Doppler.'
+  hidden: false
+  meta:
+    kb_id: 37
+- name: is_hot_jupiter
+  sql: physical_properties.massjup > 0.1 AND orbital_characteristics.period < 10
+  type: boolean
+  primary_key: false
+  description: 'Hot Jupiter (KB #23): a Gas Giant Planet (massjup > 0.1) that is also
+    a Short-Period Planet (period < 10 days).'
+  hidden: false
+  meta:
+    kb_id: 23
+- name: is_potentially_habitable
+  sql: physical_properties.densvalue > 3 AND orbital_characteristics.semimajor BETWEEN
+    sqrt((pow(CAST(json_extract(stars.stellarprops, '$.physical.Radius_Value') AS
+    REAL), 2) * pow(CAST(json_extract(stars.stellarprops, '$.physical.Temp_Value')
+    AS REAL) / 5778.0, 4)) / 1.1) AND sqrt((pow(CAST(json_extract(stars.stellarprops,
+    '$.physical.Radius_Value') AS REAL), 2) * pow(CAST(json_extract(stars.stellarprops,
+    '$.physical.Temp_Value') AS REAL) / 5778.0, 4)) / 0.53)
+  type: boolean
+  primary_key: false
+  description: 'Potentially Habitable Exoplanet (KB #26): a Rocky Planet (KB #21)
+    that is also in the Habitable Zone (KB #25).'
+  hidden: false
+  meta:
+    kb_id: 26
+measures: []
+aggregations: []
+joins:
+- target_model: stars
+  join_pairs:
+  - - hostlink
+    - stellarref
+  join_type: left
+- target_model: orbital_characteristics
+  join_pairs:
+  - - planetref
+    - bodylink
+  join_type: left
+- target_model: physical_properties
+  join_pairs:
+  - - planetref
+    - objectlink
+  join_type: left
+- target_model: data_quality_tracking
+  join_pairs:
+  - - planetref
+    - targetlink
+  join_type: left
+filters: []
+description: Confirmed planet records (one row per planet). Joins to stars via hostlink.
+  Per-planet detail tables (orbital_characteristics, physical_properties, data_quality_tracking,
+  planet_instrument_observations) link back via planetref.
+hidden: false

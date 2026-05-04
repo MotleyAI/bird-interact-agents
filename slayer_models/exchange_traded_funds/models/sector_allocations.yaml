@@ -1,0 +1,47 @@
+version: 3
+name: sector_allocations
+sql_table: sector_allocations
+query_variables: {}
+data_source: exchange_traded_funds
+columns:
+- name: allockey
+  sql: allockey
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: productlink
+  sql: productlink
+  type: string
+  primary_key: false
+  hidden: false
+- name: sectorlink
+  sql: sectorlink
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: weightpct
+  sql: weightpct
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+measures: []
+aggregations: []
+joins:
+- target_model: funds
+  join_pairs:
+  - - productlink
+    - tickersym
+  join_type: left
+- target_model: sectors
+  join_pairs:
+  - - sectorlink
+    - secid
+  join_type: left
+filters: []
+hidden: false
