@@ -38,6 +38,26 @@ columns:
   primary_key: false
   description: 'Visa class for the case (KB #1) via cases join, denormalized.'
   hidden: false
+- name: acl_case_helper
+  sql: docketkey
+  type: string
+  primary_key: false
+  description: 'Helper for Attorney Case Load (ACL, KB #14). The ACL measure (attorney_case_load,
+    formula docketkey:count_distinct) counts distinct cases per attorney; group by
+    counselmail.'
+  hidden: true
+  meta:
+    kb_id: 14
+- name: asi_visa_class_helper
+  sql: cases.visacls
+  type: string
+  primary_key: false
+  description: 'Helper for Attorney Specialization Index (ASI, KB #34). ASI = 1 -
+    (distinct visa classes handled / total visa classes); see attorney_specialization_index
+    measure. Group by counselmail.'
+  hidden: true
+  meta:
+    kb_id: 34
 measures:
 - formula: docketkey:count_distinct
   name: attorney_case_load

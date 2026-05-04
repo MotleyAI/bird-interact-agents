@@ -212,6 +212,8 @@ columns:
     \ data only stores avg/min/max per shipment, not the full point series, so :mkt\
     \ at query time is computed over shipment-level averages."
   hidden: false
+  meta:
+    kb_id: 26
 - name: compliant_shipment_id
   sql: CASE WHEN CAST(json_extract(env_metrics, '$.temperature.excursion_count') AS
     INTEGER) = 0 THEN reckeylink END

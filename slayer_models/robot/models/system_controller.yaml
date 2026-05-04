@@ -32,8 +32,7 @@ columns:
     #29).'
   hidden: false
   meta:
-    kb_ids:
-    - 29
+    kb_id: 29
 - name: row_controller_stress
   sql: COALESCE(CAST(json_extract(controller_metrics, '$.load_value') AS REAL), 0)
     + COALESCE(CAST(json_extract(controller_metrics, '$.thermal_level') AS REAL),
@@ -44,7 +43,9 @@ columns:
     from controller_metrics JSON.'
   hidden: false
   meta:
-    kb_id: 36
+    kb_ids:
+    - 36
+    - 46
 measures:
 - formula: row_controller_stress:avg
   name: csi

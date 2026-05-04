@@ -64,7 +64,35 @@ columns:
   hidden: false
   meta:
     kb_id: 55
-measures: []
+- name: is_reading_failure
+  sql: CASE WHEN recintmin IS NULL THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Reading-failure indicator for DLRS (KB #48): 1 when the recording
+    interval (recintmin) is not configured, 0 otherwise. Used to compute Fr (rate
+    of reading failures per 100 deployments).'
+  hidden: false
+  meta:
+    kb_id: 48
+- name: is_calibration_drift
+  sql: CASE WHEN calibts IS NOT NULL AND calibts < '2024-06-26' THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Calibration-drift indicator for DLRS (KB #48): 1 when the device''s
+    last calibration date is older than 365 days before the dataset reference date
+    (2025-06-26 - 1 year = 2024-06-26), 0 otherwise. Used to compute Fc (calibration
+    drift rate per 100 deployments). Anchor date is hardcoded to match the dataset''s
+    time range; for live use, parametrise via a query variable.'
+  hidden: false
+measures:
+- formula: 100 - 10 * (is_reading_failure:sum * 100.0 / *:count) - 3 * (is_calibration_drift:sum
+    * 100.0 / *:count)
+  name: dlrs
+  description: 'Data Logger Reliability Score (DLRS, KB #48): 100 - 10*Fr - 5*Fd -
+    3*Fc - 2*Fb where rates are per 100 deployments. The schema only exposes reading-failure
+    (recintmin IS NULL) and calibration-drift (calibts > 1 year old) proxies; download-failure
+    (Fd) and battery-failure (Fb) rates are not stored, so they are taken as 0. Apply
+    on monitoringdevices fleet-wide for the headline reliability number.'
 aggregations: []
 joins: []
 filters: []

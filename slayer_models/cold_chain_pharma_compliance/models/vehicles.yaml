@@ -39,6 +39,17 @@ columns:
   hidden: false
   meta:
     kb_id: 58
+- name: sbp_score
+  sql: CASE WHEN LOWER(TRIM(veh_qual)) = 'validated' THEN 9 WHEN LOWER(TRIM(veh_qual))
+    = 'qualified' THEN 7 ELSE 5 END
+  type: number
+  primary_key: false
+  description: 'Supplier Backup Presence proxy (KB #30, SCRS sub-score, 0-10): Validated
+    vehicle = 9, Qualified = 7, else = 5. Used inside Supply Chain Resilience Score;
+    heuristic from the gold task solution because the schema does not store SBP directly.'
+  hidden: false
+  meta:
+    kb_id: 30
 measures: []
 aggregations: []
 joins:

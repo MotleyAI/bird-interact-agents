@@ -20,6 +20,18 @@ columns:
   hidden: false
   meta:
     kb_id: 4
+- name: rrd_score
+  sql: CASE WHEN LOWER(TRIM(carriercert)) = 'both' THEN 10 WHEN LOWER(TRIM(carriercert))
+    IN ('gdp', 'ceiv pharma') THEN 8 ELSE 4 END
+  type: number
+  primary_key: false
+  description: 'Redundant Resources Depth proxy (KB #30, SCRS sub-score, 0-10): Both
+    certifications = 10, single GDP or CEIV Pharma = 8, else = 4. Used inside Supply
+    Chain Resilience Score; heuristic from the gold task solution because the schema
+    does not store RRD directly.'
+  hidden: false
+  meta:
+    kb_id: 30
 measures: []
 aggregations: []
 joins: []

@@ -31,6 +31,8 @@ columns:
   meta:
     kb_ids:
     - 20
+    - 1
+    - 11
 - name: j2tempval
   sql: j2tempval
   type: number
@@ -41,8 +43,7 @@ columns:
   format:
     type: integer
   meta:
-    kb_ids:
-    - 20
+    kb_id: 20
 - name: j3tempval
   sql: j3tempval
   type: number
@@ -53,8 +54,7 @@ columns:
   format:
     type: float
   meta:
-    kb_ids:
-    - 20
+    kb_id: 20
 - name: j4tempval
   sql: j4tempval
   type: number
@@ -65,8 +65,7 @@ columns:
   format:
     type: integer
   meta:
-    kb_ids:
-    - 20
+    kb_id: 20
 - name: j5tempval
   sql: j5tempval
   type: number
@@ -77,8 +76,7 @@ columns:
   format:
     type: float
   meta:
-    kb_ids:
-    - 20
+    kb_id: 20
 - name: j6tempval
   sql: j6tempval
   type: number
@@ -89,8 +87,7 @@ columns:
   format:
     type: integer
   meta:
-    kb_ids:
-    - 20
+    kb_id: 20
 - name: j1vibval
   sql: j1vibval
   type: number
@@ -101,8 +98,7 @@ columns:
   format:
     type: float
   meta:
-    kb_ids:
-    - 21
+    kb_id: 21
 - name: j2vibval
   sql: j2vibval
   type: number
@@ -113,8 +109,7 @@ columns:
   format:
     type: integer
   meta:
-    kb_ids:
-    - 21
+    kb_id: 21
 - name: j3vibval
   sql: j3vibval
   type: number
@@ -125,8 +120,7 @@ columns:
   format:
     type: integer
   meta:
-    kb_ids:
-    - 21
+    kb_id: 21
 - name: j4vibval
   sql: j4vibval
   type: number
@@ -137,8 +131,7 @@ columns:
   format:
     type: float
   meta:
-    kb_ids:
-    - 21
+    kb_id: 21
 - name: j5vibval
   sql: j5vibval
   type: number
@@ -149,8 +142,7 @@ columns:
   format:
     type: integer
   meta:
-    kb_ids:
-    - 21
+    kb_id: 21
 - name: j6vibval
   sql: j6vibval
   type: number
@@ -161,8 +153,7 @@ columns:
   format:
     type: integer
   meta:
-    kb_ids:
-    - 21
+    kb_id: 21
 - name: j1backval
   sql: j1backval
   type: number
@@ -212,6 +203,10 @@ columns:
   description: "Row-level max across the 6 joint temperatures \u2014 helper for MJT\
     \ (KB #2)."
   hidden: false
+  meta:
+    kb_ids:
+    - 2
+    - 12
 measures:
 - formula: j1tempval:avg
   name: aj1t

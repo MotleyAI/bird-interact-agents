@@ -89,6 +89,15 @@ columns:
   primary_key: false
   description: 'SOC code (KB #7) for this case_worksite, denormalized via cases join.'
   hidden: false
+- name: wd_workers_helper
+  sql: wsheads
+  type: number
+  primary_key: false
+  description: "Helper for Worksite Density (WD, KB #16). WD = total workers (\u03A3\
+    \ wsheads) / distinct worksite addresses; see worksite_density measure."
+  hidden: true
+  meta:
+    kb_id: 16
 measures:
 - formula: wsheads:sum
   name: total_workers

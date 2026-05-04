@@ -51,9 +51,4 @@ Status: not encodable from current data. Once `orders.txndate` is
 populated, encode as a column on `customers` derived via the
 `rl_orders` join (or as an R-MULTISTAGE model aggregating per-customer
 min(txndate)).
-## KB 5 — Average Processing Time (APT)
-
-Reason: not encoded during the W4b parallel translation pass (the
-agent hit its usage limit before completing this entry).
-Status: deferred to follow-up encoding pass.
 

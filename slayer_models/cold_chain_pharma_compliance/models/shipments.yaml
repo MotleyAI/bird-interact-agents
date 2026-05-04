@@ -75,10 +75,12 @@ columns:
   description: Destination street address (extracted from shipment_overview.route.destination.address).
   hidden: false
 - name: route_string
-  sql: json_extract(shipment_overview, '$.route.route_string')
+  sql: shipment_overview ->> '$.route.route_string'
   type: string
   primary_key: false
-  description: Encoded planned route (origin -> destination) string.
+  description: Encoded planned route (origin -> destination) string. Uses ->> to return
+    the JSON scalar without surrounding quotes (json_extract gets rewritten to ->
+    which yields JSON-quoted strings).
   hidden: false
 - name: risk_note
   sql: json_extract(shipment_overview, '$.route.risk_note')
@@ -166,6 +168,33 @@ columns:
   hidden: false
   meta:
     kb_id: 17
+- name: is_delayed_shipment
+  sql: CASE WHEN CAST(json_extract(shipment_overview, '$.timing_performance.actual_duration_hrs')
+    AS REAL) - CAST(json_extract(shipment_overview, '$.timing_performance.planned_eta_hrs')
+    AS REAL) > 2 THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Shipping-delay indicator for Lane Risk Potential (KB #36): 1 when
+    actual duration exceeds planned ETA by more than 2 hours (Delayed or Severely
+    Delayed under KB #13), 0 otherwise. Used to compute SD (count of shipping delays
+    per lane).'
+  hidden: false
+  meta:
+    kb_id: 36
+- name: art_score
+  sql: CASE WHEN LOWER(TRIM(shipment_overview ->> '$.route.risk_note')) = 'low' THEN
+    8 WHEN LOWER(TRIM(shipment_overview ->> '$.route.risk_note')) = 'medium' THEN
+    5 WHEN LOWER(TRIM(shipment_overview ->> '$.route.risk_note')) = 'high' THEN 2
+    ELSE 4 END
+  type: number
+  primary_key: false
+  description: 'Alternative Route Availability proxy (KB #30, SCRS sub-score, 0-10):
+    low risk lane = 8, medium = 5, high = 2, unknown = 4. Used inside Supply Chain
+    Resilience Score; not a KB-authored value but a heuristic the gold solution applies
+    because the schema does not store ART directly.'
+  hidden: false
+  meta:
+    kb_id: 30
 measures: []
 aggregations: []
 joins: []

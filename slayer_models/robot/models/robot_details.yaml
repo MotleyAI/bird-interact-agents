@@ -8,7 +8,10 @@ columns:
   sql: botdetreg
   type: string
   primary_key: true
+  description: 'Robot primary key. Carrier for Robot Count measure (KB #56).'
   hidden: false
+  meta:
+    kb_id: 56
 - name: mfgnameval
   sql: mfgnameval
   type: string

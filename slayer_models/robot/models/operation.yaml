@@ -8,7 +8,13 @@ columns:
   sql: operreg
   type: string
   primary_key: true
+  description: 'Operation primary key. Carrier for NO row count (KB #8) and Multi-Operation
+    Robot (KB #18).'
   hidden: false
+  meta:
+    kb_ids:
+    - 8
+    - 18
 - name: operbotdetref
   sql: operbotdetref
   type: string
@@ -23,9 +29,15 @@ columns:
   sql: totopshrval
   type: number
   primary_key: false
+  description: 'Cumulative total operating hours up to this row. Carrier for TOH (KB
+    #7) and Heavily Used Robot (KB #17).'
   hidden: false
   format:
     type: float
+  meta:
+    kb_ids:
+    - 7
+    - 17
 - name: apptypeval
   sql: apptypeval
   type: string
@@ -45,16 +57,29 @@ columns:
   sql: progcyclecount
   type: number
   primary_key: false
+  description: 'Program cycle count. Carrier for TPC (KB #9) and High Cycle Count
+    Robot (KB #19).'
   hidden: false
   format:
     type: integer
+  meta:
+    kb_ids:
+    - 9
+    - 19
 - name: cycletimesecval
   sql: cycletimesecval
   type: number
   primary_key: false
+  description: 'Per-operation cycle time (s). Carrier for OCE (KB #33), Cycle Efficiency
+    Category (KB #43), and Average Cycle Time (KB #51).'
   hidden: false
   format:
     type: float
+  meta:
+    kb_ids:
+    - 33
+    - 43
+    - 51
 - name: axiscountval
   sql: axiscountval
   type: number

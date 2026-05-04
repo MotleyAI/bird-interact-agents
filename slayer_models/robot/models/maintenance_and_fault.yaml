@@ -44,8 +44,7 @@ columns:
   format:
     type: integer
   meta:
-    kb_ids:
-    - 24
+    kb_id: 24
 - name: faulttypeestimation
   sql: faulttypeestimation
   type: string
@@ -63,6 +62,8 @@ columns:
   meta:
     kb_ids:
     - 25
+    - 6
+    - 16
 - name: upkeepduedays
   sql: upkeepduedays
   type: number
@@ -91,6 +92,10 @@ columns:
   description: "faultpredscore \xD7 recency_weight \u2014 numerator helper for WFPS\
     \ (KB #30)."
   hidden: false
+  meta:
+    kb_ids:
+    - 30
+    - 40
 - name: weighted_upkeepcostest
   sql: upkeepcostest * 1.0 / (1.0 + upkeepduedays)
   type: number
@@ -98,6 +103,10 @@ columns:
   description: "upkeepcostest \xD7 recency_weight \u2014 numerator helper for MCT\
     \ (KB #35)."
   hidden: false
+  meta:
+    kb_ids:
+    - 35
+    - 45
 - name: is_old_robot_row
   sql: ((julianday(robot_details__robot_record.rects) - julianday(robot_details.instdateval))
     / 365.25) > 2

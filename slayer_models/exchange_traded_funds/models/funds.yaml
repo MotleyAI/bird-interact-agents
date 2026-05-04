@@ -807,7 +807,105 @@ columns:
   hidden: false
   meta:
     kb_id: 80
-measures: []
+- name: is_fallen_angel
+  sql: (SELECT alpha5y FROM risk_metrics WHERE risk_metrics.investmentref = funds.tickersym)
+    > 0 AND ((SELECT positiveyears FROM performance WHERE performance.productref =
+    funds.tickersym) * 100.0 / NULLIF((SELECT positiveyears FROM performance WHERE
+    performance.productref = funds.tickersym) + (SELECT negativeyears FROM performance
+    WHERE performance.productref = funds.tickersym), 0)) > 80 AND (SELECT alpha3y
+    FROM risk_metrics WHERE risk_metrics.investmentref = funds.tickersym) < 0
+  type: boolean
+  primary_key: false
+  description: 'Fallen Angel (KB 62): a fund that was previously a Consistent Outperformer
+    (Alpha Generator AND Positive Return Consistency > 80) but whose most recent 3-year
+    alpha is now negative.'
+  hidden: false
+  meta:
+    kb_id: 62
+- name: is_q_garp
+  sql: (SELECT alpha5y FROM risk_metrics WHERE risk_metrics.investmentref = funds.tickersym)
+    > 0 AND ((SELECT positiveyears FROM performance WHERE performance.productref =
+    funds.tickersym) * 100.0 / NULLIF((SELECT positiveyears FROM performance WHERE
+    performance.productref = funds.tickersym) + (SELECT negativeyears FROM performance
+    WHERE performance.productref = funds.tickersym), 0)) > 80 AND (SELECT cvs_pr FROM
+    (SELECT tickersym AS t, PERCENT_RANK() OVER (PARTITION BY productclass ORDER BY
+    0.25 * (COALESCE(1.0 / NULLIF(pe_ratio, 0), 0) + COALESCE(1.0 / NULLIF(ps_ratio,
+    0), 0) + COALESCE(1.0 / NULLIF(pb_ratio, 0), 0) + COALESCE(1.0 / NULLIF(pcf_ratio,
+    0), 0))) AS cvs_pr FROM funds) sub WHERE sub.t = funds.tickersym) >= 0.5
+  type: boolean
+  primary_key: false
+  description: 'Quality-Growth at a Reasonable Price / Q-GARP (KB 63): Consistent
+    Outperformer (Alpha Generator AND Positive Return Consistency > 80) AND Composite
+    Valuation Score in the top 50th percentile of its category (productclass).'
+  hidden: false
+  meta:
+    kb_id: 63
+- name: is_high_conviction_value_investor
+  sql: (SELECT topweight FROM performance WHERE performance.productref = funds.tickersym)
+    > 0.08 AND (SELECT cvs_pr FROM (SELECT tickersym AS t, PERCENT_RANK() OVER (PARTITION
+    BY productclass ORDER BY 0.25 * (COALESCE(1.0 / NULLIF(pe_ratio, 0), 0) + COALESCE(1.0
+    / NULLIF(ps_ratio, 0), 0) + COALESCE(1.0 / NULLIF(pb_ratio, 0), 0) + COALESCE(1.0
+    / NULLIF(pcf_ratio, 0), 0))) AS cvs_pr FROM funds) sub WHERE sub.t = funds.tickersym)
+    >= 0.75
+  type: boolean
+  primary_key: false
+  description: 'High-Conviction Value Investor (KB 64): High-Conviction Portfolio
+    (largest holding > 8%) AND Composite Valuation Score in the top 25th percentile
+    of its category.'
+  hidden: false
+  meta:
+    kb_id: 64
+- name: category_fund_count
+  sql: (SELECT COUNT(*) FROM funds f2 WHERE f2.productclass = funds.productclass)
+  type: number
+  primary_key: false
+  description: Number of funds in the same investment category (productclass). Used
+    by KB 81 Category Dominator (requires category contains at least 10 funds).
+  hidden: false
+  meta:
+    kb_id: 81
+- name: is_category_dominator
+  sql: (SELECT COUNT(*) FROM funds f2 WHERE f2.productclass = funds.productclass)
+    >= 10 AND (SELECT cs FROM (SELECT tickersym AS t, (PERCENT_RANK() OVER (PARTITION
+    BY productclass ORDER BY (SELECT alpha5y FROM risk_metrics WHERE risk_metrics.investmentref
+    = funds.tickersym)) + PERCENT_RANK() OVER (PARTITION BY productclass ORDER BY
+    (SELECT sharperatio3y FROM risk_metrics WHERE risk_metrics.investmentref = funds.tickersym))
+    + PERCENT_RANK() OVER (PARTITION BY productclass ORDER BY -expensenet)) / 3.0
+    AS cs FROM funds) sub WHERE sub.t = funds.tickersym) = (SELECT MAX(cs) FROM (SELECT
+    tickersym AS t, productclass AS pc, (PERCENT_RANK() OVER (PARTITION BY productclass
+    ORDER BY (SELECT alpha5y FROM risk_metrics WHERE risk_metrics.investmentref =
+    funds.tickersym)) + PERCENT_RANK() OVER (PARTITION BY productclass ORDER BY (SELECT
+    sharperatio3y FROM risk_metrics WHERE risk_metrics.investmentref = funds.tickersym))
+    + PERCENT_RANK() OVER (PARTITION BY productclass ORDER BY -expensenet)) / 3.0
+    AS cs FROM funds) sub2 WHERE sub2.pc = funds.productclass)
+  type: boolean
+  primary_key: false
+  description: 'Category Dominator (KB 81): the fund with the highest Composite Score
+    within its investment category, provided the category contains at least 10 funds.'
+  hidden: false
+  meta:
+    kb_id: 81
+- name: alpha3y_for_regression
+  sql: (SELECT alpha3y FROM risk_metrics WHERE risk_metrics.investmentref = funds.tickersym)
+  type: number
+  primary_key: false
+  description: 3-Year Alpha pulled inline from risk_metrics, used as the Y variable
+    for the KB 82 Alpha-Turnover regression and KB 83 Fit Quality.
+  hidden: false
+  meta:
+    kb_ids:
+    - 82
+    - 83
+measures:
+- formula: alpha3y_for_regression:covar_samp(other=turnoverratio) / turnoverratio:var_samp
+  name: alpha_turnover_slope
+  description: 'Alpha-Turnover Slope (KB 82): slope of OLS regression of 3-Year Alpha
+    (Y) on Turnover Ratio (X) across the funds in the grouping. Slope = COV(Y,X) /
+    VAR(X).'
+- formula: alpha3y_for_regression:corr(other=turnoverratio) * alpha3y_for_regression:corr(other=turnoverratio)
+  name: alpha_turnover_fit_quality
+  description: 'Fit Quality / R-squared (KB 83): R-squared of the OLS regression of
+    3-Year Alpha on Turnover Ratio. Computed as the square of Pearson correlation.'
 aggregations: []
 joins:
 - target_model: exchanges

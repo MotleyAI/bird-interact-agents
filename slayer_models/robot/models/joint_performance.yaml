@@ -30,36 +30,50 @@ columns:
   primary_key: false
   description: "Joint 1 torque from joint_metrics JSON \u2014 helper for JTV (KB #38)."
   hidden: false
+  meta:
+    kb_ids:
+    - 38
+    - 48
 - name: j2_torque
   sql: CAST(json_extract(joint_metrics, '$.joint2.torque') AS REAL)
   type: number
   primary_key: false
   description: "Joint 2 torque from joint_metrics JSON \u2014 helper for JTV (KB #38)."
   hidden: false
+  meta:
+    kb_id: 38
 - name: j3_torque
   sql: CAST(json_extract(joint_metrics, '$.joint3.torque') AS REAL)
   type: number
   primary_key: false
   description: "Joint 3 torque from joint_metrics JSON \u2014 helper for JTV (KB #38)."
   hidden: false
+  meta:
+    kb_id: 38
 - name: j4_torque
   sql: CAST(json_extract(joint_metrics, '$.joint4.torque') AS REAL)
   type: number
   primary_key: false
   description: "Joint 4 torque from joint_metrics JSON \u2014 helper for JTV (KB #38)."
   hidden: false
+  meta:
+    kb_id: 38
 - name: j5_torque
   sql: CAST(json_extract(joint_metrics, '$.joint5.torque') AS REAL)
   type: number
   primary_key: false
   description: "Joint 5 torque from joint_metrics JSON \u2014 helper for JTV (KB #38)."
   hidden: false
+  meta:
+    kb_id: 38
 - name: j6_torque
   sql: CAST(json_extract(joint_metrics, '$.joint6.torque') AS REAL)
   type: number
   primary_key: false
   description: "Joint 6 torque from joint_metrics JSON \u2014 helper for JTV (KB #38)."
   hidden: false
+  meta:
+    kb_id: 38
 measures:
 - formula: (j1_torque:var_pop + j2_torque:var_pop + j3_torque:var_pop + j4_torque:var_pop
     + j5_torque:var_pop + j6_torque:var_pop) / 6

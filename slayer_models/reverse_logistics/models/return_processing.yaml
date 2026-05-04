@@ -27,9 +27,14 @@ columns:
   sql: proctime
   type: number
   primary_key: false
+  description: 'Processing time PT_i (calendar time spent processing this return at
+    the facility). Source column for the Average Processing Time (APT) measure (KB
+    #5).'
   hidden: false
   format:
     type: integer
+  meta:
+    kb_id: 5
 - name: handreq
   sql: handreq
   type: string
@@ -111,6 +116,7 @@ columns:
 measures:
 - formula: proctime:avg
   name: average_processing_time
+  label: Average Processing Time (APT)
   description: Average Processing Time (APT) = (sum of PT_i) / n. Mean calendar time
     spent processing a batch of returns at a given facility.
 aggregations: []

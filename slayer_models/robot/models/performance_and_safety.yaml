@@ -78,8 +78,7 @@ columns:
   format:
     type: integer
   meta:
-    kb_ids:
-    - 28
+    kb_id: 28
 - name: safety_metrics
   sql: safety_metrics
   type: string
@@ -93,8 +92,7 @@ columns:
     ''Emergency'') (KB #26).'
   hidden: false
   meta:
-    kb_ids:
-    - 26
+    kb_id: 26
 - name: emergency_stops
   sql: json_extract(safety_metrics, '$.emergency_stops')
   type: number
@@ -103,8 +101,7 @@ columns:
     operational issues / safety concerns (KB #27).'
   hidden: false
   meta:
-    kb_ids:
-    - 27
+    kb_id: 27
 - name: row_safety_incident_total
   sql: COALESCE(CAST(json_extract(safety_metrics, '$.overloads') AS INTEGER), 0) +
     COALESCE(CAST(json_extract(safety_metrics, '$.collisions') AS INTEGER), 0) + COALESCE(CAST(json_extract(safety_metrics,
@@ -116,7 +113,9 @@ columns:
     + emergency_stops + speed_violations from safety_metrics JSON.'
   hidden: false
   meta:
-    kb_id: 34
+    kb_ids:
+    - 34
+    - 44
 measures:
 - formula: row_safety_incident_total:sum
   name: sis

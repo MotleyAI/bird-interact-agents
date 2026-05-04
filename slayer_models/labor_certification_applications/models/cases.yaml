@@ -401,6 +401,47 @@ columns:
   primary_key: false
   description: First 2 digits of NAICS (industry sector) via employer join.
   hidden: false
+- name: asr_certified_helper
+  sql: CASE WHEN LOWER(TRIM(statustag)) = 'certified' THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Helper for Application Success Rate (ASR, KB #18). Same expression
+    as is_certified but stamped for KB #18 so the ASR measure (application_success_rate,
+    formula is_certified:sum * 100.0 / *:count) is discoverable by KB #18.'
+  hidden: true
+  meta:
+    kb_id: 18
+- name: sad_application_helper
+  sql: '1'
+  type: number
+  primary_key: false
+  description: 'Helper marking each row as one application for State Application Distribution
+    (SAD, KB #19). The SAD measure (state_application_distribution, formula *:count)
+    groups by case_worksite.wsstate or worksite.wstate; pct = count / total.'
+  hidden: true
+  meta:
+    kb_id: 19
+- name: iad_application_helper
+  sql: '1'
+  type: number
+  primary_key: false
+  description: 'Helper marking each row as one application for Industry Application
+    Distribution (IAD, KB #20). The IAD measure (industry_application_distribution,
+    formula *:count) groups by employer.naics_code (or naics_2digit); pct = count
+    / total.'
+  hidden: true
+  meta:
+    kb_id: 20
+- name: vcd_application_helper
+  sql: '1'
+  type: number
+  primary_key: false
+  description: 'Helper marking each row as one application for Visa Class Distribution
+    (VCD, KB #29). The VCD measure (visa_class_distribution, formula *:count) groups
+    by visacls; pct = count / total.'
+  hidden: true
+  meta:
+    kb_id: 29
 measures:
 - formula: is_certified:sum * 100.0 / *:count
   name: approval_rate

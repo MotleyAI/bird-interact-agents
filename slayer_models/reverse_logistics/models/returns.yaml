@@ -135,8 +135,6 @@ columns:
 measures:
 - formula: has_warranty_claim:sum * 1.0 / *:count
   name: warranty_claim_ratio
-  description: Warranty Claim Ratio (WCR) = N_claims / T_r. N_claims = returns with
-    a non-null warranty claim id; T_r = total returns.
 aggregations: []
 joins:
 - target_model: rl_products

@@ -27,9 +27,14 @@ columns:
   sql: weightpct
   type: number
   primary_key: false
+  description: 'Sector Weight (KB 28): the percentage of a fund''s assets invested
+    in this sector. A high value such as 0.4 (40%) indicates a significant bet on
+    that sector''s performance. Decimal share, 0-1.'
   hidden: false
   format:
     type: integer
+  meta:
+    kb_id: 28
 measures: []
 aggregations: []
 joins:

@@ -152,6 +152,30 @@ columns:
   description: 'Reason for quarantine if applicable: Damage / Documentation / Temperature
     Deviation. NULL means product not quarantined.'
   hidden: false
+- name: is_customs_delayed
+  sql: CASE WHEN json_extract(qc_checklist, '$.customs_and_regulatory.custom_clearance_status')
+    = 'Delayed' THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Customs-delay indicator for Lane Risk Potential (KB #36): 1 when custom_clearance_status=''Delayed''
+    on this shipment, 0 otherwise. Used to compute CD (count of customs delays per
+    lane).'
+  hidden: false
+  meta:
+    kb_id: 36
+- name: smc_score
+  sql: CASE WHEN LOWER(TRIM(qc_checklist ->> '$.gdp_quality.gdp_compliance')) = 'full'
+    THEN 9 WHEN LOWER(TRIM(qc_checklist ->> '$.gdp_quality.gdp_compliance')) = 'partial'
+    THEN 6 ELSE 3 END
+  type: number
+  primary_key: false
+  description: 'Stock Management Capability proxy (KB #30, SCRS sub-score, 0-10):
+    GDP compliance Full = 9, Partial = 6, else = 3. Used inside Supply Chain Resilience
+    Score; heuristic from the gold task solution because the schema does not store
+    SMC directly.'
+  hidden: false
+  meta:
+    kb_id: 30
 measures: []
 aggregations: []
 joins:
