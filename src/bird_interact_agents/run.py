@@ -9,6 +9,7 @@ from pathlib import Path
 from bird_interact_agents.harness import (
     calculate_budget,
     execute_submit_action,
+    finalize_result_row,
     load_db_data_if_needed,
     load_tasks,
     SampleStatus,
@@ -37,16 +38,20 @@ async def run_oracle_task(task_data: dict, data_path_base: str) -> dict:
         sol_sql, status, data_path_base
     )
 
-    return {
-        "task_id": instance_id,
-        "instance_id": instance_id,
-        "database": db_name,
-        "phase1_passed": p1,
-        "phase2_passed": p2,
-        "total_reward": reward if reward is not None else 0.0,
-        "trajectory": [],
-        "error": None,
-    }
+    return finalize_result_row(
+        {
+            "task_id": instance_id,
+            "instance_id": instance_id,
+            "database": db_name,
+            "phase1_passed": p1,
+            "phase2_passed": p2,
+            "total_reward": reward if reward is not None else 0.0,
+            "trajectory": [],
+            "error": None,
+        },
+        deleted_kb_ids=[],
+        slayer_storage_dir="",
+    )
 
 
 async def run_evaluation(
@@ -177,16 +182,20 @@ async def run_evaluation(
                 r = await run_one(td)
             except Exception as e:
                 logger.error("Error on %s: %s", instance_id, e)
-                r = {
-                    "task_id": instance_id,
-                    "instance_id": instance_id,
-                    "database": td.get("selected_database", ""),
-                    "phase1_passed": False,
-                    "phase2_passed": False,
-                    "total_reward": 0.0,
-                    "trajectory": [],
-                    "error": str(e),
-                }
+                r = finalize_result_row(
+                    {
+                        "task_id": instance_id,
+                        "instance_id": instance_id,
+                        "database": td.get("selected_database", ""),
+                        "phase1_passed": False,
+                        "phase2_passed": False,
+                        "total_reward": 0.0,
+                        "trajectory": [],
+                        "error": str(e),
+                    },
+                    deleted_kb_ids=[],
+                    slayer_storage_dir="",
+                )
             results.append(r)
             total_reward += r.get("total_reward", 0)
             if r.get("phase1_passed"):
