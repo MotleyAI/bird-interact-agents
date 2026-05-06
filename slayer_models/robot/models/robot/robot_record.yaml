@@ -1,0 +1,26 @@
+version: 4
+name: robot_record
+sql_table: robot_record
+query_variables: {}
+data_source: robot
+columns:
+- name: recreg
+  sql: recreg
+  type: string
+  primary_key: true
+  hidden: false
+- name: rects
+  sql: rects
+  type: string
+  primary_key: false
+  hidden: false
+- name: botcode
+  sql: botcode
+  type: string
+  primary_key: false
+  hidden: false
+measures: []
+aggregations: []
+joins: []
+filters: []
+hidden: false

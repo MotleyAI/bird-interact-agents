@@ -1,0 +1,83 @@
+version: 4
+name: scanqc
+sql_table: scanqc
+query_variables: {}
+data_source: archeology
+columns:
+- name: qualregistry
+  sql: qualregistry
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: arcref
+  sql: arcref
+  type: string
+  primary_key: false
+  hidden: false
+- name: crewref
+  sql: crewref
+  type: string
+  primary_key: false
+  hidden: false
+- name: accucheck
+  sql: accucheck
+  type: string
+  primary_key: false
+  hidden: false
+- name: ctrlstate
+  sql: ctrlstate
+  type: string
+  primary_key: false
+  hidden: false
+- name: valimeth
+  sql: valimeth
+  type: string
+  primary_key: false
+  hidden: false
+- name: valistate
+  sql: valistate
+  type: string
+  primary_key: false
+  hidden: false
+- name: archstat
+  sql: archstat
+  type: string
+  primary_key: false
+  hidden: false
+- name: pubstat
+  sql: pubstat
+  type: string
+  primary_key: false
+  hidden: false
+- name: copystat
+  sql: copystat
+  type: string
+  primary_key: false
+  hidden: false
+- name: refmention
+  sql: refmention
+  type: string
+  primary_key: false
+  hidden: false
+- name: remark
+  sql: remark
+  type: string
+  primary_key: false
+  hidden: false
+measures: []
+aggregations: []
+joins:
+- target_model: projects
+  join_pairs:
+  - - arcref
+    - arcregistry
+  join_type: left
+- target_model: personnel
+  join_pairs:
+  - - crewref
+    - crewregistry
+  join_type: left
+filters: []
+hidden: false

@@ -1,0 +1,42 @@
+version: 4
+name: amenities
+sql_table: amenities
+query_variables: {}
+data_source: households
+columns:
+- name: amenityref
+  sql: amenityref
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: houseid
+  sql: houseid
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: cablestatus
+  sql: cablestatus
+  type: string
+  primary_key: false
+  description: "Cable TV availability (KB #7). Truthy values: 'avail', 'available',\
+    \ 'yes' (case-insensitive).\n\n[kb=7]\nValues indicating availability, based on\
+    \ schema, are 'avail', 'available', and 'yes'. \u2014 Illustrates the availability\
+    \ of cable television.\n[/kb=7]"
+  label: Cable TV Status
+  hidden: false
+  meta:
+    kb_id: 7
+measures: []
+aggregations: []
+joins:
+- target_model: households
+  join_pairs:
+  - - houseid
+    - housenum
+  join_type: left
+filters: []
+hidden: false

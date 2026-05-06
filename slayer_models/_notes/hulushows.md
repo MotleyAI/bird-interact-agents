@@ -77,3 +77,35 @@ verifier to parse.
   Vol; `content_info` has no trailer column, so TCR is encoded as a
   `show_rollups` measure (`trailer_coverage_ratio`) using
   `trailer_vol:sum / *:count`.
+
+## KB 70 — Highly Rated but Visually Empty
+
+Reason: Verbatim restatement of KB 69 (High-Visibility Empty Bucket).
+Both KB 69 ("highly rated but no extra video segments or trailers")
+and KB 70 ("Among top-rated shows, find those missing both trailers
+and extra video segments") describe the same predicate. The encoded
+entity is `show_rollups.is_high_visibility_empty_bucket` with
+`meta.kb_id = 69`.
+
+Status: not-applicable — duplicate of KB 69
+
+## KB 71 — Over-Fragmented Offering
+
+Reason: Verbatim restatement of KB 68 (Over-Fragmented Offering).
+KB 68 describes the predicate at high level ("number of short-form
+genre categories and content types exceeds a given threshold"); KB 71
+spells out the same predicate with the concrete threshold ("more
+than six nested genre categories AND short-form > long-form"). The
+encoded entity is `core.is_over_fragmented` with `meta.kb_id = 68`.
+
+Status: not-applicable — duplicate of KB 68
+
+## KB 76 — Multi-Tier Syndication
+
+Reason: Verbatim restatement of KB 41 (Multitier Syndicated Show).
+Both KB 41 ("≥3 distinct access groups") and KB 76 ("≥3 different
+viewing plans") describe the same multi-tier presence threshold.
+The encoded entity is the `show_rollups.tier_count_per_show` measure
+with `meta.kb_id = 41` (filter `>= 3`).
+
+Status: not-applicable — duplicate of KB 41

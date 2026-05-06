@@ -1,0 +1,63 @@
+version: 4
+name: assessmentbasics
+sql_table: assessmentbasics
+query_variables: {}
+data_source: mental
+columns:
+- name: abkey
+  sql: abkey
+  type: string
+  primary_key: true
+  hidden: false
+- name: atype
+  sql: atype
+  type: string
+  primary_key: false
+  hidden: false
+- name: amethod
+  sql: amethod
+  type: string
+  primary_key: false
+  hidden: false
+- name: adurmin
+  sql: adurmin
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: alang
+  sql: alang
+  type: string
+  primary_key: false
+  hidden: false
+- name: avalid
+  sql: avalid
+  type: string
+  primary_key: false
+  hidden: false
+- name: respconsist
+  sql: respconsist
+  type: string
+  primary_key: false
+  hidden: false
+- name: symptvalid
+  sql: symptvalid
+  type: string
+  primary_key: false
+  hidden: false
+- name: patownerref
+  sql: patownerref
+  type: string
+  primary_key: false
+  hidden: false
+measures: []
+aggregations: []
+joins:
+- target_model: patients
+  join_pairs:
+  - - patownerref
+    - patkey
+  join_type: left
+filters: []
+hidden: false

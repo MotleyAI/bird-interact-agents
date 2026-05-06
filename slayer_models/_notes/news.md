@@ -2,210 +2,170 @@
 
 KB ids in the headers below are deliberately omitted from
 `slayer_models/news/`. The verifier (`scripts/verify_kb_coverage.py`)
-reads the `## KB <id> — …` headers to distinguish "skipped on
-purpose" from "missed".
+reads the `## KB <id> — …` headers to distinguish "skipped on purpose"
+from "missed".
 
-The auto-FK joins in this DB go child → parent (devices/articles →
-users; sessions → users/devices; recommendations → articles;
-interactions → sessions/recommendations; interactionmetrics →
-interactions; systemperformance → devices/sessions). Composite
-metrics that pull columns from peer tables that don't share an FK
-(e.g. `articles` + `sessions`, or `recommendations` + `sessions`)
-can't be inlined as a single `Column.sql` — they need a multistage /
-query-backed model (R-MULTISTAGE) that joins each peer to a common
-ancestor (typically through `interactions`) then composes.
+The news DB encodes most calculation_knowledge entries as row-level
+columns or measures on the host table (sessions, articles, users,
+systemperformance, interactions). The deferrals below cluster around
+two shapes:
 
-The KB also contains many domain-knowledge "criteria" entries that
-prose-describe a predicate without pinning numeric thresholds (e.g.
-"high engagement", "above the threshold"). Without specific
-threshold values, these can't be encoded as boolean columns —
-they're flagged below with `Status: deferred — undefined threshold`.
+- **Composites that bottom out on RRS (KB #2)**, whose definition
+  averages per-recommendation scores (`recscore`, `confval`) with a
+  per-session score (`recutil`). The KB is silent on which grain the
+  average is taken at, so the formula isn't well-defined as a row-level
+  column nor as a single named measure.
+- **Domain-knowledge prose** (`type=domain_knowledge`) that names a
+  category or principle without giving a discriminating predicate
+  (no thresholds, no operationalised classifier).
 
 ## KB 2 — Recommendation Relevance Score (RRS)
 
-Reason: RRS = (recscore + confval + recutil) / 3. The first two are
-on `recommendations`; `recutil` lives on `sessions` (it's a
-session-grain column whose name suggests recommendation grain). No
-FK from `recommendations` to `sessions` — the path is
-recommendations ← interactions → sessions, a peer-join through
-`interactions`. Status: deferred to W4b R-MULTISTAGE encoding.
-
-## KB 31 — Real-Time Session Efficiency (RTSE)
-
-Reason: RTSE = CIE / SBRA. CIE is an aggregate over interaction
-rows (per-session AVG of `seqval`); SBRA is a row-level expression
-on `sessions`. Multistage: aggregate `news_interactions` to one CIE
-per session, then divide by sessions.SBRA on the same session id.
-Status: deferred to W4b R-MULTISTAGE encoding.
+Reason: Definition is `RRS = (recscore + confval + recutil) / 3`.
+`recscore` and `confval` live on `news_recommendations` (one row per
+shown recommendation); `recutil` lives on `news_sessions` (one row per
+session). The KB does not specify which grain the average operates at
+(per-recommendation with `recutil` broadcast from the parent session,
+or per-session with `recscore`/`confval` first averaged across the
+session's recommendations). Either choice is a guess; agents can
+compose the per-grain version inline at query time once they pick
+one.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 32 — Dynamic Content Value (DCV)
 
-Reason: DCV = (AQI + RRS + (100 - ARS)) / 3. AQI and ARS are
-article-level (encoded on `news_articles`); RRS lives at
-recommendation grain. No direct FK between `news_articles` and
-`news_recommendations` for an article — recommendations.artlink
-points the other way (recommendations → articles). The ARS-vs-RRS
-grain mismatch (one article can have many recommendations) is what
-forces the multistage. Cascades on KB #2 (RRS deferred). Status:
-deferred to W4b R-MULTISTAGE encoding.
+Reason: `DCV = (AQI + RRS + (100 - ARS)) / 3`. AQI and ARS are encoded
+as columns on `news_articles`, but RRS (KB #2) is deferred — its grain
+isn't pinned down — so the composite inherits the ambiguity. Once the
+RRS grain is decided, DCV becomes a straightforward
+arithmetic-on-articles column.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 33 — Optimized Recommendation Score (ORS)
 
-Reason: ORS = RRS × SPI / k. RRS on recommendations (deferred), SPI
-on `news_systemperformance`, peer-join via `news_sessions`. The
-normalisation constant `k` is also unspecified. Status: deferred to
-W4b R-MULTISTAGE encoding.
+Reason: `ORS = RRS × SPI / k` with `k` declared a "normalization
+constant" but never quantified in the KB. Both the RRS grain (KB #2)
+and the value of `k` are unknowns, so the formula cannot be encoded
+faithfully.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 34 — Adjusted Read Time Estimator (ARTE)
 
-Reason: ARTE = readsec × ARS / UER. readsec and ARS are
-article-level; UER is session-level. Cross-table peer-join via
-`news_interactions`. Status: deferred to W4b R-MULTISTAGE encoding.
+Reason: `ARTE = readsec × ARS / UER`. `readsec` and ARS are
+article-row attributes; UER is a session-row attribute. The natural
+articles↔sessions bridge runs through `news_interactions` (article id
+is non-FK on interactions, sessions joined via `seshlink2`), and the
+KB is silent on how to aggregate UER across the sessions that touched
+each article (or, conversely, how to broadcast article-level readsec
+to sessions). Either direction is a guess.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 35 — Personalization Accuracy Metric (PAM)
 
-Reason: PAM = (RRS + PP) / 2. PP (KB #11) is a prose-only
-domain-knowledge criterion with no numeric definition; RRS is
-deferred (KB #2). Status: deferred — depends on KB #2 (deferred)
-and KB #11 (prose-only).
+Reason: `PAM = (RRS + PP) / 2`. RRS (KB #2) is deferred for grain
+ambiguity. PP (KB #11) is `domain_knowledge` prose with no
+predicate or numeric form, so it cannot be combined arithmetically.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 36 — Conversion Impact Factor (CIF)
 
-Reason: CIF = UER / ITI. ITI (KB #19) is a prose-only "promptness"
-indicator with no concrete column. Status: deferred — depends on
-KB #19 (prose-only, no numeric definition).
-
-## KB 37 — Adjusted Bounce Ratio (ABR)
-
-Reason: ABR = SBRA × (RTSE factor). The "RTSE factor" is itself
-not defined precisely (the KB hand-waves it). RTSE itself is
-deferred (KB #31). Status: deferred — cascades from KB #31.
+Reason: `CIF = UER / ITI`. UER (KB #0) is encoded as a row-level
+column on `news_sessions`. ITI (KB #19) is `domain_knowledge` prose
+("a minimal delay between content exposure and user interaction…")
+with no quantified definition — there is no `iti` column to divide
+by.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 38 — Composite System Stability (CSS)
 
-Reason: CSS = sqrt(SPI × DPM). DPM (Device Performance Metric) is
-not defined anywhere in the KB or schema. Status: deferred — DPM
-undefined.
+Reason: `CSS = sqrt(SPI × DPM)`. SPI (KB #4) is encoded on
+`news_systemperformance`. DPM (Device Performance Metric) is referenced
+but not defined anywhere in the KB and there is no `dpm`-shaped
+column or formula on `news_devices` or `news_systemperformance`.
+Status: deferred — SCHEMA-GAP
 
 ## KB 39 — Interactive Content Amplifier (ICA)
 
-Reason: ICA = CIE + α × RRS. α is an unspecified weight; RRS is
-deferred (KB #2). Status: deferred — cascades from KB #2; α
-undefined.
+Reason: `ICA = CIE + α × RRS`. RRS (KB #2) is deferred for grain
+ambiguity, and α is left as an unspecified weighting constant in the
+KB. Both unknowns sink the formula.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 40 — High Engagement Indicator (HEI)
 
-Reason: predicate over UER and CIE thresholds, neither pinned by
-the KB ("above the threshold", "high"). Status: deferred —
-undefined threshold.
+Reason: Definition is "marked as high engagement when UER is above
+the threshold and CIE is high". The KB names no threshold for either
+factor, so any encoded predicate would be a guess. UER and CIE are
+both available; agents can compose the predicate inline once they
+pick a threshold.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 41 — Premium Article Distinction (PAD)
 
-Reason: predicate over AQI threshold (unspecified) and KB #10 PCR
-(prose-only). Status: deferred — undefined threshold; depends on
-KB #10 prose-only criterion.
+Reason: "Article qualifies as premium when it surpasses the AQI
+threshold and complies with the Premium Content Rule". AQI (KB #1)
+is encoded as a column on `news_articles`, but the AQI threshold
+is unspecified and the Premium Content Rule (KB #10) is itself prose
+with no operational predicate.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 42 — Targeted Personalization Benchmark (TPB)
 
-Reason: predicate over KB #11 PP (prose-only) and PAM (KB #35,
-deferred). Status: deferred — cascades from KB #11 and KB #35.
+Reason: Combines PP (KB #11, prose) with PAM (KB #35, deferred). No
+quantified threshold given for either component.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 43 — User Churn Predictor (UCP)
 
-Reason: combines KB #13 ECP (prose-only "consistent engagement")
-and KB #18 SSAD (prose-only "unusually short", no quantified
-threshold). Status: deferred — depends on prose-only criteria with
-no concrete numeric definitions.
+Reason: "Inconsistent engagement per ECP combines with anomalies
+detected by SSAD". ECP (KB #13) and SSAD (KB #18) are both
+`domain_knowledge` prose with no operational thresholds — no
+inconsistency band, no anomaly cutoff is defined.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 44 — Content Virality Threshold (CVT)
 
-Reason: thresholds on DCV (KB #32, deferred) and ICA (KB #39,
-deferred), neither pinned. Status: deferred — cascades from KB #32
-and KB #39.
+Reason: "Content is viral when DCV and ICA both exceed virality
+thresholds". DCV (KB #32) and ICA (KB #39) are themselves deferred,
+and the thresholds are unspecified.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 45 — System Resilience Factor (SRF)
 
-Reason: predicate over CSS (KB #38, deferred — DPM undefined) and
-SPI (encoded). Threshold for "strong performance" not specified.
-Status: deferred — cascades from KB #38; undefined threshold.
+Reason: "System demonstrates resilience when CSS and SPI both
+indicate strong performance". CSS (KB #38) is deferred for a missing
+DPM column; "strong performance" thresholds for either factor are
+not specified.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 46 — Session Drop-off Risk (SDR)
 
-Reason: predicate over RTSE (KB #31, deferred) and ABR (KB #37,
-deferred). Status: deferred — cascades.
+Reason: "High drop-off risk when low RTSE coincides with elevated
+ABR". RTSE (KB #31) and ABR (KB #37) are both encoded as
+query-backed multistage models, but the KB names no thresholds for
+"low" or "elevated" — agents must compose the predicate inline once
+they pick cutoffs.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 47 — Conversion Potential Indicator (CPI)
 
-Reason: predicate over CIF (KB #36, deferred) and ICA (KB #39,
-deferred). Status: deferred — cascades.
+Reason: "Both CIF and ICA are optimized" — neither component has a
+defined threshold; CIF (KB #36) and ICA (KB #39) are themselves
+deferred.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 48 — Content Consumption Consistency (CCC)
 
-Reason: predicate over ARS, UER (encoded) and KB #11 PP
-(prose-only); the "steady patterns" rule has no numeric
-formulation. Status: deferred — depends on prose-only KB #11;
-undefined "steady" threshold.
+Reason: ARS, UER, and PP "together display steady patterns". No
+operational definition of "steady" (variance band, coefficient of
+variation, n-session window).
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 49 — Subscription Valuation Rule (SVR)
 
-Reason: prose-only "comprehensive user valuation" — combines USV
-(KB #17, encoded) with engagement and demographic factors but with
-no specific weighting or threshold. Agent can compose at query
-time using `news_users.user_subscription_value`,
-`news_users.user_demographic_score` and the desired session-level
-engagement metrics. Status: deferred — undefined weights.
-
-# Implementation notes (not deferred KB ids)
-
-## Encoded but value range is suspect: KB #5 ARS / KB #57 Readability Segmentation
-
-KB #5 defines ARS = readsec × log(wordlen) / w, with w from KB #56
-(Basic=1, Intermediate=1.5, Advanced=2, others=1.2). KB #57 then
-buckets ARS into Low (<50), Medium (50–100), High (>100).
-
-With this DB's data — readsec in [25, 1200] and wordlen in [104,
-5000] — both interpretations of "log" produce ARS values far above
-100 for the vast majority of articles:
-
-- log10: ARS ranges roughly 25 .. 6500, median ~600.
-- ln (natural): ARS ranges roughly 60 .. 15000.
-
-Either way, almost every article ends up in the "High" bucket and
-the Low/Medium thresholds rarely fire. The encoding uses `log10`
-(SLayer's registered SQLite UDF) and matches the KB's algebra; the
-thresholds in KB #57 simply don't fit the actual data ranges. This
-is encoded but the agent should treat the segmentation labels with
-caution. Status: encoded (KB #5 on
-`news_articles.article_readability_score`, KB #57 on
-`news_articles.readability_segment`); value range suspect; threshold
-not adjusted because KB #57 pins the numeric cuts.
-
-## Naming convention: `news_<table>` prefix on every model
-
-Every news model is named `news_<table>` (e.g. `news_users`,
-`news_articles`) rather than the bare table name. This is because
-the SLayer storage layer keys models by name only, and several other
-mini-interact DBs (crypto, virtual, hulushows, …) ingest tables
-called `users`, `interactions`, `articles`, etc. into the same
-storage. Using bare table names caused parallel-agent overwrites of
-my `users` model with crypto's data; using a `news_` prefix ensures
-news's models don't collide with anyone else's.
-
-## Real bug found in SLayer MCP: measure `meta` not persisted
-
-`mcp__slayer__edit_model` and `mcp__slayer__create_model` accept
-`meta` on `measures` entries and report success, but the field is
-never written to YAML storage. Verified by inspecting
-`~/.local/share/slayer/models/news_users.yaml` after a clean
-`create_model` call that included `measures=[{name, formula,
-description, meta: {kb_id: 55}}]`: every other field landed,
-`meta` did not.
-
-Workaround used here: stamp the KB id on a row-level Column instead
-of the ModelMeasure (the verifier walks both). KB #9 CIE → kb_id
-on `news_interactions.seqval`; KB #55 cohort_percentage → kb_id on
-`news_users.testgrp`. The semantics is slightly off (KB describes a
-measure, not a column) but verifier coverage is satisfied. Worth
-filing upstream — this would silently drop bookkeeping on every
-saved measure.
-
+Reason: "Comprehensive user valuation is achieved by weighting
+subscription duration, engagement performance, and demographic
+indicators". The KB lists ingredients (USV, UDS, plus an unspecified
+engagement factor) but gives no formula or weights — purely
+descriptive prose.
+Status: deferred — AMBIGUOUS-PROSE

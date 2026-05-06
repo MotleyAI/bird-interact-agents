@@ -39,26 +39,31 @@ the SLayer MCP. The user typically invokes by naming the DB
   ```
   ## KB <id> — <KB.knowledge>
 
-  Reason: <why this entry isn't encoded — "ambiguous prose", "needs
-  a join not present in the schema", "blocked on …", etc.>
+  Reason: <why this entry isn't encoded — concrete, schema-grounded>
 
-  Status: <"deferred", "won't fix", "encoded after follow-up", etc.>
+  Status: <one of the canonical statuses from the generic skill's
+  "Notes-file regeneration" subsection — e.g. `deferred —
+  AMBIGUOUS-PROSE`, `deferred — SCHEMA-GAP`, `deferred — DML`,
+  `not-applicable`>
   ```
 
   Multiple sections in one file. The body of each section is free-form
-  Markdown; only the header is parsed.
+  Markdown; only the header is parsed by the verifier. The Status
+  values are *not* parsed but should be one of the canonical set so
+  downstream tooling (and humans) can categorise mechanically.
 
-## The mandatory `meta.kb_id` / `meta.kb_ids` annotation
+## The mandatory `meta.kb_id` annotation
 
 When invoking any recipe from `kb-to-slayer-models` to encode a KB
 entry, **always pass `meta={"kb_id": <id>}`** where `<id>` is the
-source entry's numeric id from `<db>_kb.jsonl`.
+source entry's numeric id from `<db>_kb.jsonl`. One entity, one KB id.
 
-If a single entity covers **multiple KB entries** (a common case: one
-JSON column whose description aggregates several `value_illustration`
-entries about distinct sub-fields), pass `meta={"kb_ids": [<id1>,
-<id2>, …]}` instead. The verifier accepts either form and unions
-them.
+The plural `meta.kb_ids` is deprecated. If a single entity feels
+like it should carry multiple ids (e.g. one JSON column standing in
+for several `value_illustration` sub-fields, or one model bundling a
+calc with its threshold), that's a Bucket A/B/C/D/E/F split case —
+see "Splitting multi-KB entities" in `kb-to-slayer-models`. Apply
+the matching `R-SPLIT-*` recipe; produce N single-KB entities.
 
 This is non-optional:
 
@@ -67,7 +72,10 @@ This is non-optional:
   Missing → false-negative "unaccounted KB id".
 - The W5 HARD-8 preprocessor drops entities whose `kb_id` is in the
   task's `deleted_knowledge` list. Missing → entity stays visible to
-  the agent in tasks where it should be hidden.
+  the agent in tasks where it should be hidden. The preprocessor
+  also accepts the legacy `meta.kb_ids` plural for entities that
+  haven't been split yet, so live storage stays consistent through a
+  partial split rollout.
 
 For query-backed models (R-MULTISTAGE / R-WINDOW / R-EXISTS / R-VAR),
 attach `meta={"kb_id": <id>}` on the *model* itself via a follow-up
@@ -79,6 +87,57 @@ ModelMeasure for an R-FILTER ratio, say), every one of them carries
 the same `kb_id`. The verifier deduplicates.
 
 ## Workflow
+
+### W4c refresh override (use when re-running on a partially-encoded DB)
+
+When you're refreshing an already-translated DB — the storage already
+contains entities with `meta.kb_id` set from a prior pass — follow the
+generic skill's two-pass "Working from a partially-encoded model"
+discipline:
+
+1. **Discard the existing notes file** at
+   `bird-interact-agents/slayer_models/_notes/<db>.md` and regenerate
+   it from scratch in step 4 below.
+2. **Verify-then-fill**: walk the KB jsonl. For each id, look up the
+   matching entity (any `meta.kb_id`, or — on legacy entities not
+   yet split — any `meta.kb_ids` list covering that id) via
+   `models_summary` + `inspect_model`. Faithful encodings stay;
+   wrong ones get edited; misclassified ones get `delete_model`'d
+   / replaced. Only after this verify pass do you try to encode the
+   still-unencoded.
+3. **No gold-SQL grounding.** The encoding decisions come from KB
+   text (`definition`, `type`, `children_knowledge`), the schema,
+   the column meanings, and the recipes in the generic skill. Do
+   not consult `mini_interact.jsonl` task `sol_sql` fields.
+
+### W4d refresh override (multi-KB-entity splitting pass)
+
+When the planner gives you a per-DB instruction file at
+`_w4d_instructions/<db>.md` listing entities with `meta.kb_ids`
+(plural) and a target split shape per entity:
+
+1. Read `_w4d_instructions/<db>.md`. It lists every multi-KB entity
+   in this DB plus the bucket label (A/B/C/D/E/F) and the target
+   split (per kb_id: target entity name, host model, recipe).
+2. For each listed entity, apply the matching `R-SPLIT-*` recipe
+   from `kb-to-slayer-models` ("Splitting multi-KB entities"). End
+   state per entity: N single-KB entities each carrying its own
+   `meta.kb_id`. Existing single-KB entities on the same model are
+   load-bearing — don't disturb them.
+3. **Don't re-run the W4c verify-then-fill.** W4d is purely a
+   splitting pass; coverage is already complete. The notes file
+   gets *appended to* (not regenerated) only for Bucket-F secondary
+   ids: `Status: not-applicable — duplicate of KB <primary>`.
+4. After splitting: re-export YAML (step 5 below), then run BOTH
+   gates:
+   - `scripts/verify_kb_coverage.py --db <db>` (exit 0 — coverage
+     unchanged).
+   - `scripts/multi_kb_audit.py --db <db>` (exit 0 — no multi-KB
+     entities remain).
+
+Otherwise (first-time translation of a fresh DB, or a W4c refresh
+without a `_w4d_instructions/<db>.md` file), proceed with the
+standard steps below.
 
 ### 1. Read the inputs
 
@@ -167,17 +226,15 @@ any id is in zero or both sets.
 - **Don't recreate auto-ingested models.** Use `edit_model` to enrich
   what's already there. Only `create_model` for query-backed
   multistage models that have no host table.
-- **Peer-join limitation.** Auto-ingested joins go child → parent
-  (the table holding the FK reaches the referenced table). Two
-  per-aspect tables that both join to the *same* parent (e.g.
-  `thermalsolarwindandgrid` and `waterandwaste` both joining to
-  `equipment` in the polar DB) cannot reach each other through
-  bare `Column.sql` references. A composite metric that pulls
-  columns from both peers needs an R-MULTISTAGE encoding (a
-  query-backed model that joins both peers to the parent
-  separately, then composes). When this comes up, defer the
-  composite to the notes file with `Status: deferred to W4b
-  R-MULTISTAGE encoding` rather than try to inline it.
+- **Peer-join handling.** Two child tables that both FK to the same
+  parent (e.g. `thermalsolarwindandgrid` and `waterandwaste` both
+  joining to `equipment` in polar) cannot reach each other through
+  bare `Column.sql` references. **Encode any cross-peer composite
+  as R-MULTISTAGE** per the generic skill's "Peer-join via shared
+  parent" section. Do *not* defer; the multistage DAG is the
+  default encoding, not a workaround. Cardinality is safe regardless
+  of m:N (each peer is collapsed to one row per parent in its own
+  stage).
 - **KB ambiguity surfaces during sanity-queries, not in the
   verifier.** The verifier checks KB-coverage, not semantic
   correctness. If a sanity-query produces nonsense values

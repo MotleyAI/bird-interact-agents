@@ -126,21 +126,38 @@ async def test_raw_c_interact_knowledge_block_is_valid_json():
 
 @pytest.mark.asyncio
 async def test_slayer_c_interact_no_8_item_truncation():
-    """Models summary must include all dims/measures, not [:8]."""
+    """Models summary must include all of a model's columns, not [:8]."""
     prompt = await _claude_sdk_prompt("slayer", "c-interact")
     assert "# Available models" in prompt
     summary_block = prompt.split("# Available models\n", 1)[1]
     summary_block = summary_block.split("\n# External knowledge", 1)[0]
 
-    signals_line = next(
-        (ln for ln in summary_block.splitlines() if ln.startswith("- signals:")),
+    # New multi-line format from DEV-1362 Step 7:
+    #   - signals
+    #       columns:
+    #         - <name>: <description>
+    #         - …
+    lines = summary_block.splitlines()
+    try:
+        signals_idx = next(i for i, ln in enumerate(lines) if ln.strip() == "- signals")
+    except StopIteration:
+        pytest.fail("expected 'signals' model in summary")
+
+    columns_idx = next(
+        (i for i in range(signals_idx + 1, len(lines))
+         if lines[i].strip() == "columns:"),
         None,
     )
-    assert signals_line is not None, "expected 'signals' model in summary"
-    dims_part = signals_line.split("dims=[", 1)[1].split("]", 1)[0]
-    dim_count = len([d for d in dims_part.split(",") if d.strip()])
-    assert dim_count > 8, (
-        f"signals model summary truncated to {dim_count} dims — [:8] cap is back"
+    assert columns_idx is not None, "signals model has no `columns:` sub-section"
+
+    column_count = 0
+    for ln in lines[columns_idx + 1:]:
+        stripped = ln.lstrip()
+        if not stripped.startswith("- "):
+            break  # left the columns block
+        column_count += 1
+    assert column_count > 8, (
+        f"signals model rendered {column_count} columns — [:8] cap is back"
     )
 
 

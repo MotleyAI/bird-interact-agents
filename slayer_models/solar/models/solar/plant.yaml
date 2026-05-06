@@ -1,0 +1,37 @@
+version: 4
+name: plant
+sql_table: plant
+query_variables: {}
+data_source: solar
+columns:
+- name: growregistry
+  sql: growregistry
+  type: string
+  primary_key: true
+  hidden: false
+- name: growalias
+  sql: growalias
+  type: string
+  primary_key: false
+  hidden: false
+- name: gencapmw
+  sql: gencapmw
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: initdate
+  sql: initdate
+  type: string
+  primary_key: false
+  hidden: false
+measures: []
+aggregations: []
+joins: []
+filters: []
+description: A solar power plant. One row per plant; downstream tables (panel, environment,
+  inverter, maintenance, alerts) reference it via `growregistry`. `gencapmw` is the
+  rated generation capacity in MW; `initdate` is the commissioning date used to derive
+  `Years_Since_Installation` for degradation metrics.
+hidden: false

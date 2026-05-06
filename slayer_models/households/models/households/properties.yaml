@@ -1,0 +1,187 @@
+version: 4
+name: properties
+sql_table: properties
+query_variables: {}
+data_source: households
+columns:
+- name: propref
+  sql: propref
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: houselink
+  sql: houselink
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: infralink
+  sql: infralink
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: dwelling_specs
+  sql: dwelling_specs
+  type: string
+  primary_key: false
+  description: "JSONB with Dwelling_Class ('Brickwork house', 'Apartment', 'Condominium',\
+    \ etc \u2014 KB #6; case-mixed in data: APARTMENT/Apartment), Bath_Count (number\
+    \ of bathrooms), Room_Count (number of bedrooms).\n\n[kb=6]\nValues based on schema\
+    \ include 'Brickwork house', 'Apartment', 'Condominium', etc. \u2014 Illustrates\
+    \ dwelling categories. For scoring, 'Brickwork house' and 'Condominium' are 4\
+    \ points, 'Apartment' is 3 points, and all other types are 1 point.\n[/kb=6]"
+  label: Dwelling Type
+  hidden: false
+  meta:
+    kb_id: 6
+- name: bath_count
+  sql: json_extract(dwelling_specs, '$.Bath_Count')
+  type: number
+  primary_key: false
+  description: Number of bathrooms (extracted from dwelling_specs JSON).
+  hidden: false
+- name: room_count
+  sql: json_extract(dwelling_specs, '$.Room_Count')
+  type: number
+  primary_key: false
+  description: Number of bedrooms (extracted from dwelling_specs JSON).
+  hidden: false
+- name: dwelling_class
+  sql: TRIM(json_extract(dwelling_specs, '$.Dwelling_Class'))
+  type: string
+  primary_key: false
+  description: Dwelling class (extracted from dwelling_specs JSON).
+  hidden: false
+- name: household_density
+  sql: households.residentcount * 1.0 / NULLIF(json_extract(dwelling_specs, '$.Room_Count'),
+    0)
+  type: number
+  primary_key: false
+  description: "Household Density (KB #11): residents per bedroom.\n\n[kb=11]\nCalculated\
+    \ as the number of residents divided by the number of bedrooms. \u2014 Calculates\
+    \ the average number of residents per bedroom in a household.\n[/kb=11]"
+  label: Household Density
+  hidden: false
+  meta:
+    kb_id: 11
+- name: bathroom_ratio
+  sql: json_extract(dwelling_specs, '$.Bath_Count') * 1.0 / NULLIF(households.residentcount,
+    0)
+  type: number
+  primary_key: false
+  description: "Bathroom Ratio (KB #15): bathrooms per resident.\n\n[kb=15]\nCalculated\
+    \ as the number of bathrooms divided by the number of residents. \u2014 Calculates\
+    \ the number of bathrooms per resident in a household.\n[/kb=15]"
+  label: Bathroom Ratio
+  hidden: false
+  meta:
+    kb_id: 15
+- name: dwelling_capacity
+  sql: 2 * COALESCE(json_extract(dwelling_specs, '$.Room_Count'), 0) + COALESCE(json_extract(dwelling_specs,
+    '$.Bath_Count'), 0)
+  type: number
+  primary_key: false
+  description: "Dwelling Capacity (KB #17): 2 \xD7 bedrooms + bathrooms.\n\n[kb=17]\n\
+    Calculated as twice the number of bedrooms plus the number of bathrooms. \u2014\
+    \ Calculates the potential capacity of a dwelling based on bedrooms and bathrooms.\n\
+    [/kb=17]"
+  label: Dwelling Capacity
+  hidden: false
+  meta:
+    kb_id: 17
+- name: dwelling_type_score
+  sql: CASE WHEN LOWER(json_extract(dwelling_specs, '$.Dwelling_Class')) LIKE '%brickwork%'
+    THEN 4 WHEN LOWER(json_extract(dwelling_specs, '$.Dwelling_Class')) LIKE '%apartment%'
+    THEN 3 ELSE 1 END
+  type: number
+  primary_key: false
+  description: "Dwelling Type Score (KB #44): Brickwork house=4, Apartment=3, else=1.\
+    \ LIKE patterns to absorb whitespace + case variations in raw JSON.\n\n[kb=44]\n\
+    A scoring system where 'Brickwork house' receives 4 points, 'Apartment' receives\
+    \ 3 points, and all other types receive 1 point. This score is used in broader\
+    \ calculations like the Living Condition Score. \u2014 Assigns a numerical score\
+    \ to different dwelling types based on a predefined quality ranking.\n[/kb=44]"
+  label: Dwelling Type Score
+  hidden: false
+  meta:
+    kb_id: 44
+- name: living_condition_score
+  sql: 0.5 * (CASE WHEN LOWER(json_extract(dwelling_specs, '$.Dwelling_Class')) LIKE
+    '%brickwork%' THEN 4 WHEN LOWER(json_extract(dwelling_specs, '$.Dwelling_Class'))
+    LIKE '%apartment%' THEN 3 ELSE 1 END) + 0.5 * (CASE WHEN LOWER(TRIM(infrastructure.wateraccess))
+    LIKE 'yes%' THEN 4 ELSE 1 END + CASE WHEN LOWER(TRIM(infrastructure.roadsurface))
+    LIKE '%asphalt%' OR LOWER(TRIM(infrastructure.roadsurface)) LIKE '%concrete%'
+    THEN 4 ELSE 1 END + CASE WHEN LOWER(TRIM(infrastructure.parkavail)) = 'available'
+    THEN 4 ELSE 1 END) / 3.0
+  type: number
+  primary_key: false
+  description: "Living Condition Score (KB #20): 0.5 * dwelling_type_score (KB #44,\
+    \ 1-4 scale) + 0.5 * infrastructure_quality_score (KB #13, mean of 1-4 child scores).\
+    \ Inlined since neither helper is reachable as a Column reference from here.\n\
+    \n[kb=20]\nCalculated as a 50/50 weighted average of the Dwelling Type score and\
+    \ the Infrastructure Quality Score. \u2014 Calculates a composite score for a\
+    \ household's living conditions.\n[/kb=20]"
+  label: Living Condition Score
+  hidden: false
+  meta:
+    kb_id: 20
+- name: is_comfortable_living
+  sql: (0.5 * (CASE WHEN LOWER(json_extract(dwelling_specs, '$.Dwelling_Class')) LIKE
+    '%brickwork%' THEN 4 WHEN LOWER(json_extract(dwelling_specs, '$.Dwelling_Class'))
+    LIKE '%apartment%' THEN 3 ELSE 1 END) + 0.5 * (CASE WHEN LOWER(TRIM(infrastructure.wateraccess))
+    LIKE 'yes%' THEN 4 ELSE 1 END + CASE WHEN LOWER(TRIM(infrastructure.roadsurface))
+    LIKE '%asphalt%' OR LOWER(TRIM(infrastructure.roadsurface)) LIKE '%concrete%'
+    THEN 4 ELSE 1 END + CASE WHEN LOWER(TRIM(infrastructure.parkavail)) = 'available'
+    THEN 4 ELSE 1 END) / 3.0) > 3 AND (json_extract(dwelling_specs, '$.Bath_Count')
+    * 1.0 / NULLIF(households.residentcount, 0)) > 0.5
+  type: boolean
+  primary_key: false
+  description: "Comfortable Living Household (KB #29): TRUE iff Living Condition Score\
+    \ > 3 AND Bathroom Ratio > 0.5.\n\n[kb=29]\nA household is considered 'Comfortable'\
+    \ if its Living Condition Score is greater than 3 AND its Bathroom Ratio is greater\
+    \ than 0.5. \u2014 Defines a household with a high standard of living conditions.\n\
+    [/kb=29]"
+  label: Comfortable Living Household
+  hidden: false
+  meta:
+    kb_id: 29
+- name: is_modern_dwelling
+  sql: CASE WHEN LOWER(TRIM(json_extract(dwelling_specs, '$.Dwelling_Class'))) IN
+    ('brickwork house', 'apartment') AND LOWER(TRIM(amenities.cablestatus)) IN ('avail',
+    'available', 'yes') THEN 1 ELSE 0 END
+  type: boolean
+  primary_key: false
+  description: "Modern Dwelling (KB #26): TRUE iff Dwelling_Class is 'brickwork house'\
+    \ or 'apartment' (case/whitespace-insensitive) AND amenities.cablestatus is 'avail',\
+    \ 'available', or 'yes' (case/whitespace-insensitive).\n\n[kb=26]\nA dwelling\
+    \ with specific Dwelling Type and active Cable TV Status. \u2014 Defines a dwelling\
+    \ with modern amenities and structure.\n[/kb=26]"
+  label: Modern Dwelling
+  hidden: false
+  meta:
+    kb_id: 26
+measures: []
+aggregations: []
+joins:
+- target_model: households
+  join_pairs:
+  - - houselink
+    - housenum
+  join_type: left
+- target_model: infrastructure
+  join_pairs:
+  - - infralink
+    - infraref
+  join_type: left
+- target_model: amenities
+  join_pairs:
+  - - houselink
+    - houseid
+  join_type: left
+filters: []
+hidden: false

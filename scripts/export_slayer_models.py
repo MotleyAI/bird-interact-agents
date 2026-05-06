@@ -66,9 +66,9 @@ async def _export_async(db: str, source_path: Path) -> int:
     await dest.save_datasource(ds)
 
     n_models = 0
-    for name in await src.list_models():
+    for name in await src.list_models(data_source=db):
         try:
-            model = await src.get_model(name)
+            model = await src.get_model(name, data_source=db)
         except Exception as exc:
             # Other DBs may have v1-shape models (e.g. demo data with
             # dimension/measure name collisions) that fail v3 migration.

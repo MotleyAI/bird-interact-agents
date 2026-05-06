@@ -1,0 +1,108 @@
+version: 4
+name: systemmonitoring
+sql_table: systemmonitoring
+query_variables: {}
+data_source: crypto
+columns:
+- name: systemmonitoringpivot
+  sql: systemmonitoringpivot
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: apireqtotal
+  sql: apireqtotal
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: apierrtotal
+  sql: apierrtotal
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: apilatmark
+  sql: apilatmark
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: wsstate
+  sql: wsstate
+  type: string
+  primary_key: false
+  hidden: false
+- name: rateremain
+  sql: rateremain
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: lastupdnote
+  sql: lastupdnote
+  type: string
+  primary_key: false
+  hidden: false
+- name: seqcode
+  sql: seqcode
+  type: string
+  primary_key: false
+  hidden: false
+- name: slipratio
+  sql: slipratio
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: exectimespan
+  sql: exectimespan
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: queueline
+  sql: queueline
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: mkteffect
+  sql: mkteffect
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: priceeffect
+  sql: priceeffect
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: aitrack
+  sql: aitrack
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+measures: []
+aggregations: []
+joins:
+- target_model: analyticsindicators
+  join_pairs:
+  - - aitrack
+    - analyticsindicatorsnode
+  join_type: left
+filters: []
+hidden: false

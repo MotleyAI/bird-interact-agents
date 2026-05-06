@@ -45,3 +45,9 @@ Status: deferred — missing source column (IMDF). If a downstream
 task supplies a mapping (e.g. IMDF := some derived combination of
 sigdisp + interflvl bands), this can be added on `signal_full`
 following the same multi-peer pattern as the other cascades.
+
+## KB 51 — Bandwidth-to-Frequency Ratio (BFR)
+
+Reason: Verbatim restatement of KB 4; encoded entity is `signals.bfr` with `meta.kb_id = 4`.
+
+Status: not-applicable — duplicate of KB 4

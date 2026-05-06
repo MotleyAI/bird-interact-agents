@@ -1,0 +1,76 @@
+version: 4
+name: commerceandcollection
+sql_table: commerceandcollection
+query_variables: {}
+data_source: virtual
+columns:
+- name: commercereg
+  sql: commercereg
+  type: string
+  primary_key: true
+  hidden: false
+- name: commerceengagepivot
+  sql: commerceengagepivot
+  type: string
+  primary_key: false
+  hidden: false
+- name: commercememberpivot
+  sql: commercememberpivot
+  type: string
+  primary_key: false
+  hidden: false
+- name: merchbuy
+  sql: merchbuy
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: merchspendusd
+  sql: merchspendusd
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: digown
+  sql: digown
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: physown
+  sql: physown
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: collcomprate
+  sql: collcomprate
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: tradelevel
+  sql: tradelevel
+  type: string
+  primary_key: false
+  hidden: false
+measures: []
+aggregations: []
+joins:
+- target_model: engagement
+  join_pairs:
+  - - commerceengagepivot
+    - engagereg
+  join_type: left
+- target_model: membershipandspending
+  join_pairs:
+  - - commercememberpivot
+    - memberreg
+  join_type: left
+filters: []
+hidden: false

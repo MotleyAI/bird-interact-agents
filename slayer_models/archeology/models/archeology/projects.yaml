@@ -1,0 +1,36 @@
+version: 4
+name: projects
+sql_table: projects
+query_variables: {}
+data_source: archeology
+columns:
+- name: arcregistry
+  sql: arcregistry
+  type: string
+  primary_key: true
+  hidden: false
+- name: vesseltag
+  sql: vesseltag
+  type: string
+  primary_key: false
+  hidden: false
+- name: fundflux
+  sql: fundflux
+  type: string
+  primary_key: false
+  hidden: false
+- name: authpin
+  sql: authpin
+  type: string
+  primary_key: false
+  hidden: false
+- name: authhalt
+  sql: authhalt
+  type: string
+  primary_key: false
+  hidden: false
+measures: []
+aggregations: []
+joins: []
+filters: []
+hidden: false
