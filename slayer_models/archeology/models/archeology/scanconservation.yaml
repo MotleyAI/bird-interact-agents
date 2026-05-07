@@ -60,7 +60,7 @@ columns:
   hidden: false
 - name: is_degradation_risk_zone
   sql: CASE WHEN (sites.presstat LIKE '%Poor%' OR sites.presstat LIKE '%Critical%')
-    AND (structstate IS NULL OR structstate NOT LIKE '%Stable%') THEN 1 ELSE 0 END
+    AND (structstate IS NULL OR structstate <> 'Stable') THEN 1 ELSE 0 END
   type: BOOLEAN
   primary_key: false
   description: "Degradation Risk Zone (KB #14): site PresStat in {'Poor','Critical'}\
@@ -76,8 +76,8 @@ columns:
     kb_id: 14
 - name: risk_zone_category
   sql: CASE WHEN (sites.presstat LIKE '%Poor%' OR sites.presstat LIKE '%Critical%')
-    AND (structstate IS NULL OR structstate NOT LIKE '%Stable%') THEN 'Degradation
-    Risk Zone' ELSE 'Not in Risk Zone' END
+    AND (structstate IS NULL OR structstate <> 'Stable') THEN 'Degradation Risk Zone'
+    ELSE 'Not in Risk Zone' END
   type: TEXT
   primary_key: false
   description: "Risk Zone Category (KB #52): two-class classification \u2014 'Degradation\
@@ -149,16 +149,16 @@ columns:
     kb_id: 35
 - name: cpi
   sql: CASE WHEN (sites.presstat LIKE '%Poor%' OR sites.presstat LIKE '%Critical%')
-    AND (structstate IS NULL OR structstate NOT LIKE '%Stable%') THEN 100 - (CASE
-    sites.presstat WHEN 'Excellent' THEN 10 WHEN 'Good' THEN 30 WHEN 'Fair' THEN 50
-    WHEN 'Poor' THEN 70 WHEN 'Critical' THEN 90 ELSE 0 END) + (abs(CAST(sites.guessdate
-    AS REAL)) / 1000.0) * (1 + (CASE sites.typesite WHEN 'Religious' THEN 10 WHEN
-    'Military' THEN 8 WHEN 'Settlement' THEN 6 WHEN 'Industrial' THEN 4 WHEN 'Burial'
-    THEN 2 ELSE 0 END) / 10.0) ELSE 50 - (CASE sites.presstat WHEN 'Excellent' THEN
-    10 WHEN 'Good' THEN 30 WHEN 'Fair' THEN 50 WHEN 'Poor' THEN 70 WHEN 'Critical'
-    THEN 90 ELSE 0 END) + (abs(CAST(sites.guessdate AS REAL)) / 1000.0) * (1 + (CASE
-    sites.typesite WHEN 'Religious' THEN 10 WHEN 'Military' THEN 8 WHEN 'Settlement'
-    THEN 6 WHEN 'Industrial' THEN 4 WHEN 'Burial' THEN 2 ELSE 0 END) / 20.0) END
+    AND (structstate IS NULL OR structstate <> 'Stable') THEN 100 - (CASE sites.presstat
+    WHEN 'Excellent' THEN 10 WHEN 'Good' THEN 30 WHEN 'Fair' THEN 50 WHEN 'Poor' THEN
+    70 WHEN 'Critical' THEN 90 ELSE 0 END) + (abs(CAST(sites.guessdate AS REAL)) /
+    1000.0) * (1 + (CASE sites.typesite WHEN 'Religious' THEN 10 WHEN 'Military' THEN
+    8 WHEN 'Settlement' THEN 6 WHEN 'Industrial' THEN 4 WHEN 'Burial' THEN 2 ELSE
+    0 END) / 10.0) ELSE 50 - (CASE sites.presstat WHEN 'Excellent' THEN 10 WHEN 'Good'
+    THEN 30 WHEN 'Fair' THEN 50 WHEN 'Poor' THEN 70 WHEN 'Critical' THEN 90 ELSE 0
+    END) + (abs(CAST(sites.guessdate AS REAL)) / 1000.0) * (1 + (CASE sites.typesite
+    WHEN 'Religious' THEN 10 WHEN 'Military' THEN 8 WHEN 'Settlement' THEN 6 WHEN
+    'Industrial' THEN 4 WHEN 'Burial' THEN 2 ELSE 0 END) / 20.0) END
   type: DOUBLE
   primary_key: false
   description: "Conservation Priority Index (CPI, KB #35): piecewise formula. If in\
@@ -178,10 +178,10 @@ columns:
     kb_id: 35
 - name: is_conservation_emergency
   sql: CASE WHEN (sites.presstat LIKE '%Poor%' OR sites.presstat LIKE '%Critical%')
-    AND (structstate IS NULL OR structstate NOT LIKE '%Stable%') AND (CASE WHEN (sites.presstat
+    AND (structstate IS NULL OR structstate <> 'Stable') AND (CASE WHEN (sites.presstat
     LIKE '%Poor%' OR sites.presstat LIKE '%Critical%') AND (structstate IS NULL OR
-    structstate NOT LIKE '%Stable%') THEN 100 - (CASE sites.presstat WHEN 'Excellent'
-    THEN 10 WHEN 'Good' THEN 30 WHEN 'Fair' THEN 50 WHEN 'Poor' THEN 70 WHEN 'Critical'
+    structstate <> 'Stable') THEN 100 - (CASE sites.presstat WHEN 'Excellent' THEN
+    10 WHEN 'Good' THEN 30 WHEN 'Fair' THEN 50 WHEN 'Poor' THEN 70 WHEN 'Critical'
     THEN 90 ELSE 0 END) + (abs(CAST(sites.guessdate AS REAL)) / 1000.0) * (1 + (CASE
     sites.typesite WHEN 'Religious' THEN 10 WHEN 'Military' THEN 8 WHEN 'Settlement'
     THEN 6 WHEN 'Industrial' THEN 4 WHEN 'Burial' THEN 2 ELSE 0 END) / 10.0) ELSE
