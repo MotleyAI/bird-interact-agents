@@ -16,7 +16,7 @@
 set -euo pipefail
 
 DB="households"
-LIMIT_FLAG=""
+LIMIT=""
 CONCURRENCY=5
 PATIENCE=3
 
@@ -33,7 +33,7 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --db) DB="$2"; shift 2 ;;
-    --limit) LIMIT_FLAG="--limit $2"; shift 2 ;;
+    --limit) LIMIT="$2"; shift 2 ;;
     --concurrency) CONCURRENCY="$2"; shift 2 ;;
     --patience) PATIENCE="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
@@ -81,10 +81,20 @@ if [[ ! -s "$OUT/instance_ids.txt" ]]; then
   echo "No tasks matched db=$DB; aborting." >&2; exit 1
 fi
 
+# `--limit` is a CLI-side post-filter: it truncates AFTER --filter-ids
+# would normally apply. Applying it via the bird-interact CLI takes the
+# first N rows of the dataset (across all DBs) before --filter-ids runs,
+# which usually matches zero tasks. Instead, truncate our per-DB id list
+# ourselves so the CLI sees only the IDs we actually want to run.
+if [[ -n "$LIMIT" ]]; then
+  head -n "$LIMIT" "$OUT/instance_ids.txt" > "$OUT/instance_ids.txt.tmp"
+  mv "$OUT/instance_ids.txt.tmp" "$OUT/instance_ids.txt"
+fi
+
 # Stash the invocation for replay.
 {
   echo "DB=$DB"
-  echo "LIMIT_FLAG=$LIMIT_FLAG"
+  echo "LIMIT=$LIMIT"
   echo "CONCURRENCY=$CONCURRENCY"
   echo "PATIENCE=$PATIENCE"
   echo "BIRD_DATA_PATH=$BIRD_DATA_PATH"
@@ -108,7 +118,6 @@ uv run bird-interact \
   --concurrency "$CONCURRENCY" \
   --patience "$PATIENCE" \
   --output "$OUT/eval.json" \
-  $LIMIT_FLAG \
   2>&1 | tee "$OUT/run.log"
 
 echo
