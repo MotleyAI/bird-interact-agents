@@ -54,7 +54,11 @@ def _safe_cost(
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
         )
-    except Exception as e:
+    except litellm.exceptions.NotFoundError as e:
+        # Only swallow the "no price entry for this model" case — that's
+        # the expected, recoverable failure (warn once, record $0). Any
+        # other exception type points at an integration bug we don't
+        # want to silently mask.
         if model not in _warned_unpriced:
             _warned_unpriced.add(model)
             logger.warning(

@@ -23,8 +23,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 from pathlib import Path
 from typing import Any
+
+from bird_interact_agents.usage import TokenUsage
 
 VERSIONS = ("original", "raw", "slayer")
 
@@ -109,23 +112,49 @@ def _last_submit_sql(history: list) -> str | None:
     return None
 
 
+def _latest_run_in_db(
+    conn: sqlite3.Connection, query_mode: str
+) -> tuple[str, str] | None:
+    """Pick the (run_id, framework) for the most recent task in this leg's
+    DB. `task_results` is keyed by (run_id, framework, mode, query_mode,
+    instance_id), so reusing a leg dir across runs leaves stale rows
+    behind — without scoping, `INSERT OR REPLACE` plus duplicate
+    instance_ids would silently mix runs together. Returns `None` when
+    no row matches the requested `query_mode`.
+    """
+    row = conn.execute(
+        "SELECT run_id, framework FROM task_results "
+        "WHERE query_mode = ? "
+        "ORDER BY started_at DESC LIMIT 1",
+        (query_mode,),
+    ).fetchone()
+    return (row[0], row[1]) if row else None
+
+
 def _load_ours_from_db(db_path: Path, query_mode: str) -> list[dict] | None:
     """Read this leg's task rows from `results.db` if it exists.
 
     Returns `None` (not [] ) when the DB is missing so callers can fall
     back to the legacy `eval.json` reader without conflating "no rows"
-    with "no DB".
+    with "no DB". When the DB is present but holds rows from multiple
+    runs in the same leg dir, only the newest `(run_id, framework)`
+    slice is read so `summary` / `per_task` stay deterministic.
     """
     if not db_path.is_file():
         return None
-    import sqlite3
     conn = sqlite3.connect(str(db_path))
     try:
+        latest = _latest_run_in_db(conn, query_mode)
+        if latest is None:
+            return []
+        run_id, framework = latest
         rows = list(conn.execute(
             "SELECT instance_id, phase1_passed, phase2_passed, total_reward, "
             "error, submitted_sql, submitted_query, ground_truth_sql, "
-            "duration_s FROM task_results WHERE query_mode = ?",
-            (query_mode,),
+            "duration_s FROM task_results "
+            "WHERE query_mode = ? AND run_id = ? AND framework = ? "
+            "ORDER BY instance_id",
+            (query_mode, run_id, framework),
         ))
     finally:
         conn.close()
@@ -143,6 +172,89 @@ def _load_ours_from_db(db_path: Path, query_mode: str) -> list[dict] | None:
             "duration_s": float(r[8] or 0.0),
         })
     return out
+
+
+def _load_ours_aggregates_from_db(
+    db_path: Path, query_mode: str
+) -> dict | None:
+    """Aggregate usage + timing for the latest run's slice in `db_path`.
+
+    Returns a dict ``{"usage": ..., "timing": ...}`` shaped like
+    `_load_ours_usage` / `_load_ours_timing`'s outputs, or `None` when
+    no DB / no matching rows. Used as the partial-run fallback: when
+    `eval.json` is missing, the per-task `usage_json` + `duration_s`
+    columns still hold the cost/latency the run paid before it died,
+    and zeroing them out (the old behaviour) under-reports exactly the
+    case the per-task sink was added to preserve.
+    """
+    if not db_path.is_file():
+        return None
+    conn = sqlite3.connect(str(db_path))
+    try:
+        latest = _latest_run_in_db(conn, query_mode)
+        if latest is None:
+            return None
+        run_id, framework = latest
+        rows = list(conn.execute(
+            "SELECT usage_json, duration_s FROM task_results "
+            "WHERE query_mode = ? AND run_id = ? AND framework = ?",
+            (query_mode, run_id, framework),
+        ))
+    finally:
+        conn.close()
+    if not rows:
+        return None
+
+    total = TokenUsage()
+    durations: list[float] = []
+    for usage_json, duration_s in rows:
+        try:
+            blob = json.loads(usage_json or "{}")
+        except json.JSONDecodeError:
+            blob = {}
+        if blob:
+            total.merge(TokenUsage.model_validate(blob))
+        durations.append(float(duration_s or 0.0))
+
+    agent_in = sum(
+        b.prompt_tokens for b in total.breakdown if b.scope == "agent"
+    )
+    agent_out = sum(
+        b.completion_tokens for b in total.breakdown if b.scope == "agent"
+    )
+    user_in = sum(
+        b.prompt_tokens for b in total.breakdown if b.scope == "user_sim"
+    )
+    user_out = sum(
+        b.completion_tokens for b in total.breakdown if b.scope == "user_sim"
+    )
+    usage = {
+        "prompt_tokens": total.prompt_tokens,
+        "completion_tokens": total.completion_tokens,
+        "reasoning_tokens": total.reasoning_tokens,
+        "cache_read_tokens": total.cache_read_tokens,
+        "n_calls": total.n_calls,
+        "agent_prompt_tokens": agent_in,
+        "agent_completion_tokens": agent_out,
+        "user_sim_prompt_tokens": user_in,
+        "user_sim_completion_tokens": user_out,
+        "agent_cost_usd": total.agent_cost_usd,
+        "user_sim_cost_usd": total.user_sim_cost_usd,
+        "cost_usd": total.cost_usd,
+        # Aggregating from per-task rows always reflects a partial picture
+        # — eval.json is the only place a "run finished" signal lives.
+        "partial": True,
+    }
+
+    durations_sorted = sorted(durations)
+    n = len(durations_sorted)
+    timing = {
+        "total_duration_s": sum(durations_sorted),
+        "avg_duration_s": sum(durations_sorted) / n if n else 0.0,
+        "p50_duration_s": durations_sorted[n // 2] if n else 0.0,
+        "max_duration_s": max(durations_sorted) if durations_sorted else 0.0,
+    }
+    return {"usage": usage, "timing": timing}
 
 
 def _load_original(path: Path, *, allow_missing: bool) -> list[dict]:
@@ -259,6 +371,14 @@ def _empty_usage() -> dict:
 
 def _load_ours_usage(eval_path: Path) -> dict:
     if not eval_path.is_file():
+        # Run died before writing eval.json — pull aggregate from
+        # the per-task DB sink so partial cost is still reported.
+        leg_dir = eval_path.parent
+        agg = _load_ours_aggregates_from_db(
+            leg_dir / "results.db", leg_dir.name
+        )
+        if agg is not None:
+            return agg["usage"]
         return _empty_usage()
     blob = json.loads(eval_path.read_text())
     u = blob.get("total_usage")
@@ -312,7 +432,15 @@ def _load_orig_usage(orig_dir: Path) -> dict:
     }
     if not orig_dir.is_dir():
         return empty
-    matches = list(orig_dir.glob("token_usage_*.json"))
+    # When several `token_usage_*.json` files are present (re-runs with
+    # different agent models leave one per model), pick the freshest by
+    # mtime — `glob()` order is filesystem-dependent and would otherwise
+    # make totals non-reproducible.
+    matches = sorted(
+        orig_dir.glob("token_usage_*.json"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
     if not matches:
         # Fall back to summing per-turn `token_usage` blobs directly.
         out = _load_orig_usage_from_turns(orig_dir)
@@ -468,6 +596,14 @@ def _empty_timing() -> dict:
 
 def _load_ours_timing(eval_path: Path) -> dict:
     if not eval_path.is_file():
+        # Same partial-run rationale as `_load_ours_usage`: prefer the
+        # per-row `duration_s` over zeros when eval.json is absent.
+        leg_dir = eval_path.parent
+        agg = _load_ours_aggregates_from_db(
+            leg_dir / "results.db", leg_dir.name
+        )
+        if agg is not None:
+            return agg["timing"]
         return _empty_timing()
     blob = json.loads(eval_path.read_text())
     return {

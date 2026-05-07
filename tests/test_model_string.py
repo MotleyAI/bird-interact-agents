@@ -102,3 +102,21 @@ def test_build_pydantic_ai_model_deepinfra_missing_key_errors(monkeypatch):
     import pytest
     with pytest.raises((KeyError, RuntimeError, ValueError)):
         build_pydantic_ai_model("deepinfra/moonshotai/Kimi-K2-Instruct")
+
+
+def test_build_pydantic_ai_model_idempotent_for_colonized_input():
+    """Already-colonized inputs must pass straight through. Without the
+    `:` guard, `openrouter:z-ai/glm-4.7-flash` would partition into
+    provider=`openrouter:z-ai` and rest=`glm-4.7-flash` and re-emit as
+    `openrouter:z-ai:glm-4.7-flash`, which PydanticAI can't resolve.
+    """
+    from bird_interact_agents.model_string import build_pydantic_ai_model
+
+    assert (
+        build_pydantic_ai_model("openrouter:z-ai/glm-4.7-flash")
+        == "openrouter:z-ai/glm-4.7-flash"
+    )
+    assert (
+        build_pydantic_ai_model("anthropic:claude-sonnet-4-5")
+        == "anthropic:claude-sonnet-4-5"
+    )

@@ -49,7 +49,7 @@ async def test_user_sim_records_tracked_usage(monkeypatch):
         lambda raw: {"action_type": "answer", "encoded_data": "x"},
     )
 
-    _schema_cache["fake_db"] = "CREATE TABLE foo (x INT);"
+    monkeypatch.setitem(_schema_cache, "fake_db", "CREATE TABLE foo (x INT);")
     status = SampleStatus(
         idx=0,
         original_data={"selected_database": "fake_db", "instance_id": "fake_1"},

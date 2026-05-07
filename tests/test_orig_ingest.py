@@ -132,9 +132,12 @@ def test_ingest_skips_when_results_jsonl_missing(tmp_path):
     orig_dir.mkdir()
     db_path = tmp_path / "results.db"
     ingest_original_to_db(orig_dir=orig_dir, db_path=db_path, run_id="x")
-    assert not db_path.exists() or sqlite3.connect(db_path).execute(
-        "SELECT COUNT(*) FROM task_results"
-    ).fetchone()[0] == 0
+    if db_path.exists():
+        with sqlite3.connect(db_path) as conn:
+            count = conn.execute(
+                "SELECT COUNT(*) FROM task_results"
+            ).fetchone()[0]
+        assert count == 0
 
 
 def test_compare_results_picks_up_ingested_original_row(tmp_path):

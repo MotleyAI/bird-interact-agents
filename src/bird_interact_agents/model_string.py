@@ -74,6 +74,8 @@ def build_pydantic_ai_model(model: str):
     provider, sep, rest = model.partition("/")
     if not sep:
         return model
+    if ":" in provider:
+        return model
 
     for prov, base_url, env_var in _OPENAI_COMPAT_PROVIDERS:
         if provider == prov:

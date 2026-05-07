@@ -56,18 +56,17 @@ def test_insert_task_result_round_trip(tmp_path):
 
 
 def test_insert_task_result_replaces_on_conflict(tmp_path):
-    """Re-inserting the same (run_id, framework, query_mode, instance_id)
-    overwrites the prior row — supports retries / re-runs of a single
-    task within an output dir."""
+    """Re-inserting the same primary-key tuple overwrites the prior row —
+    supports retries / re-runs of a single task within an output dir."""
     from bird_interact_agents.results_db import (
         TaskResultRow, insert_task_result, open_db,
     )
 
     conn = open_db(tmp_path / "results.db")
 
-    def _row(reward: float) -> "TaskResultRow":
+    def _row(reward: float, mode: str = "a-interact") -> "TaskResultRow":
         return TaskResultRow(
-            run_id="x", framework="pydantic_ai", mode="a-interact",
+            run_id="x", framework="pydantic_ai", mode=mode,
             query_mode="raw", instance_id="alien_1", database="alien",
             started_at=0.0, duration_s=0.0,
             phase1_passed=False, phase2_passed=False, total_reward=reward,
@@ -80,6 +79,36 @@ def test_insert_task_result_replaces_on_conflict(tmp_path):
 
     rows = list(conn.execute("SELECT total_reward FROM task_results"))
     assert rows == [(1.0,)]
+
+
+def test_insert_task_result_distinguishes_modes(tmp_path):
+    """Same (run_id, framework, query_mode, instance_id) under different
+    `mode`s must coexist — `mode` is part of the primary key. Without it,
+    `INSERT OR REPLACE` would silently clobber per-mode rows in mixed-mode
+    runs (e.g. a-interact and c-interact for the same task)."""
+    from bird_interact_agents.results_db import (
+        TaskResultRow, insert_task_result, open_db,
+    )
+
+    conn = open_db(tmp_path / "results.db")
+
+    def _row(reward: float, mode: str) -> "TaskResultRow":
+        return TaskResultRow(
+            run_id="x", framework="pydantic_ai", mode=mode,
+            query_mode="raw", instance_id="alien_1", database="alien",
+            started_at=0.0, duration_s=0.0,
+            phase1_passed=False, phase2_passed=False, total_reward=reward,
+            submitted_sql=None, submitted_query=None, ground_truth_sql=None,
+            error=None, usage_json="{}",
+        )
+
+    insert_task_result(conn, _row(0.5, "a-interact"))
+    insert_task_result(conn, _row(0.7, "c-interact"))
+
+    rows = sorted(conn.execute(
+        "SELECT mode, total_reward FROM task_results ORDER BY mode"
+    ))
+    assert rows == [("a-interact", 0.5), ("c-interact", 0.7)]
 
 
 def test_insert_run_metadata_records_run(tmp_path):

@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS task_results (
     ground_truth_sql TEXT,
     error           TEXT,
     usage_json      TEXT NOT NULL DEFAULT '{}',
-    PRIMARY KEY (run_id, framework, query_mode, instance_id)
+    PRIMARY KEY (run_id, framework, mode, query_mode, instance_id)
 )
 """
 

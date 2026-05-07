@@ -73,7 +73,11 @@ def main() -> None:
                 break
             row = json.loads(stripped)
             ids.append(row["instance_id"])
-            selected_lines.append(stripped)
+            # Preserve the source record verbatim (minus the trailing
+            # newline; we re-add separators when writing). Otherwise
+            # downstream tools that diff `--out-jsonl` against the source
+            # slice see spurious whitespace edits.
+            selected_lines.append(raw_line.rstrip("\n"))
             record_idx += 1
 
     out_path = Path(args.out)

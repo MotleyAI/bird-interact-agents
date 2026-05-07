@@ -276,6 +276,8 @@ def _seed_db(
     phase2_passed: bool = False,
     total_reward: float = 0.0,
     usage_json: str = "{}",
+    run_id: str | None = None,
+    started_at: float = 0.0,
 ) -> None:
     """Append a `task_results` row matching the schema from results_db.py."""
     from bird_interact_agents.results_db import (
@@ -283,13 +285,13 @@ def _seed_db(
     )
     conn = open_db(db_path)
     insert_task_result(conn, TaskResultRow(
-        run_id=db_path.parent.name,
+        run_id=run_id or db_path.parent.name,
         framework=framework,
         mode="a-interact",
         query_mode=query_mode,
         instance_id=instance_id,
         database="alien",
-        started_at=0.0,
+        started_at=started_at,
         duration_s=duration_s,
         phase1_passed=phase1_passed,
         phase2_passed=phase2_passed,
@@ -417,3 +419,125 @@ def test_compare_results_db_fallback_to_eval_json(tmp_path):
     # lacks it. Should not crash, should not emit an SQL md file with
     # bogus content.
     assert blob["per_task"]["x_1"]["raw"].get("submitted_sql") is None
+
+
+def test_compare_results_db_picks_latest_run_when_dir_reused(tmp_path):
+    """Reusing a leg dir across runs leaves rows from earlier runs in
+    `results.db`. compare_results must read only the latest
+    (run_id, framework) slice — without scoping, INSERT OR REPLACE would
+    keep whichever duplicate SQLite returned last and silently mix totals
+    across runs.
+    """
+    base = tmp_path / "3way"
+    raw_db = base / "raw" / "results.db"
+    raw_db.parent.mkdir(parents=True)
+    # Older run: stale row for the same instance.
+    _seed_db(
+        raw_db, framework="pydantic_ai", query_mode="raw",
+        instance_id="alien_1",
+        submitted_sql="SELECT * FROM old_run",
+        ground_truth_sql="SELECT id FROM truth",
+        total_reward=0.0, duration_s=99.0,
+        run_id="old", started_at=1000.0,
+    )
+    # Newer run: a different instance plus an updated submission.
+    _seed_db(
+        raw_db, framework="pydantic_ai", query_mode="raw",
+        instance_id="alien_2",
+        submitted_sql="SELECT * FROM new_run",
+        ground_truth_sql="SELECT id FROM truth",
+        total_reward=1.0, duration_s=5.0,
+        run_id="new", started_at=2000.0,
+    )
+
+    slayer_db = base / "slayer" / "results.db"
+    slayer_db.parent.mkdir(parents=True)
+    _seed_db(
+        slayer_db, framework="pydantic_ai", query_mode="slayer",
+        instance_id="alien_2", duration_s=7.0,
+        run_id="new", started_at=2000.0,
+    )
+
+    orig_dir = base / "original"
+    orig_dir.mkdir(parents=True)
+    (orig_dir / "results.jsonl").write_text(
+        json.dumps({
+            "instance_id": "alien_2", "phase1_completed": False,
+            "task_finished": False, "last_reward": 0.0,
+        }) + "\n"
+    )
+
+    _run_compare(base)
+    blob = json.loads((base / "comparison.json").read_text())
+
+    # Only the new run's rows should land in per_task.
+    raw_per_task = blob["per_task"]
+    assert "alien_1" not in raw_per_task, (
+        "Stale row from older run must not leak into per_task"
+    )
+    assert raw_per_task["alien_2"]["raw"]["submitted_sql"] == "SELECT * FROM new_run"
+    # Summary `n` reflects the newer run's row count, not the union.
+    assert blob["summary"]["raw"]["n"] == 1
+
+
+def test_compare_results_usage_falls_back_to_db_when_eval_json_missing(tmp_path):
+    """A run that crashed before writing `eval.json` still leaves
+    `results.db` rows behind. The DB carries per-task `usage_json` and
+    `duration_s`, so compare_results should aggregate from those instead
+    of zeroing out cost/latency for the partial run.
+    """
+    base = tmp_path / "3way"
+    raw_db = base / "raw" / "results.db"
+    raw_db.parent.mkdir(parents=True)
+
+    usage_blob = json.dumps({
+        "prompt_tokens": 1000, "completion_tokens": 200,
+        "reasoning_tokens": 0, "cache_read_tokens": 0,
+        "n_calls": 2, "cost_usd": 0.42,
+        "agent_cost_usd": 0.30, "user_sim_cost_usd": 0.12,
+        "partial": False,
+        "breakdown": [
+            {"name": "agent::m", "scope": "agent", "model": "m",
+             "prompt_tokens": 700, "completion_tokens": 150,
+             "reasoning_tokens": 0, "cache_read_tokens": 0,
+             "n_calls": 1, "cost_usd": 0.30},
+            {"name": "user_sim::u", "scope": "user_sim", "model": "u",
+             "prompt_tokens": 300, "completion_tokens": 50,
+             "reasoning_tokens": 0, "cache_read_tokens": 0,
+             "n_calls": 1, "cost_usd": 0.12},
+        ],
+    })
+    _seed_db(
+        raw_db, framework="pydantic_ai", query_mode="raw",
+        instance_id="alien_1", duration_s=8.0, total_reward=0.0,
+        usage_json=usage_blob, run_id="r1", started_at=1.0,
+    )
+
+    # No eval.json on either leg — slayer leg has no DB at all.
+    _write_eval_json(
+        base / "slayer" / "eval.json",
+        agent_in=0, agent_out=0, user_sim_in=0, user_sim_out=0,
+    )
+    orig_dir = base / "original"
+    orig_dir.mkdir(parents=True)
+    (orig_dir / "results.jsonl").write_text(
+        json.dumps({
+            "instance_id": "alien_1", "phase1_completed": False,
+            "task_finished": False, "last_reward": 0.0,
+        }) + "\n"
+    )
+
+    _run_compare(base)
+    blob = json.loads((base / "comparison.json").read_text())
+
+    raw_u = blob["usage"]["raw"]
+    assert raw_u["prompt_tokens"] == 1000
+    assert raw_u["agent_prompt_tokens"] == 700
+    assert raw_u["user_sim_prompt_tokens"] == 300
+    assert raw_u["agent_cost_usd"] == pytest.approx(0.30)
+    assert raw_u["user_sim_cost_usd"] == pytest.approx(0.12)
+    assert raw_u["partial"] is True
+
+    raw_t = blob["timing"]["raw"]
+    assert raw_t["total_duration_s"] == pytest.approx(8.0)
+    assert raw_t["max_duration_s"] == pytest.approx(8.0)

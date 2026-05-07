@@ -50,8 +50,13 @@ def test_add_call_records_first_call():
     assert row.name == "agent::anthropic/claude-sonnet-4-5"
 
 
-def test_add_call_aggregates_same_scope_and_model():
+def test_add_call_aggregates_same_scope_and_model(monkeypatch):
+    from bird_interact_agents import usage as usage_mod
     from bird_interact_agents.usage import TokenUsage
+
+    monkeypatch.setattr(
+        usage_mod, "_cost_per_token", lambda **_: (0.0, 0.0)
+    )
 
     u = TokenUsage()
     u.add_call(scope="agent", model="m", prompt=100, completion=10)
@@ -65,8 +70,13 @@ def test_add_call_aggregates_same_scope_and_model():
     assert u.breakdown[0].prompt_tokens == 400
 
 
-def test_add_call_separates_scopes_and_models():
+def test_add_call_separates_scopes_and_models(monkeypatch):
+    from bird_interact_agents import usage as usage_mod
     from bird_interact_agents.usage import TokenUsage
+
+    monkeypatch.setattr(
+        usage_mod, "_cost_per_token", lambda **_: (0.0, 0.0)
+    )
 
     u = TokenUsage()
     u.add_call(scope="agent", model="m1", prompt=10, completion=1)
@@ -100,10 +110,18 @@ def test_scope_rolled_costs(monkeypatch):
 
 
 def test_unpriced_model_does_not_raise(monkeypatch):
+    """`litellm.cost_per_token` raises `NotFoundError` when a model
+    isn't in its pricing table — that's the expected, recoverable case
+    (warn once, record $0)."""
+    import litellm
     from bird_interact_agents import usage as usage_mod
 
     def fake_cost(*, model, **_):
-        raise Exception("model not in pricing table")
+        raise litellm.exceptions.NotFoundError(
+            "model not in pricing table",
+            model=model,
+            llm_provider="test",
+        )
 
     monkeypatch.setattr(usage_mod, "_cost_per_token", fake_cost)
 
@@ -113,6 +131,22 @@ def test_unpriced_model_does_not_raise(monkeypatch):
     assert u.cost_usd == 0.0
     assert u.agent_cost_usd == 0.0
     assert u.breakdown[0].cost_usd == 0.0
+
+
+def test_non_pricing_errors_are_not_swallowed(monkeypatch):
+    """Anything that isn't a NotFoundError is an integration bug — let
+    it surface instead of silently degrading cost to $0 across the run."""
+    import pytest
+    from bird_interact_agents import usage as usage_mod
+
+    def fake_cost(*, model, **_):
+        raise RuntimeError("transport blew up")
+
+    monkeypatch.setattr(usage_mod, "_cost_per_token", fake_cost)
+
+    u = usage_mod.TokenUsage()
+    with pytest.raises(RuntimeError, match="transport blew up"):
+        u.add_call(scope="agent", model="m", prompt=10, completion=5)
 
 
 def test_merge_sums_totals_and_merges_breakdown(monkeypatch):

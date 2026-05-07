@@ -154,23 +154,26 @@ run_original() {
     }
   ended=$(date +%s)
   total=$((ended - started))
-  # Per-task duration is not directly available from the upstream output;
-  # we record the leg-total + an `avg_duration_s` derived from --limit.
+  # Per-task duration isn't surfaced by the upstream runner. Use the
+  # actual selected-task count (some datasets are shorter than --limit,
+  # and select_tasks.py may emit fewer rows than requested).
+  local n_tasks
+  n_tasks=$(wc -l < "$IDS_FILE")
   python3 -c "
 import json, sys
 total = $total
-n = $LIMIT
+n = int(sys.argv[2])
 avg = total / n if n else 0.0
 json.dump(
     {
         'total_duration_s': float(total),
         'n_tasks': n,
         'avg_duration_s': avg,
-        'agent_model': sys.argv[2],
+        'agent_model': sys.argv[3],
     },
     open(sys.argv[1], 'w'), indent=2,
 )
-" "$out_dir/duration.json" "$AGENT_MODEL"
+" "$out_dir/duration.json" "$n_tasks" "$AGENT_MODEL"
 
   # Aggregate per-turn token_usage blobs into a single
   # token_usage_<model>.json that compare_results.py can read. Slashes
