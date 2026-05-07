@@ -6,27 +6,32 @@ attach the slayer MCP server in slayer mode without wrapping any of its
 tools ourselves.
 
 Native tools (`ask_user`, `submit_sql`, `submit_query`) are plain async
-Python functions passed via `Agent.functions`. They close over per-task
-state — no shared globals, no contextvars needed.
+Python functions passed via `Agent.functions`. Bodies live in
+`bird_interact_agents.agents._submit`; this module supplies the
+mcp-agent-specific async wrappers.
 """
 
-import json
 import logging
-import re
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from bird_interact_agents.agents._prompt_builders import (
     build_raw_c_interact_prompt,
     build_slayer_c_interact_prompt,
 )
+from bird_interact_agents.agents._submit import (
+    ask_user_impl,
+    run_env_action,
+    submit_raw_sql,
+    submit_slayer_query,
+)
+from bird_interact_agents.agents._tool_specs import BIRD_INTERACT_TOOLS
 from bird_interact_agents.agents.claude_sdk.prompts import (
     RAW_A_INTERACT,
     SLAYER_A_INTERACT,
 )
 from bird_interact_agents.harness import (
-    ACTION_COSTS,
     SampleStatus,
     _schema_cache,
     build_user_decoder_prompt,
@@ -38,8 +43,11 @@ from bird_interact_agents.harness import (
     parse_encoder_response,
     resolve_task_storage_dir,
     slayer_mcp_stdio_config,
-    update_budget,
 )
+from bird_interact_agents.usage import TokenUsage
+
+
+_BY_NAME = {t.name: t for t in BIRD_INTERACT_TOOLS}
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +63,7 @@ class TaskState(BaseModel):
     user_sim_prompt_version: str
     slayer_storage_dir: str = ""
     result: dict | None = None
+    usage: TokenUsage = Field(default_factory=TokenUsage)
     _slayer_client: Any = None
     _slayer_storage: Any = None
 
@@ -70,161 +79,66 @@ def _slayer_client(state: TaskState):
     return state._slayer_client
 
 
-async def _ask_user_impl(state: TaskState, question: str) -> str:
-    """Encoder/decoder user simulator using LiteLLM."""
-    import litellm
-
-    db_name = state.status.original_data["selected_database"]
-    schema = _schema_cache.get(db_name, "")
-
-    encoder_prompt = build_user_encoder_prompt(
-        question, state.status, schema, state.user_sim_prompt_version
-    )
-    encoder_resp = await litellm.acompletion(
-        model=state.user_sim_model,
-        messages=[{"role": "user", "content": encoder_prompt}],
-    )
-    encoder_action = parse_encoder_response(
-        encoder_resp.choices[0].message.content or ""
-    )
-
-    decoder_prompt = build_user_decoder_prompt(
-        question, encoder_action, state.status, schema, state.user_sim_prompt_version
-    )
-    decoder_resp = await litellm.acompletion(
-        model=state.user_sim_model,
-        messages=[{"role": "user", "content": decoder_prompt}],
-    )
-    raw_response = decoder_resp.choices[0].message.content or ""
-
-    match = re.search(r"<s>(.*?)</s>", raw_response, re.DOTALL)
-    return match.group(1).strip() if match else raw_response.strip()
-
-
-def _budget_note(status: SampleStatus) -> str:
-    return (
-        f"\n\n[Remaining budget: {status.remaining_budget:.1f}"
-        f" / {status.total_budget:.1f}]"
-    )
-
-
-def _gate(action_name: str, status: SampleStatus, query_mode: str) -> str | None:
-    """Reject a non-submit tool call when budget would go below submit cost.
-
-    Mirrors `claude_sdk.agent._gate`. Honors `status.force_submit`.
-    """
-    if action_name.startswith("submit_"):
-        return None
-    submit_tool = "submit_query" if query_mode == "slayer" else "submit_sql"
-    submit_cost = ACTION_COSTS[submit_tool]
-    cost = ACTION_COSTS.get(action_name, 0)
-    if status.force_submit or status.remaining_budget < cost + submit_cost:
-        return (
-            f"Budget exhausted ({status.remaining_budget:.1f} remaining, "
-            f"{action_name} costs {cost}). You MUST call {submit_tool} now "
-            "with your best answer."
-        )
-    return None
-
-
 def _build_native_functions(
-    state: TaskState, query_mode: str, eval_mode: str = "a-interact"
+    state: TaskState, query_mode: str, eval_mode: str = "a-interact",
 ) -> list:
-    """Construct the native tool functions, closing over per-task state."""
+    """Construct the native tool functions, closing over per-task state.
 
-    async def _run_env(action_name: str, action_str: str) -> str:
-        err = _gate(action_name, state.status, query_mode)
-        if err is not None:
-            return err
-        observation, _ = execute_env_action(
-            action_str, state.status, state.data_path_base
-        )
-        update_budget(state.status, action_name)
-        return str(observation) + _budget_note(state.status)
+    Each wrapper is a one-liner over the shared helpers in `_submit`,
+    which apply budget gating + bookkeeping.
+    """
 
     async def ask_user(question: str) -> str:
         """Ask the user a clarification question about their query."""
-        err = _gate("ask_user", state.status, query_mode)
-        if err is not None:
-            return err
-        answer = await _ask_user_impl(state, question)
-        update_budget(state.status, "ask_user")
-        return answer + _budget_note(state.status)
+        return await ask_user_impl(state, question, query_mode)
 
     async def execute_sql(sql: str) -> str:
         """Execute a SQL query against the database and return results."""
-        return await _run_env("execute_sql", f"execute({sql})")
+        return run_env_action(state, _BY_NAME["execute_sql"], query_mode, sql=sql)
 
     async def get_schema() -> str:
         """Get the database schema (CREATE TABLE statements with sample data)."""
-        return await _run_env("get_schema", "get_schema()")
+        return run_env_action(state, _BY_NAME["get_schema"], query_mode)
 
     async def get_all_column_meanings() -> str:
         """Get the meanings/descriptions of all columns in the database."""
-        return await _run_env("get_all_column_meanings", "get_all_column_meanings()")
+        return run_env_action(state, _BY_NAME["get_all_column_meanings"], query_mode)
 
     async def get_column_meaning(table_name: str, column_name: str) -> str:
         """Get the meaning of a specific column in a table."""
-        action = f"get_column_meaning('{table_name}', '{column_name}')"
-        return await _run_env("get_column_meaning", action)
+        return run_env_action(
+            state, _BY_NAME["get_column_meaning"], query_mode,
+            table_name=table_name, column_name=column_name,
+        )
 
     async def get_all_external_knowledge_names() -> str:
         """List all available external knowledge entry names for this database."""
-        return await _run_env(
-            "get_all_external_knowledge_names",
-            "get_all_external_knowledge_names()",
+        return run_env_action(
+            state, _BY_NAME["get_all_external_knowledge_names"], query_mode,
         )
 
     async def get_knowledge_definition(knowledge_name: str) -> str:
         """Get the definition of a specific external knowledge entry."""
-        action = f"get_knowledge_definition('{knowledge_name}')"
-        return await _run_env("get_knowledge_definition", action)
+        return run_env_action(
+            state, _BY_NAME["get_knowledge_definition"], query_mode,
+            knowledge_name=knowledge_name,
+        )
 
     async def get_all_knowledge_definitions() -> str:
         """Get all external knowledge definitions for this database."""
-        return await _run_env(
-            "get_all_knowledge_definitions", "get_all_knowledge_definitions()"
+        return run_env_action(
+            state, _BY_NAME["get_all_knowledge_definitions"], query_mode,
         )
 
     async def submit_sql(sql: str) -> str:
         """Submit your final SQL query for evaluation. Only submit when confident."""
-        observation, reward, p1, p2, finished = execute_submit_action(
-            sql, state.status, state.data_path_base
-        )
-        update_budget(state.status, "submit_sql")
-        state.result = {
-            "phase1_passed": p1,
-            "phase2_passed": p2,
-            "total_reward": reward if reward is not None else 0.0,
-            "finished": finished,
-        }
-        return str(observation) + _budget_note(state.status)
+        return submit_raw_sql(state, sql)
 
     async def submit_query(query_json: str) -> str:
         """Submit your final SLayer query for evaluation. Translates to SQL
         deterministically and tests against ground truth.
         """
-        try:
-            query_dict = json.loads(query_json)
-        except json.JSONDecodeError as e:
-            return f"Invalid JSON — submission aborted: {e}"
-        client = _slayer_client(state)
-        try:
-            sql = client.sql_sync(query_dict)
-        except Exception as e:
-            return f"Could not generate SQL — submission aborted: {e}"
-        observation, reward, p1, p2, finished = execute_submit_action(
-            sql, state.status, state.data_path_base
-        )
-        update_budget(state.status, "submit_query")
-        state.result = {
-            "phase1_passed": p1,
-            "phase2_passed": p2,
-            "total_reward": reward if reward is not None else 0.0,
-            "finished": finished,
-            "submitted_sql": sql,
-        }
-        return f"Generated SQL:\n{sql}\n\nResult: {observation}" + _budget_note(state.status)
+        return submit_slayer_query(state, query_json, _slayer_client)
 
     if query_mode == "raw" and eval_mode == "c-interact":
         return [ask_user, submit_sql]
@@ -406,6 +320,12 @@ class McpAgentAgent:
         settings = _build_settings(query_mode, slayer_storage_dir, self.model)
         app = MCPApp(name="bird-interact-mcp-agent", settings=settings)
 
+        # mcp-agent's SDK does not expose per-call token counts — we still
+        # capture user-sim usage, but flag the whole run partial so the
+        # comparison report can footnote it instead of fabricating
+        # agent-leg numbers.
+        state.usage.partial = True
+
         try:
             async with app.run():
                 agent = Agent(
@@ -429,6 +349,7 @@ class McpAgentAgent:
                     "phase1_passed": False, "phase2_passed": False,
                     "total_reward": 0.0, "trajectory": [],
                     "error": str(e),
+                    "usage": state.usage.model_dump(),
                 },
                 deleted_kb_ids=deleted_kb_ids,
                 slayer_storage_dir=slayer_storage_dir,
@@ -443,8 +364,11 @@ class McpAgentAgent:
                 "phase1_passed": result.get("phase1_passed", False),
                 "phase2_passed": result.get("phase2_passed", False),
                 "total_reward": result.get("total_reward", 0.0),
+                "submitted_sql": result.get("submitted_sql"),
+                "submitted_query": result.get("submitted_query"),
                 "trajectory": [{"final_output": str(output)[:500]}],
                 "error": None,
+                "usage": state.usage.model_dump(),
             },
             deleted_kb_ids=deleted_kb_ids,
             slayer_storage_dir=slayer_storage_dir,

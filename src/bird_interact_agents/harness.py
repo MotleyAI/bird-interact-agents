@@ -4,8 +4,6 @@ The BIRD-Interact repo must be cloned locally and its path set via the
 BIRD_BIRD_INTERACT_ROOT environment variable (or in .env).
 """
 
-import os
-import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -156,6 +154,11 @@ def load_tasks(jsonl_path: str, limit: int | None = None) -> list[dict]:
 # Each task spawns a per-DB instance pointing at the right model storage.
 # ---------------------------------------------------------------------------
 
+import os as _os
+import shutil as _shutil
+from pathlib import Path as _Path
+
+
 def _resolve_slayer_command() -> str:
     """Locate the slayer CLI binary.
 
@@ -164,11 +167,11 @@ def _resolve_slayer_command() -> str:
     """
     # The .venv lives at the repo root; src/bird_interact_agents/harness.py
     # is two levels deep below repo root.
-    repo_root = Path(__file__).resolve().parent.parent.parent
+    repo_root = _Path(__file__).resolve().parent.parent.parent
     venv_slayer = repo_root / ".venv" / "bin" / "slayer"
-    if venv_slayer.is_file() and os.access(venv_slayer, os.X_OK):
+    if venv_slayer.is_file() and _os.access(venv_slayer, _os.X_OK):
         return str(venv_slayer)
-    on_path = shutil.which("slayer")
+    on_path = _shutil.which("slayer")
     if on_path:
         return on_path
     raise RuntimeError(
@@ -265,8 +268,8 @@ def slayer_mcp_stdio_config(storage_dir: str) -> dict:
             "set --slayer-storage-root (or pass slayer_storage_root explicitly) "
             "when running slayer mode."
         )
-    env = os.environ.copy()
-    env["SLAYER_STORAGE"] = str(Path(storage_dir).resolve())
+    env = _os.environ.copy()
+    env["SLAYER_STORAGE"] = str(_Path(storage_dir).resolve())
     return {
         "command": _resolve_slayer_command(),
         "args": ["mcp"],

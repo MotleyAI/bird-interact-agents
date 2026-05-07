@@ -1,8 +1,11 @@
 """Verify the Claude SDK tool functions work in isolation (no LLM)."""
 
+from types import SimpleNamespace
+
 import pytest
 
 from bird_interact_agents.config import settings
+from bird_interact_agents.harness import ACTION_COSTS
 
 
 @pytest.mark.asyncio
@@ -92,3 +95,83 @@ async def test_submit_correct_sql_tool():
     result = agent_mod._ctx_var.get().get("result")
     assert result is not None
     assert result["phase1_passed"] is True
+
+
+def _seed_ctx(monkeypatch, *, remaining_budget=20.0):
+    """Pre-populate `_ctx_var` with the minimum dict the submit wrappers expect."""
+    from bird_interact_agents.agents.claude_sdk import agent as agent_mod
+    from bird_interact_agents.harness import SampleStatus
+
+    task_data = {
+        "selected_database": "alien",
+        "knowledge_ambiguity": [],
+        "instance_id": "alien_1",
+    }
+    agent_mod._ctx_var.set({
+        "status": SampleStatus(
+            idx=0, original_data=task_data,
+            remaining_budget=remaining_budget, total_budget=remaining_budget,
+        ),
+        "data_path_base": settings.db_path,
+        "slayer_storage_dir": "",
+        "_slayer_client": None,
+        "_slayer_storage": None,
+        "result": None,
+    })
+    return agent_mod
+
+
+@pytest.mark.asyncio
+async def test_submit_sql_charges_budget_exactly_once(monkeypatch):
+    from bird_interact_agents.agents import _submit
+
+    agent_mod = _seed_ctx(monkeypatch)
+    monkeypatch.setattr(
+        _submit, "execute_submit_action",
+        lambda sql, status, dpb: ("ok", 1.0, True, False, True),
+    )
+    status = agent_mod._ctx_var.get()["status"]
+    start = status.remaining_budget
+
+    result = await agent_mod.submit_sql.handler({"sql": "SELECT 1"})
+
+    assert status.remaining_budget == start - ACTION_COSTS["submit_sql"]
+    text = result["content"][0]["text"]
+    assert text.count("Remaining budget:") == 1
+
+
+@pytest.mark.asyncio
+async def test_submit_query_charges_budget_exactly_once(monkeypatch):
+    from bird_interact_agents.agents import _submit
+
+    agent_mod = _seed_ctx(monkeypatch)
+    monkeypatch.setattr(
+        _submit, "execute_submit_action",
+        lambda sql, status, dpb: ("ok", 1.0, True, True, True),
+    )
+    fake_client = SimpleNamespace(sql_sync=lambda d: "SELECT 1")
+    agent_mod._ctx_var.get()["_slayer_client"] = fake_client
+    status = agent_mod._ctx_var.get()["status"]
+    start = status.remaining_budget
+
+    result = await agent_mod.submit_query.handler({"query_json": '{"models": ["m"]}'})
+
+    assert status.remaining_budget == start - ACTION_COSTS["submit_query"]
+    text = result["content"][0]["text"]
+    assert text.count("Remaining budget:") == 1
+
+
+@pytest.mark.asyncio
+async def test_submit_query_bad_json_propagates_helper_message(monkeypatch):
+    agent_mod = _seed_ctx(monkeypatch)
+    status = agent_mod._ctx_var.get()["status"]
+    start = status.remaining_budget
+
+    result = await agent_mod.submit_query.handler({"query_json": "{not json"})
+
+    text = result["content"][0]["text"]
+    assert "Invalid JSON" in text
+    assert text.count("Remaining budget:") == 1
+    # Helper sets state.result on success; failure path leaves ctx result None.
+    assert agent_mod._ctx_var.get().get("result") is None
+    assert status.remaining_budget == start - ACTION_COSTS["submit_query"]
