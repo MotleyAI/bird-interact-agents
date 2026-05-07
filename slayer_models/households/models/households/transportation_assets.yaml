@@ -1,0 +1,130 @@
+version: 5
+name: transportation_assets
+sql_table: transportation_assets
+query_variables: {}
+data_source: households
+columns:
+- name: transref
+  sql: transref
+  type: INT
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: housetag
+  sql: housetag
+  type: INT
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: vehicleinventory
+  sql: vehicleinventory
+  type: TEXT
+  primary_key: false
+  description: JSONB with vehicle_counts (Auto_Count, Bike_Count, Motor_Count) and
+    Newest_Year (text ranges like '2010 to 2013', '2014 or newer', 'Not applicable').
+    Null counts default to 0. Helper columns extract individual sub-fields.
+  hidden: false
+  meta: {}
+- name: auto_count
+  sql: COALESCE(json_extract(vehicleinventory, '$.vehicle_counts.Auto_Count'), 0)
+  type: DOUBLE
+  primary_key: false
+  description: "Vehicle Type Distribution (KB #36) \u2014 Auto_Count component: cars\
+    \ owned by household (from vehicleinventory JSON; null \u2192 0). Part of an array\
+    \ of counts representing vehicle types.\n\n[kb=36]\nAn array of counts representing\
+    \ vehicle types. Null indicates unknown or unverified ownership. \u2014 Illustrates\
+    \ the structure of vehicle ownership by type for a household.\n[/kb=36]"
+  label: Vehicle Type Distribution
+  hidden: false
+  meta:
+    kb_id: 36
+- name: bike_count
+  sql: COALESCE(json_extract(vehicleinventory, '$.vehicle_counts.Bike_Count'), 0)
+  type: DOUBLE
+  primary_key: false
+  description: "Vehicle Type Distribution (KB #36) \u2014 Bike_Count component: bicycles\
+    \ owned by household (from vehicleinventory JSON; null \u2192 0). Part of an array\
+    \ of counts representing vehicle types.\n\n[kb=36]\nAn array of counts representing\
+    \ vehicle types. Null indicates unknown or unverified ownership. \u2014 Illustrates\
+    \ the structure of vehicle ownership by type for a household.\n[/kb=36]"
+  label: Vehicle Type Distribution
+  hidden: false
+  meta:
+    kb_id: 36
+- name: motor_count
+  sql: COALESCE(json_extract(vehicleinventory, '$.vehicle_counts.Motor_Count'), 0)
+  type: DOUBLE
+  primary_key: false
+  description: "Vehicle Type Distribution (KB #36) \u2014 Motor_Count component: motorcycles/scooters\
+    \ owned by household (from vehicleinventory JSON; null \u2192 0). Part of an array\
+    \ of counts representing vehicle types.\n\n[kb=36]\nAn array of counts representing\
+    \ vehicle types. Null indicates unknown or unverified ownership. \u2014 Illustrates\
+    \ the structure of vehicle ownership by type for a household.\n[/kb=36]"
+  label: Vehicle Type Distribution
+  hidden: false
+  meta:
+    kb_id: 36
+- name: newest_year_text
+  sql: json_extract(vehicleinventory, '$.Newest_Year')
+  type: TEXT
+  primary_key: false
+  description: "Vehicle Year Range (KB #10): newest vehicle year band as raw text\
+    \ from vehicleinventory JSON. Text ranges like '1995 to 1999', '2005 to 2009',\
+    \ or '2010 to 2013'. Null indicates no vehicles or unknown age.\n\n[kb=10]\nText\
+    \ ranges like '1995 to 1999', '2005 to 2009', or '2010 to 2013'. Null indicates\
+    \ no vehicles or unknown age. \u2014 Illustrates the year ranges for the newest\
+    \ vehicle owned by a household.\n[/kb=10]"
+  label: Vehicle Year Range
+  hidden: false
+  meta:
+    kb_id: 10
+- name: newest_year_score
+  sql: CASE LOWER(TRIM(json_extract(vehicleinventory, '$.Newest_Year'))) WHEN '2014
+    or newer' THEN 5 WHEN '2010 to 2013' THEN 4 WHEN '2005 to 2009' THEN 3 WHEN '2000
+    to 2004' THEN 2 WHEN '1995 to 1999' THEN 1 ELSE 0 END
+  type: DOUBLE
+  primary_key: false
+  description: 'Numeric mapping of Newest_Year band, used by Mobility Score (KB #18).'
+  hidden: false
+- name: vehicle_ownership_index
+  sql: COALESCE(json_extract(vehicleinventory, '$.vehicle_counts.Auto_Count'), 0)
+    + COALESCE(json_extract(vehicleinventory, '$.vehicle_counts.Bike_Count'), 0) +
+    COALESCE(json_extract(vehicleinventory, '$.vehicle_counts.Motor_Count'), 0)
+  type: DOUBLE
+  primary_key: false
+  description: "Vehicle Ownership Index (KB #14): Auto + Bike + Motor counts.\n\n\
+    [kb=14]\nCalculated as the sum of car, bicycle, and motorcycle counts. \u2014\
+    \ Calculates the total number of vehicles owned by a household.\n[/kb=14]"
+  label: Vehicle Ownership Index
+  hidden: false
+  meta:
+    kb_id: 14
+- name: mobility_score
+  sql: (COALESCE(json_extract(vehicleinventory, '$.vehicle_counts.Auto_Count'), 0)
+    + COALESCE(json_extract(vehicleinventory, '$.vehicle_counts.Bike_Count'), 0) +
+    COALESCE(json_extract(vehicleinventory, '$.vehicle_counts.Motor_Count'), 0)) *
+    (CASE LOWER(TRIM(json_extract(vehicleinventory, '$.Newest_Year'))) WHEN '2014
+    or newer' THEN 5 WHEN '2010 to 2013' THEN 4 WHEN '2005 to 2009' THEN 3 WHEN '2000
+    to 2004' THEN 2 WHEN '1995 to 1999' THEN 1 ELSE 0 END)
+  type: DOUBLE
+  primary_key: false
+  description: "Mobility Score (KB #18): vehicle_ownership_index \xD7 newest_year_score.\n\
+    \n[kb=18]\nThe product of the vehicle count and a numeric mapping of the newest\
+    \ vehicle year. \u2014 Calculates a household\u2019s mobility based on vehicle\
+    \ ownership and newest vehicle age.\n[/kb=18]"
+  label: Mobility Score
+  hidden: false
+  meta:
+    kb_id: 18
+measures: []
+aggregations: []
+joins:
+- target_model: households
+  join_pairs:
+  - - housetag
+    - housenum
+  join_type: left
+filters: []
+hidden: false

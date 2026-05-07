@@ -1,0 +1,166 @@
+version: 5
+name: electrical
+sql_table: electrical
+query_variables: {}
+data_source: solar
+columns:
+- name: elecregistry
+  sql: elecregistry
+  type: TEXT
+  primary_key: true
+  hidden: false
+- name: engyunitref
+  sql: engyunitref
+  type: TEXT
+  primary_key: false
+  hidden: false
+- name: efflogref
+  sql: efflogref
+  type: TEXT
+  primary_key: false
+  hidden: false
+- name: iscinita
+  sql: iscinita
+  type: DOUBLE
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: isccurra
+  sql: isccurra
+  type: DOUBLE
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: vocinitv
+  sql: vocinitv
+  type: DOUBLE
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: voccurrv
+  sql: voccurrv
+  type: DOUBLE
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: impinita
+  sql: impinita
+  type: DOUBLE
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: impcurra
+  sql: impcurra
+  type: DOUBLE
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: vmpinitv
+  sql: vmpinitv
+  type: DOUBLE
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: vmpcurrv
+  sql: vmpcurrv
+  type: DOUBLE
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: ffactorinit
+  sql: ffactorinit
+  type: DOUBLE
+  primary_key: false
+  description: "FillFactorInitial (KB#24): initial fill factor at install. Dimensionless\
+    \ 0-1; high-quality commercial panels: 0.75-0.85.\n\n[kb=24]\nA dimensionless\
+    \ value between 0 and 1 representing the ratio of maximum power point (Vmp \xD7\
+    \ Imp) to open-circuit voltage times short-circuit current (Voc \xD7 Isc). High-quality\
+    \ commercial panels typically have fill factors between 0.75 and 0.85. \u2014\
+    \ Illustrates the ratio of actual maximum power to theoretical power.\n[/kb=24]"
+  label: FillFactor (Fill Factor)
+  hidden: false
+  format:
+    type: float
+  meta:
+    kb_id: 24
+- name: ffactorcurr
+  sql: ffactorcurr
+  type: DOUBLE
+  primary_key: false
+  description: 'FillFactorCurrent (KB#24): current fill factor measurement. Lower
+    than initial reflects degradation.'
+  hidden: false
+  format:
+    type: float
+- name: seriesresohm
+  sql: seriesresohm
+  type: DOUBLE
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: shuntresohm
+  sql: shuntresohm
+  type: DOUBLE
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: ffdr
+  sql: CASE WHEN panel_performance.years_since_install > 0 THEN (ffactorinit - ffactorcurr)
+    / panel_performance.years_since_install * 100 ELSE NULL END
+  type: DOUBLE
+  primary_key: false
+  description: "Fill Factor Degradation Rate (FFDR, KB#5): (FillFactorInitial - FillFactorCurrent)\
+    \ / Years_Since_Installation \xD7 100. Years_Since_Installation comes from the\
+    \ linked panel_performance row.\n\n[kb=5]\nFFDR = \\frac{FillFactorInitial - FillFactorCurrent}{Years\\\
+    _Since\\_Installation} \\times 100\\%, \\text{where FillFactorInitial and FillFactorCurrent\
+    \ are from the electrical table.} \u2014 Calculates the rate at which the fill\
+    \ factor of a panel is degrading over time.\n[/kb=5]"
+  label: Fill Factor Degradation Rate (FFDR)
+  hidden: false
+  meta:
+    kb_id: 5
+- name: edi
+  sql: CASE WHEN ffactorinit > 0 AND vocinitv > 0 AND iscinita > 0 THEN (ffactorinit
+    - ffactorcurr) / ffactorinit + (vocinitv - voccurrv) / vocinitv + (iscinita -
+    isccurra) / iscinita ELSE NULL END
+  type: DOUBLE
+  primary_key: false
+  description: "Electrical Degradation Index (EDI, KB#38): (FillFactorInitial - FillFactorCurrent)/FillFactorInitial\
+    \ + (VocInitialV - VocCurrV)/VocInitialV + (IscInitialA - IscCurrA)/IscInitialA.\
+    \ Higher = more severe combined electrical degradation.\n\n[kb=38]\nEDI = (FillFactorInitial\
+    \ - FillFactorCurrent)/FillFactorInitial + (VocInitialV - VocCurrV)/VocInitialV\
+    \ + (IscInitialA - IscCurrA)/IscInitialA, where higher values indicate more severe\
+    \ degradation. \u2014 Measures the combined degradation of electrical parameters.\n\
+    [/kb=38]"
+  label: Electrical Degradation Index (EDI)
+  hidden: false
+  meta:
+    kb_id: 38
+measures: []
+aggregations: []
+joins:
+- target_model: panel
+  join_pairs:
+  - - engyunitref
+    - panemark
+  join_type: left
+- target_model: panel_performance
+  join_pairs:
+  - - efflogref
+    - perfregistry
+  join_type: left
+filters: []
+description: Per-panel electrical parameters captured both initially and currently
+  (Isc, Voc, Imp, Vmp, FillFactor, plus series and shunt resistance). Joins to `panel`
+  (via `engyunitref`) and `panel_performance` (via `efflogref`).
+hidden: false

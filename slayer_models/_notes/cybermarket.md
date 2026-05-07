@@ -1,157 +1,84 @@
 # cybermarket — KB entries not encoded as model entities
 
-KB ids in the headers below are deliberately omitted from
-`slayer_models/cybermarket/`. The verifier
-(`scripts/verify_kb_coverage.py`) reads the `## KB <id> — …` headers to
-distinguish "skipped on purpose" from "missed".
-
-The auto-FK joins in this DB go child → parent, with these direction-FKs:
-
-- `buyers` → markets, vendors
-- `vendors` → markets
-- `products` → buyers, vendors
-- `transactions` → buyers, markets, products
-- `communication` → transactions, products
-- `riskanalysis` → communication, transactions
-- `securitymonitoring` → communication, riskanalysis
-- `investigation` → riskanalysis, securitymonitoring
-
-Composite metrics whose definition crosses an aggregation boundary
-(per-market aggregations over child rows in vendors, transactions,
-products, alerts; per-vendor aggregations over transactions or
-markets-the-vendor-operates-on; per-buyer aggregations over
-transactions; identity-matching across markets) cannot be inlined as
-`Column.sql` on a single host model — they need a multistage /
-query-backed model (R-MULTISTAGE). One such model is encoded
-(`market_stability_index`, KB #15); the rest are queued for a W4b
-refinement pass.
-
-The cascading domain-knowledge predicates that depend on a deferred
-calc are themselves deferred — fixing the calc unblocks them.
-
-## KB 20 — High-Risk Market
-
-Reason: predicate combines markets-local checks (MRS > 500, vendcount
-> 100, dlyflow > 5000) with "at least one 'High' security alert".
-The alert lives on `securitymonitoring`, which is reachable from
-markets only via tx → comm → risk → secmon — a 4-hop fan-in plus an
-EXISTS aggregation. Needs an R-EXISTS / R-MULTISTAGE encoding. Status:
-deferred to W4b R-MULTISTAGE encoding.
-
-## KB 25 — Priority Investigation Target
-
-Reason: IPS > 200 (encoded on `investigation`) AND lawinterest = 'High'
-AND involves a Suspicious Transaction Pattern (KB #22, encoded on
-`transactions` reachable via riskref → riskanalysis → txref) AND
-connected to a High-Risk Market (KB #20, deferred). Cascades from
-KB #20. Status: deferred — cascades from KB #20.
-
 ## KB 27 — Market Migration Indicator
 
-Reason: a *temporal cross-market pattern* — multiple vendors and
-buyers from one mktregistry begin appearing on a different mktregistry
-within < 30 days, often after a security incident. Requires
-correlating vendor/buyer identity across markets over time, plus a
-30-day window anchor. The mini-interact schema has no shared
-vendor/buyer identity across markets (`vendregistry` and
-`buyregistry` are unique per market) and no event-time on the join.
-Status: deferred — cross-market identity matching is not expressible
-against the current schema.
+The KB describes "a pattern where multiple vendors (vendregistry) and
+buyers (buyregistry) associated with one market (mktregistry) begin
+appearing on another market within a short timeframe (less than 30
+days)". This requires a stable cross-market identity for both
+vendors and buyers — but in this schema `vendors.vendregistry` is the
+PK of a (vendor, market) row (vendors FK to markets via mktref) and
+`buyers.buyregistry` similarly (buyers FK to markets via mktref).
+There is no cross-market vendor or buyer identity column, no name /
+key / fingerprint that would let us say "the same vendor on two
+different markets". The "begin appearing on another market" temporal
+half also has no column to anchor it (vendors has `vendlastmoment`
+but no first-appearance column on a per-market basis that could be
+compared across markets).
 
-## KB 29 — Cross-Platform Operator
+This is the same identity-mapping shortfall that affects KB #29
+(Cross-Platform Operator), KB #31 (VNC), KB #38 (CPRA), KB #41
+(Market Kingpin), and KB #48 (Multi-Platform Threat Entity) — those
+sibling entries each carry a literal-fit encoding documenting the
+shortfall in the entity description. KB #27, however, has no scalar
+score or row-level boolean shape that would let a literal-fit
+produce *anything* meaningful: the predicate is intrinsically a
+cross-market, cross-row temporal pattern (Σ_vendors and Σ_buyers
+appearing on a *second* market within 30 days of leaving a *first*).
+A literal-fit would collapse to a constant 0 or 1 with no semantic
+content.
 
-Reason: identifies entities with keymatchcount > 30 (on
-`communication`) operating on three or more markets simultaneously.
-"Operating on N markets" needs a per-entity COUNT(DISTINCT
-mktref) — but the schema has no entity identity that survives across
-markets. Multi-stage aggregation plus a missing identity column.
-Status: deferred — needs cross-market identity aggregation that the
-schema doesn't support.
-
-## KB 30 — Market Vulnerability Index (MVI)
-
-Reason: MVI = (100 - MSI) + (COUNT(CASE WHEN alertsev IS NOT NULL …)
-/ 10) × (alertsev_numeric × 2) - vendcount × 0.05 + (COUNT(CASE WHEN
-lawinterest = 'High') / 5). Per-market metric whose terms require
-aggregating alerts (from `securitymonitoring`) and law-interest
-flags (from `investigation`) — both reachable from markets only via
-the long tx → comm → risk → secmon / inv chain. Multi-stage
-aggregation. Status: deferred to W4b R-MULTISTAGE encoding.
-
-## KB 31 — Vendor Network Centrality (VNC)
-
-Reason: VNC = (COUNT(DISTINCT mktref) × 5) + vendtxcount/50 +
-(VTI × 0.1) - (1 - sizecluster_numeric) × 10. The
-COUNT(DISTINCT mktref) term is per *vendor identity across markets*,
-but `vendors.mktref` is a single value per vendor row (vendregistry
-is unique per market). Without a cross-market vendor identity column,
-this can't be expressed. Status: deferred — same identity-mapping
-issue as KB #27 / KB #29.
+Status: deferred — SCHEMA-GAP
 
 ## KB 34 — Transaction Velocity Metric (TVM)
 
-Reason: TVM = COUNT(txregistry) / (MAX(eventstamp) - MIN(eventstamp))
-× payamtusd/500 × (1 + paymethod_weight × 0.1). The first factor is
-an aggregation over transactions "from a single source", but the
-"source" is undefined in the KB (buyer? wallet? vendor?). Mixes
-aggregated terms with per-row terms; needs a multistage definition.
-Status: deferred to W4b R-MULTISTAGE encoding.
+The KB definition is
 
-## KB 35 — Market Diversification Score (MDS)
+```
+TVM = COUNT(txregistry) / (MAX(eventstamp) - MIN(eventstamp))
+      * payamtusd/500
+      * (1 + paymethod_weight * 0.1)
+```
 
-Reason: MDS = COUNT(DISTINCT prodsubcat)/5 + vendcount/50 +
-COUNT(txregistry)/vendcount × 0.5 - mktclass_weight/10. Per-market
-metric requiring distinct-count of `products.prodsubcat` and
-`transactions.txregistry` per market. `products` reaches markets only
-via `vendref → vendors → mktref` (peer-join) or via `transactions →
-mktref`; needs an R-MULTISTAGE encoding that joins both children to
-`markets` separately, then composes. Status: deferred to W4b
-R-MULTISTAGE encoding.
+which mixes per-source aggregates (`COUNT(txregistry)`,
+`MAX(eventstamp)`, `MIN(eventstamp)`) with row-level columns
+(`payamtusd`, `paymethod_weight`). The "single source" the KB hints
+at is undefined: the transaction table has FKs to market, product,
+and buyer, but the KB's prose ("rapidity and volume of transactions
+from a single source") doesn't specify which grouping key. Different
+choices (per-buyer, per-vendor, per-market, per-wallet via
+riskanalysis) give materially different metric values, and the KB's
+downstream user (KB #44 Flash Transaction Cluster) requires a
+"related-sources" cluster which is itself unspecified.
 
-## KB 38 — Cross-Platform Risk Amplification (CPRA)
+Beyond the grouping ambiguity, the time arithmetic
+`MAX(eventstamp) - MIN(eventstamp)` is unitless in the formula —
+days, hours, seconds all give different scales, and the SLayer
+engine does not currently expose a portable `julianday`/`epoch`
+difference for `text(6)` timestamps without a SQLite-specific
+expression.
 
-Reason: CPRA = (keymatchcount × 3) + (COUNT(DISTINCT mktref) × 10) +
-(WRI × 0.2) + (mktspan/365 × 5) - compliancescore/20. Same
-COUNT(DISTINCT mktref) cross-market identity issue as KB #29 / KB
-#31. Status: deferred — needs cross-market identity aggregation.
+Encoding helper columns (per-buyer counts, payamtusd/500,
+paymethod_weight) lets an agent compose the metric ad-hoc once a
+specific source grain is supplied at query time — but the metric
+itself can't be saved as a fixed ModelMeasure without picking one of
+several incompatible groupings.
 
-## KB 40 — Unstable Market
-
-Reason: MVI > 75 AND MSI < 40 AND has 'Critical' alert. Depends on
-KB #30 (MVI, deferred) and the same secmon→market fan-in. Cascades
-from KB #30. Status: deferred — cascades from KB #30.
-
-## KB 41 — Market Kingpin
-
-Reason: VNC > 85 AND COUNT(DISTINCT mktref) >= 3 AND vendchecklvl =
-'Premium' AND Trusted Vendor. Depends on KB #31 (VNC, deferred) and
-the cross-market vendor identity that the schema lacks. Cascades from
-KB #31. Status: deferred — cascades from KB #31.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 44 — Flash Transaction Cluster
 
-Reason: TVM > 50 AND paymethod = 'Crypto_B' AND short timeframe AND
-escrowhrs < 12. Depends on KB #34 (TVM, deferred). Cascades from KB
-#34. Status: deferred — cascades from KB #34.
+Builds on KB #34 (TVM) with TVM > 50, plus "from related sources",
+"completed within < 24 hours", and `escrowhrs < 12`. The "related
+sources" qualifier is undefined (see KB #34 above) and cascades the
+ambiguity: there's no per-cluster identity column and no clustering
+algorithm specified. Even discarding the cluster-identity
+requirement, TVM itself isn't encodable (KB #34 deferral), so any
+predicate of shape "TVM > 50" cannot be expressed as a row-level
+boolean against a fixed model.
 
-## KB 45 — Diversified Marketplace
+`paymethod = 'Crypto_B'` (privacy coin) and `escrowhrs < 12` are
+already directly available as row-level filters on transactions; an
+agent can apply them ad-hoc without a saved entity.
 
-Reason: MDS > 65 AND COUNT(DISTINCT prodsubcat) >= 15 AND vendcount >
-200 AND mktclass = 'Marketplace'. Depends on KB #35 (MDS, deferred).
-Cascades from KB #35. Status: deferred — cascades from KB #35.
-
-## KB 47 — Customer Loyalty Network
-
-Reason: VRS > 90 AND > 5 transactions per buyer (per-vendor,
-per-buyer aggregation over `transactions` joined through `products`)
-AND vendrate > 4.8 AND vendchecklvl IN ('Advanced', 'Premium'). The
-">5 tx per buyer" predicate is a per-(vendor, buyer) aggregation over
-transactions; needs an R-MULTISTAGE encoding. Status: deferred to W4b
-R-MULTISTAGE encoding.
-
-## KB 48 — Multi-Platform Threat Entity
-
-Reason: CPRA > 80 AND Cross-Platform Operator characteristics AND WRI
-> 70 AND consistent OPSEC across platforms. Depends on KB #38 (CPRA,
-deferred) and KB #29 (Cross-Platform Operator, deferred). Cascades.
-Status: deferred — cascades from KB #29 / KB #38.
+Status: deferred — AMBIGUOUS-PROSE

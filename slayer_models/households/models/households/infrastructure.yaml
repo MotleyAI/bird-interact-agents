@@ -1,0 +1,111 @@
+version: 5
+name: infrastructure
+sql_table: infrastructure
+query_variables: {}
+data_source: households
+columns:
+- name: infraref
+  sql: infraref
+  type: INT
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: wateraccess
+  sql: wateraccess
+  type: TEXT
+  primary_key: false
+  description: "Piped water supply access type (KB #3). 'Yes' (or 'available...')\
+    \ indicates piped access; other values are non-piped statuses.\n\n[kb=3]\nValues\
+    \ based on schema include 'Yes' and other non-piped statuses. \u2014 Illustrates\
+    \ water supply types. For scoring, 'Yes' (piped access) is assigned 4 points,\
+    \ while other statuses are assigned 1 point.\n[/kb=3]"
+  label: Water Access Type
+  hidden: false
+  meta:
+    kb_id: 3
+- name: roadsurface
+  sql: roadsurface
+  type: TEXT
+  primary_key: false
+  description: "Road surface / pavement type around the household (KB #4). Examples:\
+    \ 'Asphalt', 'Concrete', 'Gravel'.\n\n[kb=4]\nValues based on schema include 'Asphalt',\
+    \ 'Concrete', 'Gravel', etc. \u2014 Illustrates road surface types. For scoring,\
+    \ 'Asphalt' and 'Concrete' surfaces are assigned 4 points, while others are 1\
+    \ point.\n[/kb=4]"
+  label: Road Surface Quality
+  hidden: false
+  meta:
+    kb_id: 4
+- name: parkavail
+  sql: parkavail
+  type: TEXT
+  primary_key: false
+  description: "Private parking availability (KB #5). 'Available' / 'not available'.\n\
+    \n[kb=5]\nValues based on schema include 'Available' and 'not available'. \u2014\
+    \ Illustrates parking options. For scoring, 'Available' status is assigned 4 points,\
+    \ while 'not available' is 1 point.\n[/kb=5]"
+  label: Parking Availability
+  hidden: false
+  meta:
+    kb_id: 5
+- name: water_access_score
+  sql: CASE WHEN LOWER(TRIM(wateraccess)) LIKE 'yes%' THEN 4 ELSE 1 END
+  type: DOUBLE
+  primary_key: false
+  description: "Score component of Infrastructure Quality (KB #13 / KB #3): 4 if 'Yes'\
+    \ (piped) water access, else 1.\n\n[kb=3]\nValues based on schema include 'Yes'\
+    \ and other non-piped statuses. \u2014 Illustrates water supply types. For scoring,\
+    \ 'Yes' (piped access) is assigned 4 points, while other statuses are assigned\
+    \ 1 point.\n[/kb=3]"
+  label: Water Access Type
+  hidden: false
+  meta:
+    kb_id: 3
+- name: road_surface_score
+  sql: CASE WHEN LOWER(TRIM(roadsurface)) LIKE '%asphalt%' OR LOWER(TRIM(roadsurface))
+    LIKE '%concrete%' THEN 4 ELSE 1 END
+  type: DOUBLE
+  primary_key: false
+  description: "Score component of Infrastructure Quality (KB #13 / KB #4): 4 if 'Asphalt'\
+    \ or 'Concrete', else 1.\n\n[kb=4]\nValues based on schema include 'Asphalt',\
+    \ 'Concrete', 'Gravel', etc. \u2014 Illustrates road surface types. For scoring,\
+    \ 'Asphalt' and 'Concrete' surfaces are assigned 4 points, while others are 1\
+    \ point.\n[/kb=4]"
+  label: Road Surface Quality
+  hidden: false
+  meta:
+    kb_id: 4
+- name: parking_availability_score
+  sql: CASE WHEN LOWER(TRIM(parkavail)) = 'available' THEN 4 ELSE 1 END
+  type: DOUBLE
+  primary_key: false
+  description: "Score component of Infrastructure Quality (KB #13 / KB #5): 4 if 'Available'\
+    \ parking, else 1.\n\n[kb=5]\nValues based on schema include 'Available' and 'not\
+    \ available'. \u2014 Illustrates parking options. For scoring, 'Available' status\
+    \ is assigned 4 points, while 'not available' is 1 point.\n[/kb=5]"
+  label: Parking Availability
+  hidden: false
+  meta:
+    kb_id: 5
+- name: infrastructure_quality_score
+  sql: (CASE WHEN LOWER(TRIM(wateraccess)) LIKE 'yes%' THEN 4 ELSE 1 END + CASE WHEN
+    LOWER(TRIM(roadsurface)) LIKE '%asphalt%' OR LOWER(TRIM(roadsurface)) LIKE '%concrete%'
+    THEN 4 ELSE 1 END + CASE WHEN LOWER(TRIM(parkavail)) = 'available' THEN 4 ELSE
+    1 END) / 3.0
+  type: DOUBLE
+  primary_key: false
+  description: "Infrastructure Quality Score (KB #13): mean of water-access, road-surface,\
+    \ parking-availability scores per KB #3/#4/#5 (Yes/Asphalt-Concrete/Available\
+    \ = 4, else 1). Range 1.0-4.0.\n\n[kb=13]\nCalculated as the average of the individual\
+    \ scores for Water Access, Road Surface, and Parking Availability. \u2014 Calculates\
+    \ a composite score for infrastructure quality.\n[/kb=13]"
+  label: Infrastructure Quality Score
+  hidden: false
+  meta:
+    kb_id: 13
+measures: []
+aggregations: []
+joins: []
+filters: []
+hidden: false

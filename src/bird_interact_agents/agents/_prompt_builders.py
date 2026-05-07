@@ -48,6 +48,18 @@ async def build_raw_c_interact_prompt(
     )
 
 
+_DESCRIPTION_TRUNCATE_AT = 320
+
+
+def _short(desc: str | None) -> str:
+    if not desc:
+        return ""
+    text = " ".join(desc.split())
+    if len(text) <= _DESCRIPTION_TRUNCATE_AT:
+        return text
+    return text[:_DESCRIPTION_TRUNCATE_AT].rstrip() + "…"
+
+
 async def build_slayer_c_interact_prompt(
     *,
     budget: float,
@@ -58,14 +70,41 @@ async def build_slayer_c_interact_prompt(
 ) -> str:
     storage = YAMLStorage(base_dir=slayer_storage_dir)
     names = await storage.list_models()
-    lines = []
+    lines: list[str] = []
     for name in names:
-        m = await storage.get_model(name)
+        try:
+            m = await storage.get_model(name)
+        except Exception:
+            continue
         if m is None:
             continue
-        dims = ", ".join(d.name for d in (m.dimensions or []))
-        meas = ", ".join(x.name for x in (m.measures or []))
-        lines.append(f"- {name}: dims=[{dims}] measures=[{meas}]")
+        lines.append(f"- {name}")
+        if m.description:
+            lines.append(f"    description: {_short(m.description)}")
+        if m.columns:
+            lines.append("    columns:")
+            for c in m.columns:
+                desc = _short(getattr(c, "description", None))
+                if desc:
+                    lines.append(f"      - {c.name}: {desc}")
+                else:
+                    lines.append(f"      - {c.name}")
+        if m.measures:
+            lines.append("    measures:")
+            for x in m.measures:
+                desc = _short(getattr(x, "description", None))
+                if desc:
+                    lines.append(f"      - {x.name}: {desc}")
+                else:
+                    lines.append(f"      - {x.name}")
+        if m.aggregations:
+            lines.append("    aggregations:")
+            for a in m.aggregations:
+                desc = _short(getattr(a, "description", None))
+                if desc:
+                    lines.append(f"      - {a.name}: {desc}")
+                else:
+                    lines.append(f"      - {a.name}")
     return SLAYER_C_INTERACT.format(
         budget=budget,
         user_query=user_query,

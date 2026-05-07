@@ -1,6 +1,6 @@
 ---
 name: kb-to-slayer-models
-description: Translate a structured knowledge base (calculation entries, descriptions, enum bands, multistage formulas) into edits on a SLayer datasource via the v0.4.0+ MCP server. A recipe book — a caller picks the recipe whose trigger matches each KB entry and applies it. Domain-agnostic; downstream wrappers add domain bookkeeping.
+description: Translate a structured knowledge base (calculation entries, descriptions, enum bands, multistage formulas) into edits on a SLayer datasource via the v0.5.0+ MCP server. A recipe book — a caller picks the recipe whose trigger matches each KB entry and applies it. Domain-agnostic; downstream wrappers add domain bookkeeping.
 ---
 
 # Translate a KB into SLayer model enrichments via MCP
@@ -14,13 +14,22 @@ By the time this skill runs:
   `auto_ingest=True`, or `mcp__slayer__ingest_datasource_models`.
 - One SLayer model per table already exists, with **FK joins**, **column
   types**, and one **Column** per source column populated.
-- **SLayer 0.4.0+ MCP** is the runtime. `edit_model` and `create_model`
+- **SLayer 0.5.0+ MCP** is the runtime. `edit_model` and `create_model`
   expose the v3 unified `columns` list and the v3 named-formula
-  `measures` list with `formula` (not `sql`).
+  `measures` list with `formula` (not `sql`). The rank-family
+  transforms (`rank`, `percent_rank`, `dense_rank`, `row_number`,
+  `ntile`) and `covar_pop` / `covar_samp` / `corr` aggregations are
+  available as ModelMeasure formulas.
 
 This skill **edits the existing models in place** via the SLayer MCP
 server. **Do not recreate** auto-ingested models. Reserve `create_model`
 for query-backed (multistage) models that have no host table.
+
+**All edits go through the MCP** (`mcp__slayer__edit_model` /
+`create_model` / `delete_model`). Do not edit YAML files directly.
+The MCP writes to the live storage; downstream wrappers re-export YAML
+(e.g. via `scripts/export_slayer_models.py`) once the in-storage state
+is correct.
 
 This skill is **domain-agnostic**. It says nothing about JSONL files,
 KB ids, notes files, or verifiers. Wrappers (e.g.
@@ -73,11 +82,80 @@ on.
 | **R-AGG** | Named metric is an aggregation that needs more than one column or has tunable parameters (MKT, weighted_avg with a non-default weight column, trimmed_mean with bounds, …). |
 | **R-RESOLVE** | Definition contains "where X is the …" or any unqualified reference to another already-encoded metric by name. |
 | **R-MULTISTAGE** | A row-level expression references an aggregate of child rows; one stage of arithmetic must run after a stage of aggregation. |
-| **R-WINDOW** | "Top quartile / above median / rank ≤ N / percentile ≥ p" used as a row-level dimension or filter. |
+| **R-PEER-JOIN** | A composite formula references measures or columns on two (or more) tables that share a common ancestor in the FK graph. **Default encoding: R-MULTISTAGE** (per-peer aggregation, then joined DAG). See "Peer-join via shared parent" below. |
+| **R-WINDOW** | "Top quartile / above median / rank ≤ N / percentile ≥ p / NTILE bucket / argmin-by-time" used as a row-level dimension or filter. Available transforms: `rank`, `percent_rank`, `dense_rank`, `ntile`, `first` (FIRST_VALUE asc / argmin), `last` (FIRST_VALUE desc / argmax), `lag`, `lead`. Pass `partition_by=<dim>` (or a list) to scope the window; cross-model dotted paths work (e.g. `partition_by=actuation_data.robot_details.ctrltypeval`). For non-standard window expressions, fall back to a raw window inside `Column.sql` — SLayer auto-promotes Column-level windows so they survive the SQL generator. |
 | **R-EXISTS** | "Exists ≥1 child meeting X", "all children meet X", "% of children meeting X" as a Boolean attribute on the parent. |
 | **R-VAR** | Definition depends on a "report date" / "as of" / "past N months" — anything that's a query parameter, not data. |
 | **R-HOST** | Boolean predicate composes facts from multiple tables; no obvious host model — pick by predicate grain. |
 | **R-PROSE** | Algebraic intent expressed only in prose — resolve column refs from the surrounding column-meaning metadata, then emit via R-COL / R-MEASURE / R-AGG. |
+
+## KB self-annotation discipline
+
+Every encoded entity carries three mandatory fields:
+
+- `label` = `KB.knowledge` (verbatim).
+- `description` containing a canonical block:
+
+  ```
+  [kb=<id>]
+  <KB.definition> — <KB.description>
+  [/kb=<id>]
+  ```
+
+  Optional free-text caveats (e.g. "encoded with proxy because schema
+  lacks X") go ABOVE the block, separated by a blank line. The block
+  is regenerable — re-runs strip and re-emit; caveats survive.
+
+- `meta.kb_id` (singular int). One entity, one KB id. The plural
+  `meta.kb_ids` is deprecated; if a single entity feels like it
+  should carry multiple ids, use a splitting recipe (see
+  "Splitting multi-KB entities" below). Multiple entities may share
+  the same `meta.kb_id` — the verifier dedupes.
+
+**kb_id placement rule.** Stamp `meta.kb_id` on the entity that
+*operationalizes* the KB (the helper column that extracts and
+computes), NOT on the data carrier (a JSON blob column that holds
+the raw values). If both exist, the helper carries the kb_id and
+the JSON blob stays untagged.
+
+## Peer-join via shared parent
+
+A common shape: child A and child B both FK→same parent P. Auto-FK
+ingestion gives `A.joins=[→P]` and `B.joins=[→P]` only — there's no
+edge from P to its children, and no sibling edge between A and B. A
+composite formula that pulls measures from both children can't be
+expressed as a single dotted reference from either side.
+
+**Default encoding: R-MULTISTAGE.** Build a query-backed model with
+three named stages forming a DAG:
+
+- **Stage 1** aggregates A by the FK column → one row per parent.
+- **Stage 2** aggregates B by its FK column → one row per parent.
+- **Stage 3** anchors at the dim-bearing model (typically the parent),
+  declares an explicit `joins` clause referencing prior named stages
+  on the parent key, and applies the composite formula.
+
+Why multistage instead of "manual reverse joins on P + a single
+formula":
+
+- **Cardinality-safe regardless of m:N** — each peer is collapsed to
+  one row per parent in its own stage; the final join is one-to-one.
+  The auto-emitted SQL never produces an m×n cross-product.
+- **No manual reverse joins required** on the parent (auto reverse
+  joins are tracked by DEV-1338; until they ship, multistage avoids
+  needing them entirely).
+- **GROUP BY dimensions can live anywhere.** If the dim is on a peer
+  rather than the parent, anchor stage 3 at that peer (or add a
+  fourth stage). Cross-stage references use dot notation
+  (`stage_a.measure_x`).
+- **Generalises to deeper FK chains.** When the "shared parent" is a
+  grandparent two hops up, the inner stages just have longer FK
+  chains — same recipe.
+
+For the design analysis behind this default, see
+[DEV-1350](https://linear.app/motley-ai/issue/DEV-1350).
+
+The canonical example is in Pass 5 below (R-MULTISTAGE).
 
 ## Workflow
 
@@ -207,8 +285,26 @@ mcp__slayer__edit_model(
 **R-AGG.** Parametrized aggregation — needs more than one column or
 tunable parameters.
 
+For the **OLS regression slope** of y on x — the canonical KB pattern
+"slope of regression(y, x) across qualifying rows" — express it as a
+ModelMeasure formula using built-in `covar_pop` / `var_pop`:
+
 ```
-# Example: MKT (uses ln/exp UDFs registered by SLayer 0.4.1+)
+measures=[{
+  "name": "y_x_regression_slope",
+  "formula": "y:covar_pop(other=x) / x:var_pop",
+  "description": "OLS slope of y on x across the queried rows",
+  "meta": {…},
+}]
+# query: filter to qualifying rows, group by whatever scope the KB defines.
+# Algebra: slope = covar_pop(x, y) / var_pop(x).
+```
+
+`corr(x, y) = covar(x,y) / (stddev(x) * stddev(y))` is also available
+via `:corr(other=…)` for Pearson correlation.
+
+```
+# Example: MKT (uses ln/exp UDFs registered by SLayer)
 mcp__slayer__edit_model(
   model_name="excursion_events",
   aggregations=[{
@@ -243,18 +339,127 @@ Each stage in the `query=[…]` list is a SlayerQuery dict. Use `measures`
 `meta` on a query-backed model goes on the model itself via a separate
 `edit_model(meta=…)` call after `create_model`.
 
-**R-MULTISTAGE — composite that crosses an aggregation boundary.**
+**R-MULTISTAGE — composite that crosses an aggregation boundary; default for peer-joins.**
+
+The canonical example is a peer-join via a shared parent. Child A
+(`thermalsolarwindandgrid`) carries REC; child B (`waterandwaste`)
+carries WRMI; both FK to parent `equipment`. The composite RSSI =
+0.6·REC + 0.4·WRMI cannot be expressed as a single dotted formula
+because the auto-FK graph has no edge between A and B. Encode as a
+three-stage DAG:
 
 ```
-# Example: VRA = VRI × RES, where VRI is an avg over child rows
+mcp__slayer__create_model(
+  name="resource_self_sufficiency_index",
+  query=[
+    {
+      "name": "rec_per_eq",
+      "source_model": "thermalsolarwindandgrid",
+      "dimensions": ["thermaleqref"],
+      "measures": [{"formula": "rec:avg", "name": "rec"}],
+    },
+    {
+      "name": "wrmi_per_eq",
+      "source_model": "waterandwaste",
+      "dimensions": ["wasteeqref"],
+      "measures": [{"formula": "wrmi:avg", "name": "wrmi"}],
+    },
+    {
+      "source_model": {
+        "source_name": "rec_per_eq",
+        "joins": [{"target_model": "wrmi_per_eq",
+                   "join_pairs": [["thermaleqref", "wasteeqref"]]}],
+      },
+      "dimensions": ["thermaleqref"],
+      "measures": [{"formula": "0.6 * rec + 0.4 * wrmi_per_eq.wrmi",
+                    "name": "rssi"}],
+    },
+  ],
+)
+mcp__slayer__edit_model(model_name="resource_self_sufficiency_index",
+                        meta={…caller bookkeeping…})
+```
+
+Stages 1 and 2 each collapse one peer to one row per parent. Stage 3
+joins them on the parent key and applies the composite formula. The
+emitted SQL is cardinality-safe regardless of how many child rows each
+parent has.
+
+When the GROUP BY dim lives on a peer rather than on the parent,
+anchor stage 3 at that peer instead (and add a fourth stage if the
+peer dim itself comes from a different table). The shape generalises.
+
+**R-MULTISTAGE portfolio — many derived metrics on one per-parent view.**
+When several KBs all want their value at parent grain (e.g. EER, TWR,
+JDI, OCE all "per robot"), don't build one query-backed model per
+metric. Build *one* per-parent model that aggregates each peer child
+to per-parent in its own named stage, joins them all in the final
+stage, and exposes the derived metrics as **computed columns inside
+the final stage's `ModelExtension.columns`**. Example skeleton:
+
+```
+mcp__slayer__create_model(
+  name="<parent>_per_<parent>",
+  query=[
+    {"name": "_per_<peer_a>", "source_model": "<peer_a>",
+     "dimensions": ["<fk_to_parent>"],
+     "measures": [{"formula": "x:sum", "name": "x_total"}, …]},
+    {"name": "_per_<peer_b>", "source_model": "<peer_b>",
+     "dimensions": ["<fk_to_parent>"],
+     "measures": [{"formula": "y:max", "name": "y_max"}, …]},
+    # …one stage per peer…
+    {"source_model": {
+        "source_name": "_per_<peer_a>",
+        "joins": [
+          {"target_model": "_per_<peer_b>",
+           "join_pairs": [["<fk_a>", "<fk_b>"]]},
+          # …join every other named stage…
+        ],
+        "columns": [
+          # Derived per-parent metrics composed from joined stages.
+          # Each becomes an auto-introspected column on the model.
+          {"name": "ratio_a_over_b",
+           "sql": "CASE WHEN _per_<peer_b>.y_max > 0 THEN _per_<peer_a>.x_total / _per_<peer_b>.y_max END",
+           "type": "number"},
+          # Pass-throughs for ergonomic access:
+          {"name": "y_max", "sql": "_per_<peer_b>.y_max", "type": "number"},
+        ],
+     },
+     "dimensions": ["<fk_to_parent>", "x_total", "y_max", "ratio_a_over_b", …]},
+  ],
+)
+
+# Cascade categories ride the same per-parent view as ModelMeasures:
+mcp__slayer__edit_model(
+  model_name="<parent>_per_<parent>",
+  measures=[
+    {"name": "is_ratio_high",
+     "formula": "ratio_a_over_b:max > 0.01 and y_max:max > 1000",
+     "meta": {"kb_id": <cascade_kb>}},
+  ],
+)
+```
+
+This shape was used for `robot_per_robot`: per-child-table rollups
+for `operation`, `performance_and_safety`, `joint_condition`,
+`actuation_data`, `maintenance_and_fault`, plus a `_robot_meta`
+stage carrying the parent attributes (`modelseriesval`,
+`ctrltypeval`, …). Derived columns: `eer`, `twr`, `oce`, `jdi`.
+Measures: `eer_value`, `twr_value`, `is_energy_inefficient`,
+`is_joint_health_risk`, `eer_rank`, `model_avg_position_error` …
+
+A simpler **non-peer-join** R-MULTISTAGE — one parent + one child set:
+
+```
+# VRA = VRI × RES, where VRI is an avg over child rows of vendors
 mcp__slayer__create_model(
   name="vendor_risk_amplification",
   query=[
     {
       "name": "vri_per_vendor",
       "source_model": "vendor_security_assessments",
-      "measures": [{"formula": "VendSecRate:avg", "name": "vri"}],
       "dimensions": ["vendor_id"],
+      "measures": [{"formula": "VendSecRate:avg", "name": "vri"}],
     },
     {
       "source_model": {
@@ -272,17 +477,46 @@ mcp__slayer__edit_model(model_name="vendor_risk_amplification",
                         meta={…caller bookkeeping…})
 ```
 
-**R-WINDOW — quartile / rank / percentile as a row predicate.**
+**R-WINDOW — quartile / rank / percentile as a row dimension or filter.**
+
+Available transforms in SLayer 0.5.0+: `rank`, `percent_rank`,
+`dense_rank`, `ntile`, `first` (FIRST_VALUE asc / argmin),
+`last` (FIRST_VALUE desc / argmax), `lag`, `lead`. The natural shape
+is a ModelMeasure formula:
 
 ```
+# EER ranked per application type, descending
+mcp__slayer__edit_model(
+  model_name="robot_per_robot",
+  measures=[{
+    "name": "eer_rank",
+    "formula": "percent_rank(eer:max, partition_by=apptypeval)",
+    "description": "EER percentile rank within application type",
+    "meta": {…caller bookkeeping…},
+  }],
+)
+```
+
+The transform applies after the underlying aggregate (`eer:max`), so
+it lives in the formula layer beside `rank` / `lag` / etc. Sort is
+descending by default; pass a list to `partition_by=` for multi-key
+partitions; cross-model dotted paths work
+(`partition_by=actuation_data.robot_details.ctrltypeval`).
+
+For non-standard window expressions not covered by these transforms,
+fall back to a raw window in `Column.sql` inside a query-backed
+model:
+
+```
+# TEI quartile as a row dimension on accounts
 mcp__slayer__create_model(
   name="account_with_tei_quartile",
   query=[
     {
       "name": "tei_per_account",
       "source_model": "accounts",
-      "measures": [{"formula": "tei", "name": "tei_v"}],
       "dimensions": ["id"],
+      "measures": [{"formula": "tei", "name": "tei_v"}],
     },
     {
       "source_model": {
@@ -300,6 +534,70 @@ mcp__slayer__create_model(
   ],
 )
 ```
+
+**Argmin / argmax patterns** ("the value at the row with smallest /
+largest X"). Three shapes, depending on grain and ordering column:
+
+1. **Global argmin/argmax — the one row with smallest/largest X
+   across the whole table.** Plain query-backed model with `order` +
+   `limit=1`, no multistage needed:
+
+   ```
+   mcp__slayer__create_model(
+     name="latest_volmeter",
+     query=[{
+       "source_model": "marketstats",
+       "dimensions": ["volmeter"],
+       "order": [{"column": "marketstatsmark", "direction": "desc"}],
+       "limit": 1,
+     }],
+   )
+   ```
+
+2. **Per-group argmin/argmax over a *time* dimension.** Use the
+   built-in `first` / `last` transforms — they emit FIRST_VALUE
+   windows ordered by the model's time dimension:
+
+   ```
+   measures=[{"formula": "score:last", "name": "latest_score"}]
+   # ↑ FIRST_VALUE(score) OVER (ORDER BY <time_dim> DESC ...)
+   ```
+
+3. **Per-group argmin/argmax over a *non-time* column** (the robot
+   KB 5 case: faultpredscore at the row with smallest upkeepduedays
+   per robot). The transforms don't accept arbitrary order columns,
+   so use a two-stage multistage with the standard SQL argmin idiom
+   — stage 1 = `:min` per group, stage 2 = self-join + filter on
+   `column = stage1.min_value`:
+
+   ```
+   mcp__slayer__create_model(
+     name="recent_fault_prediction_score",
+     query=[
+       {
+         "name": "min_due_per_robot",
+         "source_model": "maintenance_and_fault",
+         "dimensions": ["upkeeprobot"],
+         "measures": [{"formula": "upkeepduedays:min", "name": "min_due"}],
+       },
+       {
+         "source_model": {
+           "source_name": "maintenance_and_fault",
+           "joins": [{"target_model": "min_due_per_robot",
+                      "join_pairs": [["upkeeprobot", "upkeeprobot"]]}],
+         },
+         "dimensions": ["upkeeprobot"],
+         "measures": [{"formula": "faultpredscore:max", "name": "rfps"}],
+         "filters": ["upkeepduedays = min_due_per_robot.min_due"],
+       },
+     ],
+   )
+   ```
+
+   The `:max` in stage 2 isn't really aggregating — the filter
+   leaves one row per robot — it's just the colon-syntax handle for
+   "extract the value". Ties on `upkeepduedays` resolve to the row
+   with the largest faultpredscore (deterministic).
 
 **R-EXISTS — ∃ child meeting predicate.**
 
@@ -359,6 +657,126 @@ Place the encoded column / measure on the model whose PK matches the
 predicate's grain. Cross-table refs come via dotted joined paths. Avoid
 coarse predicates on fine-grained models — fan-out distorts aggregations.
 
+## Working from a partially-encoded model
+
+When some KB ids are already encoded (entities with `meta.kb_id` set
+on a prior pass), don't blindly re-encode. Two passes:
+
+1. **Verify existing encodings first.** Walk the KB; for each id,
+   look up matching entities via
+   `mcp__slayer__models_summary(datasource_name=<db>)` then
+   `mcp__slayer__inspect_model(...)` on each model the KB
+   references. For each entity carrying a `meta.kb_id` (or, on
+   legacy entities not yet split, a `meta.kb_ids` list — see
+   "Splitting multi-KB entities"), check the encoding against the
+   KB's `definition` text and `type`:
+   - If the formula / sql / case-when faithfully expresses the KB's
+     definition: leave it alone.
+   - If the encoding is wrong (incorrect formula, wrong host, missing
+     filter): edit via `edit_model`. Keep the same `meta.kb_id`.
+   - If the recipe was misapplied (e.g. an aggregation encoded as a
+     plain column, or a metric that should be query-backed encoded
+     as a row-level column): delete the offending entity and
+     re-encode under the right recipe.
+
+2. **Encode the rest.** Any KB id not yet covered: pick the recipe,
+   apply it, stamp `meta.kb_id` (caller's domain bookkeeping
+   dictates the exact key — see wrappers).
+
+The verifier deduplicates ids — multiple entities tagged with the
+same `meta.kb_id` is fine. What's not fine is the same id appearing
+in **both** the encoded set AND the deferral notes file (see next
+subsection).
+
+## Splitting multi-KB entities
+
+When a refresh workflow encounters an entity with `meta.kb_ids`
+(plural; the deprecated form), pick the recipe whose pattern matches
+and split it into N single-KB entities. The verifier still passes:
+the KB ids stay accounted for, just under different homes.
+
+| Recipe | Bucket | Pattern | Split shape |
+|---|---|---|---|
+| **R-SPLIT-CALC-THRESH** | A | one entity holds the calc *and* its threshold/classification | calc Column with one kb_id + CASE-WHEN sibling Column with the other kb_id |
+| **R-SPLIT-ILLUSTRATION** | B | one JSON blob column described by N value_illustration KB entries about distinct sub-fields | one helper column per sub-field, each carrying its own kb_id; the JSON blob itself stays untagged (per kb_id placement rule) |
+| **R-SPLIT-TRINITY** | C | illustration + calc + threshold all bundled (the robot pattern) | 3-way split: helper column + calc + classification, each with its own kb_id |
+| **R-SPLIT-MULTI-FORMULA** | D | one model lumps several unrelated formulas | one entity per formula, each carrying its own kb_id |
+| **R-SPLIT-MONSTER** | E | aggressive over-grouping (e.g. one model carrying 21 kb_ids) | aggressive split, target shape per-entity must come from the caller's instruction file |
+| **R-SPLIT-DUP** | F | KB X is a verbatim restatement of KB Y | retain primary kb_id; document secondary in the per-DB notes file with `Status: not-applicable — duplicate of KB <primary>` |
+
+For Buckets A–E the splits all produce single-KB entities (verifier
+counts them all as encoded). For Bucket F the secondary id moves
+from the entity into the notes file (the notes header counts as
+documented; that's also a pass).
+
+**Worked example — Bucket A (R-SPLIT-CALC-THRESH).** One Column
+carrying both the EWR calc (KB 10) and the EWR classification (KB
+50). After:
+
+```
+mcp__slayer__edit_model(
+  model_name="equipment",
+  columns=[
+    {"name": "ewr_score",
+     "type": "number",
+     "sql": "<calc>",
+     "meta": {"kb_id": 10}},
+    {"name": "ewr_status",
+     "type": "string",
+     "sql": "CASE WHEN ewr_score > 0.7 AND ... THEN 'Ready' ELSE 'Not Ready' END",
+     "meta": {"kb_id": 50}},
+  ],
+)
+```
+
+**Worked example — Bucket F (R-SPLIT-DUP).** One Column with
+`meta.kb_ids=[4, 51]` where KB 4 and KB 51 state the same BFR
+formula in different words. Smaller id wins; 4 stays on the entity,
+51 moves to notes.
+
+```
+mcp__slayer__edit_model(
+  model_name="signals",
+  columns=[{"name": "bfr", "meta": {"kb_id": 4}}],
+)
+# slayer_models/_notes/<db>.md gets:
+# ## KB 51 — <KB.knowledge>
+#
+# Reason: Verbatim restatement of KB 4; encoded entity is
+# `signals.bfr` with `meta.kb_id = 4`.
+#
+# Status: not-applicable — duplicate of KB 4
+```
+
+For Bucket B / E, the caller's instruction file lists the per-kb_id
+target entity (recipe + new name + host model) — the agent should
+not invent the split shape from prose alone for these. For Bucket A
+/ C / D the bucket label plus the KB texts are usually enough.
+
+## Notes-file regeneration
+
+When invoked under a "refresh" workflow (a wrapper signals this —
+e.g. `translate-mini-interact-kb`'s W4c override), **discard the
+existing per-DB notes file and regenerate it from scratch.** The
+new file lists *only* KB ids that could not be encoded after both
+passes above. Each section header is load-bearing for the wrapper's
+verifier (see the wrapper for the exact format); the body should
+include one of these canonical statuses:
+
+| `Status:` value | Meaning |
+|---|---|
+| `deferred — AMBIGUOUS-PROSE` | KB underspecifies thresholds or labels; the predicate would be a guess. Encode helper columns so the agent can compose ad-hoc at query time. |
+| `deferred — TIME-ANCHOR` | KB's predicate depends on a query-time anchor date ("rolling 30 days from `today`") and the model has no anchor. R-VAR may fix this; otherwise defer. |
+| `deferred — DML` | KB describes an INSERT / UPDATE / DELETE workflow. Models describe queryable shape, not mutations. Permanently not-applicable. |
+| `deferred — SCHEMA-GAP` | The data the KB names is not in the schema — verify by inspecting the schema and column meanings, including JSON subfields, before trusting this status. Many "schema gaps" turn out to be JSON sub-keys or differently-named columns. |
+| `deferred — CROSS-DB` | KB requires data from a second datasource in a single query. SLayer doesn't support cross-datasource joins today. |
+| `not-applicable` | KB is descriptive metadata (a column-value enumeration, a table-purpose narrative) rather than a metric — captured via `description` on the host column / model rather than as an encoded entity. |
+| `not-applicable — duplicate of KB <primary>` | KB is a verbatim restatement of an already-encoded KB. The primary id stays on the entity; the secondary id is documented here. See R-SPLIT-DUP under "Splitting multi-KB entities". |
+
+If both passes leave zero ids deferred, the notes file should still
+exist with a one-line body ("All KB entries encoded.") so the
+verifier finds it.
+
 ## Constraints & gotchas
 
 - **Idempotency**: `edit_model` upserts each list by name. Re-running
@@ -369,6 +787,19 @@ coarse predicates on fine-grained models — fan-out distorts aggregations.
   names go in `description` / `label`.
 - **`meta` is opaque to this skill**: pass through whatever the caller
   supplies; this skill takes no position on its content.
+- **Query-backed model namespace.** Auto-introspected columns and
+  ModelMeasures share a single namespace per model. If the final
+  stage exposes a `ratio` column, you can't add a `ratio` measure on
+  the same model — name the measure `ratio_value` (or similar).
+- **Bare ModelMeasure name on QB model queries.** When querying a
+  query-backed model, `{"formula": "<measure_name>"}` errors with
+  "use colon syntax" — bare-name resolution to a saved
+  ModelMeasure's formula isn't honored on QB models today. Use the
+  underlying expression with explicit colon syntax (e.g.
+  `{"formula": "ratio:max"}`) or define the measure with the
+  inline expression at query time. The saved ModelMeasure still
+  carries `meta.kb_id` correctly for the verifier; this only
+  affects ergonomic re-use at query time.
 - **Verification**: after Pass 4 / 5, hit a representative query and
   confirm the natural agent expression is short — measure list +
   dimensions + filters, no per-call formula re-derivation.

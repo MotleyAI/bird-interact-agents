@@ -5,129 +5,201 @@ KB ids in the headers below are deliberately omitted from
 (`scripts/verify_kb_coverage.py`) reads the `## KB <id> — …` headers to
 distinguish "skipped on purpose" from "missed".
 
-## KB 19 — Socioeconomic Index
+Helper columns named below remain encoded on their host models (without
+`meta.kb_id`) so the agent can compose the deferred predicates ad-hoc
+at query time.
 
-Reason: KB defines this as "a weighted sum of income score,
-expenditure ratio, and tenure score" but does not specify the weights
-or how to normalise the three terms (their natural ranges differ).
-Status: deferred. The agent at query time can compose it ad-hoc from
-`households.tenure_type`, `households.income_bracket_score`, and
-`households.expenditure_ratio` if a benchmark task requires a specific
-weighting.
+## KB 16 — Service Support Score
+
+Reason: KB definition reads "A weighted score combining domestic help
+availability and social assistance participation status (Yes/No)" — the
+weights are not specified. Any specific weighting is a guess. Helper
+columns `service_types.domestic_help_score` (numeric tier mapping for
+domestichelp) and `service_types.soc_support_score` (1/0 for socsupport)
+remain available; the agent can compose any weighting at query time.
+A heuristic combination is also kept as
+`service_types.service_support_score` (without `kb_id`) for convenience.
+
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 22 — Urban Household
 
-Reason: KB says "'Municipal Piped' Water Access Type and high-quality
-Road Surface Quality", but no `Municipal Piped` value appears in the
-`infrastructure.wateraccess` data (the column carries 'Yes',
-'available...' etc.). 'High-quality' road surface is also undefined.
-Status: deferred — predicate would be a guess against the real
-distinct values. Agent can compose from
-`infrastructure.water_access_score` + `infrastructure.road_surface_score`
-at query time.
+Reason: KB defines this as "'Municipal Piped' Water Access Type and
+high-quality Road Surface Quality". The literal string 'Municipal
+Piped' does not appear in `infrastructure.wateraccess`; the column
+carries 'Yes, available at least in one room' and similar values.
+"High-quality" road surface is also not pinned (KB #4 distinguishes
+Asphalt/Concrete from others without using the word "high-quality"
+itself).
+
+Helpers available: `infrastructure.water_access_score`,
+`infrastructure.road_surface_score`.
+
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 23 — Mobile Household
 
-Reason: "High Vehicle Ownership Index and a recent Vehicle Year Range"
-— KB doesn't pin a numeric threshold for "high" or "recent". Status:
-deferred. The agent has `transportation_assets.vehicle_ownership_index`
-and `transportation_assets.newest_year_score` to filter on at query
-time.
+Reason: "A household with a high Vehicle Ownership Index and a recent
+Vehicle Year Range." Neither "high" nor "recent" is given a numeric
+threshold or band list.
+
+Helpers available: `transportation_assets.vehicle_ownership_index`,
+`transportation_assets.newest_year_score`,
+`transportation_assets.newest_year_text`.
+
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 25 — Crowded Household
 
-Reason: "Household Density greater than a threshold" — threshold
-unspecified. Status: deferred; agent filters on
-`properties.household_density > N` at query time.
+Reason: "A household with Household Density greater than a threshold."
+KB explicitly says "a threshold" without naming a number.
 
-## KB 26 — Modern Dwelling
+Helper available: `properties.household_density`.
 
-Reason: "specific Dwelling Type and active Cable TV Status" — neither
-"specific" type list nor "active" cable status values are pinned by
-KB. Status: deferred.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 27 — Well-Equipped Household
 
-Reason: "high Infrastructure Quality Score and a high Service Support
-Score" — both thresholds unspecified. Status: deferred; agent filters
-on `infrastructure.infrastructure_quality_score` +
-`service_types.service_support_score` at query time.
+Reason: "A household with a high Infrastructure Quality Score and a
+high Service Support Score." Both thresholds are unspecified, and the
+Service Support Score itself (KB #16) has unspecified weights.
+
+Helpers available: `infrastructure.infrastructure_quality_score`,
+`service_types.domestic_help_score`, `service_types.soc_support_score`.
+
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 28 — Economically Stable Household
 
-Reason: "high Socioeconomic Index and a low Expenditure Ratio".
-Depends on KB #19 (deferred above) and undefined thresholds. Status:
-deferred.
+Reason: "A household with a high Socioeconomic Index and a low
+Expenditure Ratio." Depends on KB #19 (deferred — weights unspecified)
+and adds two more unspecified thresholds ("high" / "low").
+
+Helpers available: `households.expenditure_ratio`,
+`households.income_bracket_score`.
+
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 30 — Self-Sufficient Household
 
-Reason: "limited Domestic Help Availability, social support 'No', and
-high Vehicle Ownership Index" — "limited" and "high" thresholds
-unspecified. Status: deferred; the agent has the helper columns to
-filter on at query time.
+Reason: "A household with limited Domestic Help Availability, social
+support status of 'No', and high Vehicle Ownership Index." "Limited"
+and "high" are not pinned; only the social-support clause is concrete.
+
+Helpers available: `service_types.domestic_help_score`,
+`service_types.socsupport`,
+`transportation_assets.vehicle_ownership_index`.
+
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 31 — Purge Incomplete Transport Data
 
-Reason: This is a DML operation (DELETE rows from
-`transportation_assets` for households with NULL
-`socioeconomic.Income_Bracket`), not a property of a SLayer model.
-SLayer models describe queryable shape, not mutations. Status: not
-applicable to model translation.
+Reason: KB definition explicitly says "Delete records from the
+transportation assets data for any household where the income
+classification is NULL." DML operations are out-of-scope for SLayer
+models, which describe queryable shape, not mutations.
+
+Status: deferred — DML
 
 ## KB 32 — Register New Household
 
-Reason: DML operation (INSERT into `households`). See KB #31 reasoning.
-Status: not applicable to model translation.
+Reason: KB definition explicitly says "Insert a new record into the
+household data with all required information." DML — out-of-scope
+(see KB #31).
+
+Status: deferred — DML
 
 ## KB 33 — Update Vehicle Inventory
 
-Reason: DML operation (UPDATE on `transportation_assets`). See KB #31
-reasoning. Status: not applicable to model translation.
+Reason: KB definition explicitly says "Update the vehicle inventory
+data for a specific household, modifying fields such as newest vehicle
+year or vehicle counts." DML — out-of-scope (see KB #31).
+
+Status: deferred — DML
 
 ## KB 34 — Residential Zone Types
 
-Reason: KB describes 'Urban' / 'Suburban' / 'Rural' / 'Mixed' zone
-types, but the `households.locregion` and `households.loczone` columns
-hold administrative-region codes and macrozone numbers, not these
-labels. No source field carries this concept in the schema. Status:
-not encodable from current data; this looks like a stale or aspirational
-KB entry.
+Reason: KB describes value labels 'Urban' / 'Suburban' / 'Rural' /
+'Mixed'. The schema's `households.locregion` carries administrative
+region names (e.g. 'Taguatinga') and `households.loczone` carries
+numeric zone codes — neither column carries the four labels KB #34
+names. KB #45 ("loczone = 1 ⇒ urban") is the only zone-type rule the
+schema can express, and is encoded as `households.is_urban_zone`.
+
+Status: deferred — SCHEMA-GAP
 
 ## KB 35 — Utility Access Level
 
-Reason: KB describes 'Full' / 'Partial' / 'Basic' / 'None' utility
-levels, but no schema column carries this composite indicator (water,
-cable, etc are split across `infrastructure` and `amenities`). Could
-be derived in principle, but KB doesn't pin the exact rule. Status:
-not encodable from current data.
+Reason: KB describes composite labels 'Full' / 'Partial' / 'Basic' /
+'None' over (water + cable + ?). No schema column carries this
+composite indicator, and the KB does not pin the exact rule for
+mapping individual utility flags to the four levels.
+
+Helpers available: `infrastructure.water_access_score`,
+`amenities.cablestatus`.
+
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 38 — Dwelling Condition Status
 
-Reason: KB describes 'Excellent' / 'Good' / 'Fair' / 'Poor' condition
-labels, but no schema column tracks dwelling condition. Status: not
-encodable from current data.
+Reason: KB describes value labels 'Excellent' / 'Good' / 'Fair' /
+'Poor'. No schema column tracks dwelling condition; `properties` only
+carries `Bath_Count`, `Room_Count`, `Dwelling_Class`.
+
+Status: deferred — SCHEMA-GAP
 
 ## KB 39 — Compact Household
 
-Reason: "specific Dwelling Type and a small resident count" — neither
-the type list nor the resident-count threshold is pinned. Status:
-deferred.
+Reason: "A household with specific Dwelling Type and a small resident
+count." Neither the type list nor the "small" resident-count threshold
+is pinned by the KB.
+
+Helpers available: `properties.dwelling_class`,
+`properties.dwelling_type_score`, `households.residentcount`.
+
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 40 — High-Mobility Urban Household
 
-Reason: References KB #34 (Residential Zone Types — not encodable) and
-KB #36 (vehicle type distribution — encoded). Without zone types in
-schema, this composite predicate can't be encoded. Status: blocked on
-schema gap (KB #34).
+Reason: "A household with specific Residential Zone Type and Vehicle
+Type Distribution." The Residential Zone Type concept (KB #34) is not
+in the schema, so the urban-zone clause cannot be expressed beyond
+KB #45's narrower `loczone = 1` rule. KB #36 (vehicle_counts) is
+encoded but the predicate side ("specific … Vehicle Type
+Distribution") is itself unpinned.
+
+Helpers available: `households.is_urban_zone`,
+`transportation_assets.auto_count`, `transportation_assets.bike_count`,
+`transportation_assets.motor_count`,
+`transportation_assets.vehicle_ownership_index`.
+
+Status: deferred — SCHEMA-GAP
 
 ## KB 41 — Stable Infrastructure Household
 
-Reason: References KB #35 (Utility Access Level — not encodable) and
-road surface (encoded). Blocked on KB #35. Status: blocked on schema
-gap (KB #35).
+Reason: "A household with a specific Utility Access Level and Road
+Surface Quality." Depends on KB #35 (Utility Access Level — unpinned).
+The road-surface side resolves to KB #4 helpers, but the composite
+predicate is blocked on KB #35.
+
+Helpers available: `infrastructure.road_surface_score`,
+`infrastructure.water_access_score`, `amenities.cablestatus`.
+
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 43 — Well-Maintained Dwelling
 
-Reason: References KB #38 (Dwelling Condition Status — not encodable)
-and KB #7 (cable status — encoded). Blocked on KB #38. Status:
-blocked on schema gap (KB #38).
+Reason: "A dwelling with specific Dwelling Condition Status and Cable
+TV Status." Depends on KB #38 (Dwelling Condition Status — not in
+schema). Cable side resolves to KB #7 helpers, but the composite
+predicate is blocked on KB #38.
+
+Helper available: `amenities.cablestatus`.
+
+Status: deferred — SCHEMA-GAP
+
+## KB 37 — Social Assistance Participation
+
+Reason: Verbatim restatement of KB 9; encoded entity is `service_types.socsupport` with `meta.kb_id = 9`.
+
+Status: not-applicable — duplicate of KB 9
