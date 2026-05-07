@@ -2145,7 +2145,7 @@ wheels = [
 
 [[package]]
 name = "motley-slayer"
-version = "0.3.1"
+version = "0.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fastapi" },
@@ -2157,9 +2157,9 @@ dependencies = [
     { name = "sqlglot", extra = ["c"] },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4d/d3/c6b30027c55234dc23eaeeb15bbbb82e3d187bb085ec047bdb10e74e911b/motley_slayer-0.3.1.tar.gz", hash = "sha256:e0cf4bb853bdf225d48ef00c4a858e879d59be0f2f32b408c1af76a32aedfcc6", size = 132248, upload-time = "2026-04-20T08:29:22.353Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/13/6d/44271ac7808d3fa6d31ff602d5536d13851fddb12fae5af2725847d729a8/motley_slayer-0.4.2.tar.gz", hash = "sha256:3048ea22d4c457f35c8bf5727c1e2c7d8f60a75e5f1535c6633038cf7c9142b4", size = 185418, upload-time = "2026-05-04T09:24:16.171Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d5/9c/e562c9d7100fea72563faede1986df8895673cd0816c70351623c4081781/motley_slayer-0.3.1-py3-none-any.whl", hash = "sha256:dd4bdcd10ad2193b7e64d71604483bc06fccbf279c45662b44d5fd0630934ee1", size = 149911, upload-time = "2026-04-20T08:29:20.783Z" },
+    { url = "https://files.pythonhosted.org/packages/a0/7b/e2e4be13083396eccc9ad67387ab085472f743fe6abfc3ae02fcb18578bf/motley_slayer-0.4.2-py3-none-any.whl", hash = "sha256:0918f2120243605c7a8cc7fd16fc69fa1daa1c3a07845bd5f11b3868750cdf80", size = 207192, upload-time = "2026-05-04T09:24:14.239Z" },
 ]
 
 [[package]]

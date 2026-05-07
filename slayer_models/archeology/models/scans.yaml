@@ -1,0 +1,94 @@
+version: 3
+name: scans
+sql_table: scans
+query_variables: {}
+data_source: archeology
+columns:
+- name: questregistry
+  sql: questregistry
+  type: string
+  primary_key: true
+  hidden: false
+- name: chronotag
+  sql: chronotag
+  type: string
+  primary_key: false
+  hidden: false
+- name: arcref
+  sql: arcref
+  type: string
+  primary_key: false
+  hidden: false
+- name: crewref
+  sql: crewref
+  type: string
+  primary_key: false
+  hidden: false
+- name: zoneref
+  sql: zoneref
+  type: string
+  primary_key: false
+  hidden: false
+- name: scancount
+  sql: scancount
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: climtune
+  sql: climtune
+  type: string
+  primary_key: false
+  hidden: false
+- name: huecatch
+  sql: huecatch
+  type: string
+  primary_key: false
+  hidden: false
+- name: fmtfile
+  sql: fmtfile
+  type: string
+  primary_key: false
+  hidden: false
+- name: gbsize
+  sql: gbsize
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: pressratio
+  sql: pressratio
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: spanmin
+  sql: spanmin
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+measures: []
+aggregations: []
+joins:
+- target_model: projects
+  join_pairs:
+  - - arcref
+    - arcregistry
+  join_type: left
+- target_model: personnel
+  join_pairs:
+  - - crewref
+    - crewregistry
+  join_type: left
+- target_model: sites
+  join_pairs:
+  - - zoneref
+    - zoneregistry
+  join_type: left
+filters: []
+hidden: false

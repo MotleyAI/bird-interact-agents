@@ -1,0 +1,84 @@
+version: 3
+name: system_controller
+sql_table: system_controller
+query_variables: {}
+data_source: robot
+columns:
+- name: systemoverseeractuation
+  sql: systemoverseeractuation
+  type: string
+  primary_key: true
+  hidden: false
+- name: systemoverseeroperation
+  sql: systemoverseeroperation
+  type: string
+  primary_key: false
+  hidden: false
+- name: systemoverseerrobot
+  sql: systemoverseerrobot
+  type: string
+  primary_key: false
+  hidden: false
+- name: controller_metrics
+  sql: controller_metrics
+  type: string
+  primary_key: false
+  hidden: false
+- name: load_value
+  sql: json_extract(controller_metrics, '$.load_value')
+  type: number
+  primary_key: false
+  description: 'System / CPU load value of the supervisory controller (0-100%) (KB
+    #29).'
+  hidden: false
+  meta:
+    kb_id: 29
+- name: row_controller_stress
+  sql: COALESCE(CAST(json_extract(controller_metrics, '$.load_value') AS REAL), 0)
+    + COALESCE(CAST(json_extract(controller_metrics, '$.thermal_level') AS REAL),
+    0)
+  type: number
+  primary_key: false
+  description: 'Row-level helper for CSI (KB #36): per-row sum of load_value + thermal_level
+    from controller_metrics JSON.'
+  hidden: false
+  meta:
+    kb_ids:
+    - 36
+    - 46
+measures:
+- formula: row_controller_stress:avg
+  name: csi
+  label: CSI
+  description: "Controller Stress Index (KB #36) \u2014 avg across system_controller\
+    \ rows of (load_value + thermal_level) from controller_metrics JSON. Group by\
+    \ systemoverseerrobot for per-robot."
+- formula: row_controller_stress:avg > 100
+  name: is_controller_overload_risk
+  label: Controller Overload Risk (CSI > 100 portion)
+  description: "Controller Overload Risk (KB #46) \u2014 true if CSI > 100. KB also\
+    \ requires NO > 2 (count of operations across the robot's operation rows); to\
+    \ apply that part, the agent should additionally filter / co-group with operation.no\
+    \ > 2. Group by systemoverseerrobot for per-robot CSI portion."
+aggregations: []
+joins:
+- target_model: actuation_data
+  join_pairs:
+  - - systemoverseeractuation
+    - actreg
+  join_type: left
+- target_model: operation
+  join_pairs:
+  - - systemoverseeroperation
+    - operreg
+  join_type: left
+- target_model: robot_details
+  join_pairs:
+  - - systemoverseerrobot
+    - botdetreg
+  join_type: left
+filters: []
+description: Per-actuation system controller telemetry. Holds a JSONB controller_metrics
+  blob with load, memory, thermal, cabinet conditions. Joined to robot_details via
+  systemoverseerrobot.
+hidden: false

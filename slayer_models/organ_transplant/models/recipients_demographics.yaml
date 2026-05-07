@@ -1,0 +1,100 @@
+version: 3
+name: recipients_demographics
+sql_table: recipients_demographics
+query_variables: {}
+data_source: organ_transplant
+columns:
+- name: recip_registry
+  sql: recip_registry
+  type: string
+  primary_key: true
+  description: Recipient primary key.
+  hidden: false
+- name: age_count
+  sql: age_count
+  type: number
+  primary_key: false
+  description: Recipient age in years.
+  hidden: false
+  format:
+    type: integer
+- name: gend_type
+  sql: gend_type
+  type: string
+  primary_key: false
+  description: Recipient gender (F/M).
+  hidden: false
+- name: blood_class
+  sql: blood_class
+  type: string
+  primary_key: false
+  description: Recipient ABO blood type code (A+, A-, AB+, AB-, B+, B-, O+, O-).
+  hidden: false
+- name: ht_cm
+  sql: ht_cm
+  type: number
+  primary_key: false
+  description: Recipient height in cm.
+  hidden: false
+  format:
+    type: integer
+- name: wt_kg
+  sql: wt_kg
+  type: number
+  primary_key: false
+  description: Recipient weight in kg.
+  hidden: false
+  format:
+    type: integer
+- name: bmi_val
+  sql: bmi_val
+  type: number
+  primary_key: false
+  description: 'Recipient BMI as stored. KB Body Mass Index (BMI): weight_kg / height_m^2.'
+  hidden: false
+  format:
+    type: integer
+  meta:
+    kb_id: 0
+- name: ethn_grp
+  sql: ethn_grp
+  type: string
+  primary_key: false
+  description: Recipient ethnicity.
+  hidden: false
+- name: recip_bmi_computed
+  sql: wt_kg * 1.0 / pow(ht_cm / 100.0, 2)
+  type: number
+  primary_key: false
+  description: Recipient BMI re-computed via KB formula weight_kg / height_m^2.
+  hidden: false
+  meta:
+    kb_ids:
+    - 0
+- name: recip_bmi_category
+  sql: CASE WHEN bmi_val < 18.5 THEN 'Underweight' WHEN bmi_val < 25 THEN 'Normal'
+    WHEN bmi_val < 30 THEN 'Overweight' ELSE 'Obese' END
+  type: string
+  primary_key: false
+  description: Standard BMI bands.
+  hidden: false
+  meta:
+    kb_ids:
+    - 40
+measures: []
+aggregations: []
+joins:
+- target_model: clinical
+  join_pairs:
+  - - recip_registry
+    - clin_recip_registry
+  join_type: left
+- target_model: recipients_immunology
+  join_pairs:
+  - - recip_registry
+    - immu_recip_registry
+  join_type: left
+filters: []
+description: Transplant recipient demographics, keyed by recip_registry. Age, gender,
+  blood type, height, weight, BMI, ethnicity.
+hidden: false

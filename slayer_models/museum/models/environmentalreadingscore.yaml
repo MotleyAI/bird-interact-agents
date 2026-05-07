@@ -1,0 +1,136 @@
+version: 3
+name: environmentalreadingscore
+sql_table: environmentalreadingscore
+query_variables: {}
+data_source: museum
+columns:
+- name: envreadregistry
+  sql: envreadregistry
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: monitorcode
+  sql: monitorcode
+  type: string
+  primary_key: false
+  hidden: false
+- name: readtimestamp
+  sql: readtimestamp
+  type: string
+  primary_key: false
+  hidden: false
+- name: showcaseref
+  sql: showcaseref
+  type: string
+  primary_key: false
+  hidden: false
+- name: tempc
+  sql: tempc
+  type: number
+  primary_key: false
+  description: 'Temperature in Celsius (KB #27): typical 15-25; ideal 18-22; >2 deg
+    fluctuation in 24h stresses materials; <10 or >30 indicates control failure.'
+  hidden: false
+  format:
+    type: integer
+  meta:
+    kb_id: 27
+- name: tempvar24h
+  sql: tempvar24h
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: relhumidity
+  sql: relhumidity
+  type: number
+  primary_key: false
+  description: 'Relative humidity %% (KB #28): typical 30-65; ideal 45-55 for mixed
+    collections; >5 pp fluctuation/24h causes dimensional changes; <30 risks embrittlement;
+    >65 risks mold.'
+  hidden: false
+  format:
+    type: integer
+  meta:
+    kb_id: 28
+- name: humvar24h
+  sql: humvar24h
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: airpresshpa
+  sql: airpresshpa
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: sesr
+  sql: 10 - (tempvar24h + (humvar24h / 5.0) + showcases.leakrate) / 3.0
+  type: number
+  primary_key: false
+  description: 'Showcase Environmental Stability Rating (KB #5): 10 - (TempVar24h
+    + HumVar24h/5 + LeakRate)/3. Higher = more stable showcase.'
+  hidden: false
+  meta:
+    kb_id: 5
+- name: is_env_instability_event
+  sql: tempvar24h > 1 OR humvar24h > 3
+  type: boolean
+  primary_key: false
+  description: 'Environmental Instability Event (KB #13): TempVar24h > 1C OR HumVar24h
+    > 3 within 24h.'
+  hidden: false
+  meta:
+    kb_id: 13
+- name: is_showcase_failure_risk
+  sql: (10 - (tempvar24h + (humvar24h / 5.0) + showcases.leakrate) / 3.0) < 4 OR (CASE
+    WHEN showcases.sealcondition = 'Poor' THEN 1 ELSE 0 END + CASE WHEN showcases.maintstatus
+    = 'Overdue' THEN 1 ELSE 0 END + CASE WHEN showcases.filterstatus = 'Replace Now'
+    THEN 1 ELSE 0 END + CASE WHEN showcases.silicagelstatus = 'Replace Now' THEN 1
+    ELSE 0 END) >= 3
+  type: boolean
+  primary_key: false
+  description: 'Showcase Failure Risk (KB #16): SESR<4 OR >=3 of {SealCondition=''Poor'',
+    MaintStatus=''Overdue'', FilterStatus=''Replace Now'', SilicaGelStatus=''Replace
+    Now''}.'
+  hidden: false
+  meta:
+    kb_id: 16
+measures: []
+aggregations: []
+joins:
+- target_model: showcases
+  join_pairs:
+  - - showcaseref
+    - showcasereg
+  join_type: left
+- target_model: lightandradiationreadings
+  join_pairs:
+  - - envreadregistry
+    - envreadref
+  join_type: left
+- target_model: airqualityreadings
+  join_pairs:
+  - - envreadregistry
+    - envreadref
+  join_type: left
+- target_model: surfaceandphysicalreadings
+  join_pairs:
+  - - envreadregistry
+    - envreadref
+  join_type: left
+filters: []
+description: 'Environmental sensor readings per showcase (1 row per timestamp, here
+  1:1 with showcases). Conservation Environment Chronology (CEC, KB #54): supports
+  grouping readings by fixed time intervals (year/quarter/month) to identify seasonal
+  trends, long-term shifts, and anomalies in environmental conditions. Use the readtimestamp
+  column with `time_dimensions` queries to apply CEC.'
+hidden: false
+meta:
+  kb_id: 54

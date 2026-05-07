@@ -1,0 +1,118 @@
+version: 3
+name: annual_returns
+sql_table: annual_returns
+query_variables: {}
+data_source: exchange_traded_funds
+columns:
+- name: yearlyid
+  sql: yearlyid
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: portfolioref
+  sql: portfolioref
+  type: string
+  primary_key: false
+  hidden: false
+- name: calendaryear
+  sql: calendaryear
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: fundperf
+  sql: fundperf
+  type: number
+  primary_key: false
+  description: Fund's return performance for that calendar year as decimal. Source
+    for KB 85 Median 1-Year Return (median of fundperf within the grouping).
+  hidden: false
+  format:
+    type: integer
+  meta:
+    kb_id: 85
+- name: categoryperf
+  sql: categoryperf
+  type: number
+  primary_key: false
+  description: Category average return for the same calendar year.
+  hidden: false
+  format:
+    type: integer
+- name: annual_fund_outperformance
+  sql: fundperf - categoryperf
+  type: number
+  primary_key: false
+  description: Annual Fund Outperformance (KB 0) = fund's annual return - category's
+    average annual return.
+  hidden: false
+  meta:
+    kb_id: 0
+- name: is_up_market_year
+  sql: categoryperf > 0
+  type: boolean
+  primary_key: false
+  description: 'Marker: 1 = category had positive return that year, 0 = non-positive
+    (KB 73 / 74). Up/down split is the building block for KB 75 Capture Differential.'
+  hidden: false
+  meta:
+    kb_id: 75
+- name: upside_outperformance
+  sql: CASE WHEN categoryperf > 0 THEN fundperf - categoryperf ELSE NULL END
+  type: number
+  primary_key: false
+  description: Annual Fund Outperformance restricted to category-up years (KB 73).
+    NULL otherwise so AVG ignores down years.
+  hidden: false
+  meta:
+    kb_id: 73
+- name: downside_outperformance
+  sql: CASE WHEN categoryperf <= 0 THEN fundperf - categoryperf ELSE NULL END
+  type: number
+  primary_key: false
+  description: Annual Fund Outperformance restricted to category-non-positive years
+    (KB 74).
+  hidden: false
+  meta:
+    kb_id: 74
+- name: year_over_year_performance_trend
+  sql: (fundperf - categoryperf) - LAG(fundperf - categoryperf) OVER (PARTITION BY
+    portfolioref ORDER BY calendaryear)
+  type: number
+  primary_key: false
+  description: Year-over-Year Performance Trend (KB 70) = current year's Annual Fund
+    Outperformance minus previous year's. Computed per fund across years.
+  hidden: false
+  meta:
+    kb_id: 70
+measures:
+- formula: upside_outperformance:avg
+  name: average_upside_outperformance
+  description: 'Average Upside Outperformance (KB 73): AVG(fund_outperformance) over
+    years where category had positive returns.'
+- formula: downside_outperformance:avg
+  name: average_downside_outperformance
+  description: 'Average Downside Outperformance (KB 74): AVG(fund_outperformance)
+    over years where category had non-positive returns.'
+- formula: upside_outperformance:avg - downside_outperformance:avg
+  name: capture_differential
+  description: 'Capture Differential (KB 75): Avg Upside Outperformance - Avg Downside
+    Outperformance.'
+- formula: fundperf:median
+  name: median_1y_return
+  description: 'Median 1-Year Return (KB 85): median of annual fundperf across the
+    grouping.'
+aggregations: []
+joins:
+- target_model: funds
+  join_pairs:
+  - - portfolioref
+    - tickersym
+  join_type: left
+filters: []
+description: Per-fund per-calendar-year returns and category benchmark comparison.
+  Many rows per fund (one per calendar year).
+hidden: false

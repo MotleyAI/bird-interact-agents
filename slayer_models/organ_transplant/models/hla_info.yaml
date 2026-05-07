@@ -1,0 +1,59 @@
+version: 3
+name: hla_info
+sql_table: hla_info
+query_variables: {}
+data_source: organ_transplant
+columns:
+- name: immu_don_registry
+  sql: immu_don_registry
+  type: string
+  primary_key: true
+  description: FK to demographics.contrib_registry.
+  hidden: false
+- name: hla_a_val
+  sql: hla_a_val
+  type: number
+  primary_key: false
+  description: Donor HLA-A antigen typing value. KB HLA Typing.
+  hidden: false
+  format:
+    type: integer
+  meta:
+    kb_ids:
+    - 22
+- name: hla_b_val
+  sql: hla_b_val
+  type: number
+  primary_key: false
+  description: Donor HLA-B antigen typing value.
+  hidden: false
+  format:
+    type: integer
+- name: hla_dr_val
+  sql: hla_dr_val
+  type: number
+  primary_key: false
+  description: Donor HLA-DR antigen typing value.
+  hidden: false
+  format:
+    type: integer
+- name: hla_dq_val
+  sql: hla_dq_val
+  type: number
+  primary_key: false
+  description: Donor HLA-DQ antigen typing value.
+  hidden: false
+  format:
+    type: integer
+measures: []
+aggregations: []
+joins:
+- target_model: demographics
+  join_pairs:
+  - - immu_don_registry
+    - contrib_registry
+  join_type: left
+filters: []
+description: Donor HLA typing values for immunological compatibility (A, B, DR, DQ
+  loci). KB HLA Typing.
+hidden: false

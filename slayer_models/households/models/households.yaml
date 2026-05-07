@@ -1,0 +1,176 @@
+version: 3
+name: households
+sql_table: households
+query_variables: {}
+data_source: households
+columns:
+- name: housenum
+  sql: housenum
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: residentcount
+  sql: residentcount
+  type: number
+  primary_key: false
+  description: Number of people currently residing in the household.
+  hidden: false
+  format:
+    type: integer
+- name: locregion
+  sql: locregion
+  type: string
+  primary_key: false
+  hidden: false
+- name: loczone
+  sql: loczone
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: serviceplan
+  sql: serviceplan
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: socioeconomic
+  sql: socioeconomic
+  type: string
+  primary_key: false
+  description: "JSONB with three keys: Tenure_Type ('OWNED'|'RENTED'|'OCCUPIED' \u2014\
+    \ KB #1, owner-occupied if 'OWNED'), Income_Bracket (Low Income \u2192 Very High\
+    \ Income; null = undisclosed/irregular \u2014 KB #2), Expend_Coeff (real-number\
+    \ expenditure coefficient)."
+  hidden: false
+  meta:
+    kb_ids:
+    - 1
+    - 2
+- name: expend_coeff
+  sql: json_extract(socioeconomic, '$.Expend_Coeff')
+  type: number
+  primary_key: false
+  description: Expenditure coefficient (extracted from socioeconomic JSON).
+  hidden: false
+- name: tenure_type
+  sql: LOWER(TRIM(json_extract(socioeconomic, '$.Tenure_Type')))
+  type: string
+  primary_key: false
+  description: Tenure type, lowercased + trimmed (extracted from socioeconomic JSON;
+    raw data has whitespace/case variations).
+  hidden: false
+- name: income_bracket_text
+  sql: REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
+    CHAR(9), ' '), '  ', ' ')
+  type: string
+  primary_key: false
+  description: Income bracket text, normalized for whitespace + case (raw data has
+    mixed-case + tabs).
+  hidden: false
+- name: income_bracket_score
+  sql: CASE WHEN REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
+    CHAR(9), ' '), '  ', ' ') LIKE '%r$ 13,200%' OR REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic,
+    '$.Income_Bracket'))), CHAR(9), ' '), '  ', ' ') LIKE '%more than r$ 17,600%'
+    THEN 7 WHEN REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
+    CHAR(9), ' '), '  ', ' ') LIKE '%r$ 8,800 and less than r$ 13,200%' THEN 6 WHEN
+    REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
+    CHAR(9), ' '), '  ', ' ') LIKE '%r$ 4,400 and less than r$ 8,800%' THEN 5 WHEN
+    REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
+    CHAR(9), ' '), '  ', ' ') LIKE '%r$ 2,640 and less than r$ 4,400%' THEN 4 WHEN
+    REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
+    CHAR(9), ' '), '  ', ' ') LIKE '%r$ 1,760 and less than r$ 2,640%' THEN 3 WHEN
+    REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
+    CHAR(9), ' '), '  ', ' ') LIKE '%r$ 880 and less than r$ 1,760%' THEN 2 WHEN REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic,
+    '$.Income_Bracket'))), CHAR(9), ' '), '  ', ' ') LIKE '%r$ 440 and less than r$
+    880%' THEN 1 ELSE NULL END
+  type: number
+  primary_key: false
+  description: "Numeric ladder 1\u20137 over Income_Bracket text. KB #2 / KB #12 don't\
+    \ specify the exact mapping; this uses observed bracket lower bounds (R$440\u2192\
+    R$13,200) in increasing order."
+  hidden: false
+- name: expenditure_ratio
+  sql: json_extract(socioeconomic, '$.Expend_Coeff') * 1.0 / NULLIF(CASE WHEN REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic,
+    '$.Income_Bracket'))), CHAR(9), ' '), '  ', ' ') LIKE '%r$ 13,200%' OR REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic,
+    '$.Income_Bracket'))), CHAR(9), ' '), '  ', ' ') LIKE '%more than r$ 17,600%'
+    THEN 7 WHEN REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
+    CHAR(9), ' '), '  ', ' ') LIKE '%r$ 8,800 and less than r$ 13,200%' THEN 6 WHEN
+    REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
+    CHAR(9), ' '), '  ', ' ') LIKE '%r$ 4,400 and less than r$ 8,800%' THEN 5 WHEN
+    REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
+    CHAR(9), ' '), '  ', ' ') LIKE '%r$ 2,640 and less than r$ 4,400%' THEN 4 WHEN
+    REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
+    CHAR(9), ' '), '  ', ' ') LIKE '%r$ 1,760 and less than r$ 2,640%' THEN 3 WHEN
+    REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
+    CHAR(9), ' '), '  ', ' ') LIKE '%r$ 880 and less than r$ 1,760%' THEN 2 WHEN REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic,
+    '$.Income_Bracket'))), CHAR(9), ' '), '  ', ' ') LIKE '%r$ 440 and less than r$
+    880%' THEN 1 ELSE NULL END, 0)
+  type: number
+  primary_key: false
+  description: 'Expenditure Ratio (KB #12): Expend_Coeff / income_bracket_score. Income
+    mapping is best-effort (KB doesn''t specify the numeric scale).'
+  hidden: false
+  meta:
+    kb_id: 12
+- name: is_urban_zone
+  sql: loczone = 1
+  type: boolean
+  primary_key: false
+  description: 'Urban Zone (KB #45): TRUE iff loczone = 1.'
+  hidden: false
+  meta:
+    kb_id: 45
+- name: is_affluent
+  sql: LOWER(TRIM(json_extract(socioeconomic, '$.Tenure_Type'))) = 'owned' AND CASE
+    WHEN REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
+    CHAR(9), ' '), '  ', ' ') LIKE '%r$ 13,200%' OR REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic,
+    '$.Income_Bracket'))), CHAR(9), ' '), '  ', ' ') LIKE '%r$ 4,400 and less than
+    r$ 8,800%' OR REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
+    CHAR(9), ' '), '  ', ' ') LIKE '%r$ 8,800 and less than r$ 13,200%' THEN 1 ELSE
+    0 END = 1
+  type: boolean
+  primary_key: false
+  description: 'Affluent Household (KB #21): tenure=''OWNED'' AND income bracket is
+    ''High'' or ''Very High'' (R$ 4,400+).'
+  hidden: false
+  meta:
+    kb_id: 21
+- name: is_economically_independent
+  sql: CASE WHEN REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
+    CHAR(9), ' '), '  ', ' ') LIKE '%r$ 4,400 and less than r$ 8,800%' OR REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic,
+    '$.Income_Bracket'))), CHAR(9), ' '), '  ', ' ') LIKE '%r$ 8,800 and less than
+    r$ 13,200%' OR REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
+    CHAR(9), ' '), '  ', ' ') LIKE '%r$ 13,200%' THEN 1 ELSE 0 END = 1 AND LOWER(TRIM(service_types.socsupport))
+    = 'no'
+  type: boolean
+  primary_key: false
+  description: 'Economically Independent Household (KB #42): high income bracket (R$
+    4,400+) AND socsupport=''No''.'
+  hidden: false
+  meta:
+    kb_id: 42
+measures: []
+aggregations: []
+joins:
+- target_model: locations
+  join_pairs:
+  - - locregion
+    - regioncode
+  join_type: left
+- target_model: locations
+  join_pairs:
+  - - loczone
+    - zonenum
+  join_type: left
+- target_model: service_types
+  join_pairs:
+  - - serviceplan
+    - serviceref
+  join_type: left
+filters: []
+hidden: false

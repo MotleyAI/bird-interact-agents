@@ -1,0 +1,145 @@
+version: 3
+name: recipients_immunology
+sql_table: recipients_immunology
+query_variables: {}
+data_source: organ_transplant
+columns:
+- name: immu_recip_registry
+  sql: immu_recip_registry
+  type: string
+  primary_key: true
+  description: FK to recipients_demographics.recip_registry.
+  hidden: false
+- name: pra_score
+  sql: pra_score
+  type: number
+  primary_key: false
+  description: Panel Reactive Antibody score (0-100). KB PRA / PRA Score Interpretation.
+  hidden: false
+  format:
+    type: integer
+  meta:
+    kb_ids:
+    - 23
+    - 43
+- name: dsa_state
+  sql: dsa_state
+  type: string
+  primary_key: false
+  description: Donor-specific antibody status (Negative/Positive). KB Donor-Specific
+    Antibodies.
+  hidden: false
+  meta:
+    kb_ids:
+    - 26
+- name: cross_result
+  sql: cross_result
+  type: string
+  primary_key: false
+  description: Crossmatch result (Negative/Positive/Pending). KB Crossmatch Test /
+    Crossmatch Results.
+  hidden: false
+  meta:
+    kb_ids:
+    - 24
+    - 46
+- name: cmv_state
+  sql: cmv_state
+  type: string
+  primary_key: false
+  description: Recipient CMV status.
+  hidden: false
+- name: ebv_state
+  sql: ebv_state
+  type: string
+  primary_key: false
+  description: Recipient EBV status.
+  hidden: false
+- name: func_status
+  sql: func_status
+  type: string
+  primary_key: false
+  description: Recipient functional status band.
+  hidden: false
+- name: life_support
+  sql: life_support
+  type: string
+  primary_key: false
+  description: Recipient life-support modality (NULL if none).
+  hidden: false
+- name: hlaprofile
+  sql: hlaprofile
+  type: string
+  primary_key: false
+  description: 'JSON: {Hla_A_Val, Hla_B_Val, Hla_Dr_Val, Hla_Dq_Val} for recipient.
+    KB HLA Typing.'
+  hidden: false
+  meta:
+    kb_ids:
+    - 22
+- name: pra_band
+  sql: CASE WHEN pra_score <= 10 THEN 'Low' WHEN pra_score < 80 THEN 'Moderate' ELSE
+    'High' END
+  type: string
+  primary_key: false
+  description: 'PRA banding per KB PRA Score Interpretation: 0-10 Low, 11-79 Moderate,
+    >=80 High.'
+  hidden: false
+  meta:
+    kb_ids:
+    - 43
+- name: is_high_pra
+  sql: CASE WHEN pra_score >= 80 THEN 1 ELSE 0 END
+  type: boolean
+  primary_key: false
+  description: True when pra_score >= 80 (KB Immunological Sensitization).
+  hidden: false
+  meta:
+    kb_id: 29
+- name: recip_hla_a
+  sql: CAST(json_extract(hlaprofile, '$.Hla_A_Val') AS REAL)
+  type: number
+  primary_key: false
+  description: Recipient HLA-A value parsed from hlaprofile.
+  hidden: false
+- name: recip_hla_b
+  sql: CAST(json_extract(hlaprofile, '$.Hla_B_Val') AS REAL)
+  type: number
+  primary_key: false
+  description: Recipient HLA-B value parsed from hlaprofile.
+  hidden: false
+- name: recip_hla_dr
+  sql: CAST(json_extract(hlaprofile, '$.Hla_Dr_Val') AS REAL)
+  type: number
+  primary_key: false
+  description: Recipient HLA-DR value parsed from hlaprofile.
+  hidden: false
+- name: recip_hla_dq
+  sql: CAST(json_extract(hlaprofile, '$.Hla_Dq_Val') AS REAL)
+  type: number
+  primary_key: false
+  description: Recipient HLA-DQ value parsed from hlaprofile.
+  hidden: false
+- name: is_amr_high_risk
+  sql: CASE WHEN cross_result = 'Positive' AND pra_score >= 80 AND dsa_state = 'Positive'
+    THEN 1 ELSE 0 END
+  type: boolean
+  primary_key: false
+  description: 'Antibody-Mediated Rejection High-Risk (KB AMR Risk Stratification):
+    Positive crossmatch AND PRA >= 80 AND Positive DSA.'
+  hidden: false
+  meta:
+    kb_id: 51
+measures: []
+aggregations: []
+joins:
+- target_model: recipients_demographics
+  join_pairs:
+  - - immu_recip_registry
+    - recip_registry
+  join_type: left
+filters: []
+description: 'Recipient immunology: PRA, DSA status, crossmatch, viral status (CMV/EBV),
+  functional status, life support, and a JSON hlaprofile (recipient HLA A/B/DR/DQ
+  values). KB PRA / Crossmatch / DSA / Sensitization.'
+hidden: false

@@ -1,0 +1,74 @@
+version: 3
+name: account
+sql_table: account
+query_variables: {}
+data_source: fake
+columns:
+- name: accindex
+  sql: accindex
+  type: string
+  primary_key: true
+  description: 'Account primary key. KB #81 (member count) = COUNT(DISTINCT accindex)
+    per cluster (platident). KB #83 (member account IDs) = the set of distinct accindex
+    values in a cluster.'
+  hidden: false
+  meta:
+    kb_ids:
+    - 81
+    - 83
+- name: acctident
+  sql: acctident
+  type: string
+  primary_key: false
+  hidden: false
+- name: platident
+  sql: platident
+  type: string
+  primary_key: false
+  description: 'Platform identifier. Per KB #80, this is the cluster identifier used
+    to group accounts in an Amplification Network and similar cluster-level rules.'
+  hidden: false
+  meta:
+    kb_id: 80
+- name: plattype
+  sql: plattype
+  type: string
+  primary_key: false
+  hidden: false
+- name: acctcreatedate
+  sql: acctcreatedate
+  type: string
+  primary_key: false
+  hidden: false
+- name: acctagespan
+  sql: acctagespan
+  type: number
+  primary_key: false
+  description: 'Account age in days since creation. Denominator of AAF (KB #0).'
+  hidden: false
+  format:
+    type: integer
+- name: acctstatus
+  sql: acctstatus
+  type: string
+  primary_key: false
+  description: 'Account status enum (Active / Deleted / Suspended / Dormant). KB #15
+    (Dormant Bot) checks acctstatus=''Dormant''.'
+  hidden: false
+- name: acctcategory
+  sql: acctcategory
+  type: string
+  primary_key: false
+  hidden: false
+- name: authstatus
+  sql: authstatus
+  type: string
+  primary_key: false
+  hidden: false
+measures: []
+aggregations: []
+joins: []
+filters: []
+description: "Accounts on the platform \u2014 the natural grouping key for KB metrics.\
+  \ Use accindex to identify a unique account."
+hidden: false

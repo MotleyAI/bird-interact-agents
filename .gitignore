@@ -7,5 +7,6 @@ build/
 results/
 *.sqlite
 .venv/
-.claude/
+.claude/*
+!.claude/skills/
 slayer_storage/

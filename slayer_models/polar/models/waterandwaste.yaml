@@ -1,0 +1,101 @@
+version: 3
+name: waterandwaste
+sql_table: waterandwaste
+query_variables: {}
+data_source: polar
+columns:
+- name: waterregistry
+  sql: waterregistry
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: watereqref
+  sql: watereqref
+  type: string
+  primary_key: false
+  hidden: false
+- name: waterlevelpercent
+  sql: waterlevelpercent
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: waterpressurekpa
+  sql: waterpressurekpa
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: watertemperaturec
+  sql: watertemperaturec
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: waterflowlpm
+  sql: waterflowlpm
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: waterqualityindex
+  sql: waterqualityindex
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: wastetanklevelpercent
+  sql: wastetanklevelpercent
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: wrmi
+  sql: waterlevelpercent * (waterqualityindex / 100.0) * (1 - wastetanklevelpercent
+    / 100.0)
+  type: number
+  primary_key: false
+  description: 'Water Resource Management Index (KB #7).'
+  hidden: false
+  meta:
+    kb_id: 7
+- name: water_quality_class
+  sql: CASE WHEN waterqualityindex >= 91 THEN 'High-Quality' WHEN waterqualityindex
+    >= 76 THEN 'Good' WHEN waterqualityindex >= 51 THEN 'Acceptable' WHEN waterqualityindex
+    >= 26 THEN 'Marginal' ELSE 'Poor' END
+  type: string
+  primary_key: false
+  description: 'Water Quality Classification System (KB #25): 5-tier ladder over waterqualityindex.'
+  hidden: false
+  meta:
+    kb_id: 25
+- name: needs_water_conservation
+  sql: waterlevelpercent * (waterqualityindex / 100.0) * (1 - wastetanklevelpercent
+    / 100.0) < 0.5
+  type: boolean
+  primary_key: false
+  description: 'Water Conservation Requirement (KB #18) / Water Resource Management
+    Status (KB #53): TRUE iff WRMI < 0.5.'
+  hidden: false
+  meta:
+    kb_ids:
+    - 18
+    - 53
+measures: []
+aggregations: []
+joins:
+- target_model: equipment
+  join_pairs:
+  - - watereqref
+    - equipmentcode
+  join_type: left
+filters: []
+hidden: false

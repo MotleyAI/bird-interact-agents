@@ -1,0 +1,70 @@
+version: 3
+name: allocation_details
+sql_table: allocation_details
+query_variables: {}
+data_source: organ_transplant
+columns:
+- name: allc_match_registry
+  sql: allc_match_registry
+  type: string
+  primary_key: true
+  description: FK to transplant_matching.match_rec_registry.
+  hidden: false
+- name: allc_seq_num
+  sql: allc_seq_num
+  type: number
+  primary_key: false
+  description: Allocation rank position.
+  hidden: false
+  format:
+    type: integer
+- name: allc_region
+  sql: allc_region
+  type: string
+  primary_key: false
+  description: Geographic region for organ allocation. KB Regional Allocation Priority.
+  hidden: false
+  meta:
+    kb_id: 36
+- name: allc_pol_vers
+  sql: allc_pol_vers
+  type: string
+  primary_key: false
+  description: Allocation Policy version (e.g. 'v2.7'). KB Allocation Policy.
+  hidden: false
+  meta:
+    kb_id: 34
+- name: donor_ref_reg
+  sql: donor_ref_reg
+  type: string
+  primary_key: false
+  description: FK to demographics.contrib_registry.
+  hidden: false
+- name: recip_ref_reg
+  sql: recip_ref_reg
+  type: string
+  primary_key: false
+  description: FK to recipients_demographics.recip_registry.
+  hidden: false
+measures: []
+aggregations: []
+joins:
+- target_model: transplant_matching
+  join_pairs:
+  - - allc_match_registry
+    - match_rec_registry
+  join_type: left
+- target_model: demographics
+  join_pairs:
+  - - donor_ref_reg
+    - contrib_registry
+  join_type: left
+- target_model: recipients_demographics
+  join_pairs:
+  - - recip_ref_reg
+    - recip_registry
+  join_type: left
+filters: []
+description: 'Per-match allocation policy ranking: sequence number, region, policy
+  version. KB Allocation Policy / Regional Allocation Priority.'
+hidden: false

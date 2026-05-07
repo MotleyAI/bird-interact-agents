@@ -1,0 +1,43 @@
+version: 3
+name: equipment
+sql_table: equipment
+query_variables: {}
+data_source: archeology
+columns:
+- name: equipregistry
+  sql: equipregistry
+  type: string
+  primary_key: true
+  hidden: false
+- name: equipform
+  sql: equipform
+  type: string
+  primary_key: false
+  hidden: false
+- name: equipdesign
+  sql: equipdesign
+  type: string
+  primary_key: false
+  hidden: false
+- name: equiptune
+  sql: equiptune
+  type: string
+  primary_key: false
+  hidden: false
+- name: equipstatus
+  sql: equipstatus
+  type: string
+  primary_key: false
+  hidden: false
+- name: powerlevel
+  sql: powerlevel
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+measures: []
+aggregations: []
+joins: []
+filters: []
+hidden: false

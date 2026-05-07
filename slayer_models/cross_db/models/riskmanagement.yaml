@@ -1,0 +1,224 @@
+version: 3
+name: riskmanagement
+sql_table: riskmanagement
+query_variables: {}
+data_source: cross_db
+columns:
+- name: risktrace
+  sql: risktrace
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: flowlink
+  sql: flowlink
+  type: string
+  primary_key: false
+  hidden: false
+- name: recordregistry
+  sql: recordregistry
+  type: string
+  primary_key: false
+  hidden: false
+- name: riskassess
+  sql: riskassess
+  type: number
+  primary_key: false
+  description: "Assessed risk score (0\u2013100). KB #21: >80 indicates high risk;\
+    \ <20 suggests minimal risk."
+  hidden: false
+  format:
+    type: float
+  meta:
+    kb_id: 21
+- name: riskmitstate
+  sql: riskmitstate
+  type: string
+  primary_key: false
+  hidden: false
+- name: secureaction
+  sql: secureaction
+  type: string
+  primary_key: false
+  hidden: false
+- name: breachnotify
+  sql: breachnotify
+  type: string
+  primary_key: false
+  hidden: false
+- name: incidentplan
+  sql: incidentplan
+  type: string
+  primary_key: false
+  hidden: false
+- name: incidentcount
+  sql: incidentcount
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: breachcount
+  sql: breachcount
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: nearmissnum
+  sql: nearmissnum
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: avgresolhrs
+  sql: avgresolhrs
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: slapct
+  sql: slapct
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: costusd
+  sql: costusd
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: penusd
+  sql: penusd
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: coveragestate
+  sql: coveragestate
+  type: string
+  primary_key: false
+  hidden: false
+- name: residrisklevel
+  sql: residrisklevel
+  type: string
+  primary_key: false
+  hidden: false
+- name: ctrleff
+  sql: ctrleff
+  type: number
+  primary_key: false
+  description: "Effectiveness of risk controls (0\u2013100). KB #28: 90% = strong\
+    \ controls; <50% indicates weaknesses."
+  hidden: false
+  format:
+    type: float
+  meta:
+    kb_id: 28
+- name: compscore
+  sql: compscore
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: maturitylevel
+  sql: maturitylevel
+  type: string
+  primary_key: false
+  hidden: false
+- name: nextrevdate
+  sql: nextrevdate
+  type: string
+  primary_key: false
+  hidden: false
+- name: planstate
+  sql: planstate
+  type: string
+  primary_key: false
+  hidden: false
+- name: res
+  sql: riskassess * 1.0 / NULLIF(ctrleff, 0)
+  type: number
+  primary_key: false
+  description: "Risk Exposure Score (RES) \u2014 KB #2: RiskAssess \xD7 CtrlEff^(-1)\
+    \ (i.e. RiskAssess / CtrlEff)."
+  hidden: false
+  meta:
+    kb_id: 2
+- name: ccr
+  sql: costusd * 1.0 / (penusd + 1)
+  type: number
+  primary_key: false
+  description: "Compliance Cost Ratio (CCR) \u2014 KB #3: CostUSD / (PenUSD + 1)."
+  hidden: false
+  meta:
+    kb_id: 3
+- name: ire
+  sql: slapct * 1.0 / (avgresolhrs + 1)
+  type: number
+  primary_key: false
+  description: "Incident Resolution Efficiency (IRE) \u2014 KB #48: SLApct / (AvgResolHrs\
+    \ + 1)."
+  hidden: false
+  meta:
+    kb_id: 48
+- name: cbrf
+  sql: (riskassess * 1.0 / NULLIF(ctrleff, 0)) * CASE WHEN dataflow.orignation !=
+    dataflow.destnation THEN 2 ELSE 1 END
+  type: number
+  primary_key: false
+  description: "Cross-Border Risk Factor (CBRF) \u2014 KB #9: RES \xD7 2 if cross-border\
+    \ else 1."
+  hidden: false
+  meta:
+    kb_id: 9
+- name: iif
+  sql: (riskassess * 1.0 / NULLIF(ctrleff, 0)) * (1 - (slapct * 1.0 / (avgresolhrs
+    + 1)))
+  type: number
+  primary_key: false
+  description: "Incident Impact Factor (IIF) \u2014 KB #55: RES \xD7 (1 \u2212 IRE)."
+  hidden: false
+  meta:
+    kb_id: 55
+- name: is_critical_data_flow_risk
+  sql: (riskassess * 1.0 / NULLIF(ctrleff, 0)) > 0.7 AND ((dataflow.successpct * 1.0
+    / (dataflow.errtally + 1)) * (1 - (dataflow.rtrytally * 1.0 / (dataflow.errtally
+    + 1)))) < 0.5
+  type: boolean
+  primary_key: false
+  description: 'Critical Data Flow Risk (KB #39): RES > 0.7 AND DFRS < 0.5.'
+  hidden: false
+  meta:
+    kb_id: 39
+- name: is_unstable_high_risk_flow
+  sql: (((dataflow.successpct * 1.0 / (dataflow.errtally + 1)) * (1 - (dataflow.rtrytally
+    * 1.0 / (dataflow.errtally + 1)))) * (dataflow.successpct * 1.0 / (dataflow.errtally
+    + 1))) < 0.5 AND ((riskassess * 1.0 / NULLIF(ctrleff, 0)) > 0.7 AND ((dataflow.successpct
+    * 1.0 / (dataflow.errtally + 1)) * (1 - (dataflow.rtrytally * 1.0 / (dataflow.errtally
+    + 1)))) < 0.5)
+  type: boolean
+  primary_key: false
+  description: 'Unstable High-Risk Flow (KB #60): DFSI < 0.5 AND Critical Data Flow
+    Risk.'
+  hidden: false
+  meta:
+    kb_id: 60
+measures: []
+aggregations: []
+joins:
+- target_model: dataflow
+  join_pairs:
+  - - flowlink
+    - recordregistry
+  join_type: left
+filters: []
+hidden: false

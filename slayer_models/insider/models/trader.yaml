@@ -1,0 +1,165 @@
+version: 3
+name: trader
+sql_table: trader
+query_variables: {}
+data_source: insider
+columns:
+- name: tradereg
+  sql: tradereg
+  type: string
+  primary_key: true
+  hidden: false
+- name: tradekind
+  sql: tradekind
+  type: string
+  primary_key: false
+  description: Broad category of the trader (Market Maker, Broker, Individual, Institution).
+  hidden: false
+- name: acctdays
+  sql: acctdays
+  type: number
+  primary_key: false
+  description: Age of the trading account in days since opening.
+  hidden: false
+  format:
+    type: integer
+- name: acctbal
+  sql: acctbal
+  type: number
+  primary_key: false
+  description: Current cash equity in the trader's account in USD.
+  hidden: false
+  format:
+    type: float
+- name: freqscope
+  sql: freqscope
+  type: string
+  primary_key: false
+  description: 'Average trading frequency classification: Low, Medium, High.'
+  hidden: false
+- name: voldaily
+  sql: voldaily
+  type: number
+  primary_key: false
+  description: Mean daily share volume traded across all symbols.
+  hidden: false
+  format:
+    type: float
+- name: posavg
+  sql: posavg
+  type: number
+  primary_key: false
+  description: Average position size in USD held per trade.
+  hidden: false
+  format:
+    type: float
+- name: posspan
+  sql: posspan
+  type: string
+  primary_key: false
+  description: 'Trader Position Holding Style (KB #20): Intraday = open+close same
+    day; Swing = a few days to weeks; Position = weeks to months on broader trends;
+    Long-term = months/years on fundamentals.'
+  hidden: false
+  meta:
+    kb_id: 20
+- name: trading_performance
+  sql: trading_performance
+  type: string
+  primary_key: false
+  description: 'JSONB metrics. Top-level: winpct, plratio. Nested risklevel: {risklevel
+    (Conservative/Moderate/Aggressive), margpct, levratio}.'
+  hidden: false
+- name: winpct
+  sql: json_extract(trading_performance, '$.winpct')
+  type: number
+  primary_key: false
+  description: Historical win-rate percentage (extracted from trading_performance
+    JSON).
+  hidden: false
+- name: plratio
+  sql: json_extract(trading_performance, '$.plratio')
+  type: number
+  primary_key: false
+  description: Profit-to-loss ratio of realised trades (extracted from trading_performance
+    JSON).
+  hidden: false
+- name: tle
+  sql: CAST(json_extract(trading_performance, '$.risklevel.levratio') AS REAL)
+  type: number
+  primary_key: false
+  description: "Trader Leverage Exposure (TLE = trading_performance.risklevel.levratio)\
+    \ \u2014 KB #2."
+  hidden: false
+  meta:
+    kb_id: 2
+- name: margpct
+  sql: CAST(json_extract(trading_performance, '$.risklevel.margpct') AS REAL)
+  type: number
+  primary_key: false
+  description: Margin utilisation percentage (extracted from trading_performance.risklevel
+    JSON).
+  hidden: false
+- name: risk_appetite
+  sql: json_extract(trading_performance, '$.risklevel.risklevel')
+  type: string
+  primary_key: false
+  description: 'Trader Risk Appetite (KB #23 reference): Conservative / Moderate /
+    Aggressive.'
+  hidden: false
+- name: dtr
+  sql: voldaily * 1.0 / NULLIF(acctbal, 0)
+  type: number
+  primary_key: false
+  description: "Daily Turnover Rate (DTR = voldaily / acctbal) \u2014 KB #0."
+  hidden: false
+  meta:
+    kb_id: 0
+- name: rawr
+  sql: json_extract(trading_performance, '$.winpct') * 1.0 / MAX(1.0, CAST(json_extract(trading_performance,
+    '$.risklevel.levratio') AS REAL))
+  type: number
+  primary_key: false
+  description: "Risk-Adjusted Win Rate (RAWR = winpct / Max(1, TLE)) \u2014 KB #59."
+  hidden: false
+  meta:
+    kb_id: 59
+- name: rat
+  sql: (voldaily * 1.0 / NULLIF(acctbal, 0)) * CAST(json_extract(trading_performance,
+    '$.risklevel.levratio') AS REAL)
+  type: number
+  primary_key: false
+  description: "Risk-Adjusted Turnover (RAT = DTR * TLE) \u2014 KB #30."
+  hidden: false
+  meta:
+    kb_id: 30
+- name: is_high_risk_trader
+  sql: (CAST(json_extract(trading_performance, '$.risklevel.levratio') AS REAL) >
+    5.0 AND json_extract(trading_performance, '$.risklevel.risklevel') = 'Aggressive')
+    OR (voldaily * 1.0 / NULLIF(acctbal, 0)) > 0.5
+  type: boolean
+  primary_key: false
+  description: 'High-Risk Trader Profile (KB #10): TLE>5 AND risk_appetite=''Aggressive''
+    OR DTR>0.5.'
+  hidden: false
+  meta:
+    kb_id: 10
+- name: is_high_frequency_high_risk
+  sql: ((CAST(json_extract(trading_performance, '$.risklevel.levratio') AS REAL) >
+    5.0 AND json_extract(trading_performance, '$.risklevel.risklevel') = 'Aggressive')
+    OR (voldaily * 1.0 / NULLIF(acctbal, 0)) > 0.5) AND freqscope = 'High'
+  type: boolean
+  primary_key: false
+  description: 'High-Frequency High-Risk Trader (KB #40): High-Risk Trader Profile
+    AND freqscope=''High''.'
+  hidden: false
+  meta:
+    kb_id: 40
+measures: []
+aggregations: []
+joins: []
+filters: []
+description: A trader account in the insider-trading surveillance system. PK = `tradereg`.
+  JSON `trading_performance` exposes `winpct`, `plratio`, and a nested `risklevel`
+  block (`risklevel`, `margpct`, `levratio`).
+hidden: false
