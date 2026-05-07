@@ -1,0 +1,127 @@
+version: 3
+name: orders
+sql_table: orders
+query_variables: {}
+data_source: crypto
+columns:
+- name: orderspivot
+  sql: orderspivot
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: recordvault
+  sql: recordvault
+  type: string
+  primary_key: false
+  hidden: false
+- name: timecode
+  sql: timecode
+  type: string
+  primary_key: false
+  hidden: false
+- name: exchspot
+  sql: exchspot
+  type: string
+  primary_key: false
+  hidden: false
+- name: mktnote
+  sql: mktnote
+  type: string
+  primary_key: false
+  hidden: false
+- name: orderstamp
+  sql: orderstamp
+  type: string
+  primary_key: false
+  hidden: false
+- name: userlink
+  sql: userlink
+  type: string
+  primary_key: false
+  hidden: false
+- name: ordertune
+  sql: ordertune
+  type: string
+  primary_key: false
+  hidden: false
+- name: dealedge
+  sql: dealedge
+  type: string
+  primary_key: false
+  description: 'Order side enum (KB #20): ''Buy'' = purchase the base asset using
+    the quote (e.g. buy BTC with USDT). ''Sell'' = sell the base asset for the quote.'
+  hidden: false
+  meta:
+    kb_id: 20
+- name: dealquote
+  sql: dealquote
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: dealcount
+  sql: dealcount
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: notionsum
+  sql: notionsum
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: orderflow
+  sql: orderflow
+  type: string
+  primary_key: false
+  description: 'Order status enum (KB #21): ''New'' = newly placed, unmatched. ''PartiallyFilled''
+    = some portion executed. ''Cancelled'' = cancelled before full execution. ''Filled''
+    = completely executed.'
+  hidden: false
+  meta:
+    kb_id: 21
+- name: timespan
+  sql: timespan
+  type: string
+  primary_key: false
+  description: 'Time-in-force enum (KB #22): ''IOC'' = immediate-or-cancel. ''GTC''
+    = good-till-cancelled. ''GTD'' = good-till-date. ''FOK'' = fill-or-kill.'
+  hidden: false
+  meta:
+    kb_id: 22
+- name: orderbase
+  sql: orderbase
+  type: string
+  primary_key: false
+  hidden: false
+- name: clientmark
+  sql: clientmark
+  type: string
+  primary_key: false
+  hidden: false
+- name: createspot
+  sql: createspot
+  type: string
+  primary_key: false
+  hidden: false
+- name: updatespot
+  sql: updatespot
+  type: string
+  primary_key: false
+  hidden: false
+measures: []
+aggregations: []
+joins:
+- target_model: users
+  join_pairs:
+  - - userlink
+    - userstamp
+  join_type: left
+filters: []
+hidden: false

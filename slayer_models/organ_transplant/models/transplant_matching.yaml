@@ -1,0 +1,225 @@
+version: 3
+name: transplant_matching
+sql_table: transplant_matching
+query_variables: {}
+data_source: organ_transplant
+columns:
+- name: match_rec_registry
+  sql: match_rec_registry
+  type: string
+  primary_key: true
+  description: Match primary key. Other matching-context tables FK here.
+  hidden: false
+- name: created_ts
+  sql: created_ts
+  type: string
+  primary_key: false
+  description: When the match record was created.
+  hidden: false
+- name: donor_ref_reg
+  sql: donor_ref_reg
+  type: string
+  primary_key: false
+  description: FK to demographics.contrib_registry.
+  hidden: false
+- name: recip_ref_reg
+  sql: recip_ref_reg
+  type: string
+  primary_key: false
+  description: FK to recipients_demographics.recip_registry.
+  hidden: false
+- name: org_spec
+  sql: org_spec
+  type: string
+  primary_key: false
+  description: Organ being matched (Heart/Kidney/Liver/Lung/Pancreas).
+  hidden: false
+- name: match_status
+  sql: match_status
+  type: string
+  primary_key: false
+  description: Match process status (Completed/Failed/In Progress/Matched/Pending).
+  hidden: false
+- name: score_val
+  sql: score_val
+  type: number
+  primary_key: false
+  description: Overall matching score from upstream system.
+  hidden: false
+  format:
+    type: integer
+- name: level_val
+  sql: level_val
+  type: string
+  primary_key: false
+  description: Match level (Acceptable/High Risk/Marginal/Optimal).
+  hidden: false
+- name: alg_vers
+  sql: alg_vers
+  type: string
+  primary_key: false
+  description: Matching algorithm version, e.g. 'v2.5'.
+  hidden: false
+- name: run_registry
+  sql: run_registry
+  type: string
+  primary_key: false
+  description: Batch run id.
+  hidden: false
+- name: match_ts
+  sql: match_ts
+  type: string
+  primary_key: false
+  description: Timestamp the algorithm executed.
+  hidden: false
+- name: dur_sec
+  sql: dur_sec
+  type: number
+  primary_key: false
+  description: Algorithm runtime in seconds.
+  hidden: false
+  format:
+    type: integer
+- name: conf_val
+  sql: conf_val
+  type: number
+  primary_key: false
+  description: Confidence value.
+  hidden: false
+  format:
+    type: integer
+- name: dss_val
+  sql: dss_val
+  type: number
+  primary_key: false
+  description: Decision support system score.
+  hidden: false
+  format:
+    type: integer
+- name: donor_recipient_age_diff
+  sql: ABS(recipients_demographics.age_count - CAST(substr(demographics.age_count,
+    1, instr(demographics.age_count, ' ') - 1) AS INTEGER))
+  type: number
+  primary_key: false
+  description: Donor-Recipient Age Difference = |Age_recipient - Age_donor| (KB).
+  hidden: false
+  meta:
+    kb_id: 1
+- name: age_compatibility_score
+  sql: exp(-0.03 * ABS(recipients_demographics.age_count - CAST(substr(demographics.age_count,
+    1, instr(demographics.age_count, ' ') - 1) AS INTEGER)))
+  type: number
+  primary_key: false
+  description: Age Compatibility Score = e^(-0.03 * |age_diff|) (KB).
+  hidden: false
+  meta:
+    kb_id: 7
+- name: size_compatibility_score
+  sql: 1.0 - ABS(CAST(json_extract(demographics.physicalstats, '$.Bmi_Value') AS REAL)
+    / NULLIF(recipients_demographics.bmi_val, 0) - 1.0)
+  type: number
+  primary_key: false
+  description: Size Compatibility Score = 1 - |donor_BMI / recipient_BMI - 1| (KB).
+    Uses physicalstats.Bmi_Value for donor, bmi_val for recipient.
+  hidden: false
+  meta:
+    kb_id: 6
+- name: egs_score_computed
+  sql: 1.0 / (1.0 + exp(-1.0 * (-0.5 + 1.5 * (0.6 * (CASE WHEN lower(compatibility_metrics.blood_compat)
+    = 'compatible' THEN 1.0 ELSE 0.0 END) + 0.4 * (1.0 - compatibility_metrics.hla_mis_count
+    / 6.0)) - 0.02 * CAST(substr(demographics.age_count, 1, instr(demographics.age_count,
+    ' ') - 1) AS INTEGER))))
+  type: number
+  primary_key: false
+  description: Expected Graft Survival = sigmoid(-0.5 + 1.5*S_immune - 0.02*Age_donor)
+    (KB EGS). S_immune inlined from KB Immunological Compat Score formula.
+  hidden: false
+  meta:
+    kb_id: 13
+- name: composite_allocation_score
+  sql: 0.5 * (0.7 * (CASE WHEN recipients_demographics__clinical.med_urgency = 'Status
+    1A' THEN 5 WHEN recipients_demographics__clinical.med_urgency = 'Status 1B' THEN
+    4 WHEN recipients_demographics__clinical.med_urgency IN ('Status 2', '2') THEN
+    3 WHEN recipients_demographics__clinical.med_urgency IN ('Status 3', '3') THEN
+    2 ELSE 1 END) + 0.3 * (CAST(substr(recipients_demographics__clinical.wait_time,
+    1, instr(recipients_demographics__clinical.wait_time, ' ') - 1) AS REAL) / 365.0))
+    + 0.25 * (0.6 * (CASE WHEN lower(compatibility_metrics.blood_compat) = 'compatible'
+    THEN 1.0 ELSE 0.0 END) + 0.4 * (1.0 - compatibility_metrics.hla_mis_count / 6.0))
+    + 0.25 * (1.0 / (1.0 + exp(-1.0 * (-0.5 + 1.5 * (0.6 * (CASE WHEN lower(compatibility_metrics.blood_compat)
+    = 'compatible' THEN 1.0 ELSE 0.0 END) + 0.4 * (1.0 - compatibility_metrics.hla_mis_count
+    / 6.0)) - 0.02 * CAST(substr(demographics.age_count, 1, instr(demographics.age_count,
+    ' ') - 1) AS INTEGER)))))
+  type: number
+  primary_key: false
+  description: Composite Allocation Score = 0.5*S_urgency + 0.25*S_immune + 0.25*EGS
+    (KB). S_urgency / S_immune / EGS inlined from their KB formulas.
+  hidden: false
+  meta:
+    kb_id: 17
+- name: comprehensive_match_quality
+  sql: 0.4 * (0.6 * (CASE WHEN lower(compatibility_metrics.blood_compat) = 'compatible'
+    THEN 1.0 ELSE 0.0 END) + 0.4 * (1.0 - compatibility_metrics.hla_mis_count / 6.0))
+    + 0.2 * CAST(json_extract(compatibility_metrics.compatscores, '$.Age_Score') AS
+    REAL) - 0.3 * COALESCE(risk_evaluation.surg_risk_val, 0) + 0.1 * ((700.0 / (CAST(substr(compatibility_metrics.distance,
+    1, instr(compatibility_metrics.distance, ' ') - 1) AS REAL) * 1.609344)) + (300.0
+    / (CAST(substr(compatibility_metrics.exp_isch_time, 1, instr(compatibility_metrics.exp_isch_time,
+    ' ') - 1) AS REAL) + CAST(substr(compatibility_metrics.exp_time, 1, instr(compatibility_metrics.exp_time,
+    ' ') - 1) AS REAL))))
+  type: number
+  primary_key: false
+  description: "Comprehensive Match Quality = 0.4*S_immune + 0.2*S_age - 0.3*S_surgical\
+    \ + 0.1*I_logistics (KB). S_age uses pre-computed compatscores.Age_Score; S_surgical\
+    \ = risk_evaluation.surg_risk_val (COALESCE NULL\u21920); I_logistics inlined."
+  hidden: false
+  meta:
+    kb_id: 50
+measures: []
+aggregations: []
+joins:
+- target_model: demographics
+  join_pairs:
+  - - donor_ref_reg
+    - contrib_registry
+  join_type: left
+- target_model: recipients_demographics
+  join_pairs:
+  - - recip_ref_reg
+    - recip_registry
+  join_type: left
+- target_model: compatibility_metrics
+  join_pairs:
+  - - match_rec_registry
+    - match_comp_registry
+  join_type: left
+- target_model: risk_evaluation
+  join_pairs:
+  - - match_rec_registry
+    - risk_eval_registry
+  join_type: left
+- target_model: allocation_details
+  join_pairs:
+  - - match_rec_registry
+    - allc_match_registry
+  join_type: left
+- target_model: logistics
+  join_pairs:
+  - - match_rec_registry
+    - log_match_registry
+  join_type: left
+- target_model: administrative_and_review
+  join_pairs:
+  - - match_rec_registry
+    - adm_rev_registry
+  join_type: left
+- target_model: data_source_and_quality
+  join_pairs:
+  - - match_rec_registry
+    - q_match_registry
+  join_type: left
+filters: []
+description: 'Per-match record: donor x recipient pairing for a specific organ. Holds
+  matching status, score, level, algorithm version. Joins to demographics (donor)
+  and recipients_demographics (recipient). Many other tables (compatibility_metrics,
+  risk_evaluation, allocation_details, logistics, administrative_and_review, data_source_and_quality)
+  hang off match_rec_registry.'
+hidden: false

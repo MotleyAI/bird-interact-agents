@@ -1,0 +1,61 @@
+version: 3
+name: processing_efficiency_ratio
+source_queries:
+- version: 3
+  name: case_apt
+  source_model: cases
+  dimensions:
+  - name: filekey
+  - name: application_processing_time
+  whole_periods_only: false
+- version: 3
+  source_model:
+    source_name: case_apt
+    columns:
+    - name: per
+      type: number
+      sql: AVG(application_processing_time) OVER () * 1.0 / NULLIF(application_processing_time,
+        0)
+  dimensions:
+  - name: filekey
+  - name: application_processing_time
+  - name: per
+  whole_periods_only: false
+query_variables: {}
+backing_query_sql: "SELECT \"case_apt.filekey\" AS filekey, \"case_apt.application_processing_time\"\
+  \ AS application_processing_time, \"case_apt.per\" AS per FROM (SELECT\n  case_apt.filekey\
+  \ AS \"case_apt.filekey\",\n  case_apt.application_processing_time AS \"case_apt.application_processing_time\"\
+  ,\n  AVG(application_processing_time) OVER () * 1.0 / NULLIF(application_processing_time,\
+  \ 0) AS \"case_apt.per\"\nFROM (\n  SELECT\n    \"cases.filekey\" AS filekey,\n\
+  \    \"cases.application_processing_time\" AS application_processing_time\n  FROM\
+  \ (\n    SELECT\n      cases.filekey AS \"cases.filekey\",\n      CAST(JULIANDAY(decisionday)\
+  \ - JULIANDAY(REPLACE(recvday, '/', '-')) AS INTEGER) AS \"cases.application_processing_time\"\
+  \n    FROM cases AS cases\n  ) AS _inner\n) AS case_apt) AS _inner"
+data_source: labor_certification_applications
+columns:
+- name: filekey
+  sql: filekey
+  type: string
+  primary_key: false
+  hidden: false
+- name: application_processing_time
+  sql: application_processing_time
+  type: number
+  primary_key: false
+  description: 'Application Processing Time (APT, KB #12): days between recvday and
+    decisionday.'
+  hidden: false
+- name: per
+  sql: per
+  type: number
+  primary_key: false
+  hidden: false
+measures: []
+aggregations: []
+joins: []
+filters: []
+description: 'Processing Efficiency Ratio per case (KB #32): avg_processing_time /
+  case_processing_time. Values >1 mean faster than average.'
+hidden: false
+meta:
+  kb_id: 32

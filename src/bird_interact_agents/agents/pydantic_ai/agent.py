@@ -55,8 +55,10 @@ from bird_interact_agents.harness import (
     build_user_encoder_prompt,
     execute_env_action,
     execute_submit_action,
+    finalize_result_row,
     load_db_data_if_needed,
     parse_encoder_response,
+    resolve_task_storage_dir,
     slayer_mcp_stdio_config,
     update_budget,
 )
@@ -446,8 +448,11 @@ class PydanticAIAgent:
             idx=0, original_data=task_data,
             remaining_budget=budget, total_budget=budget,
         )
-        slayer_storage_dir = (
-            f"{self.slayer_storage_root}/{db_name}" if self.slayer_storage_root else ""
+        slayer_storage_dir, deleted_kb_ids = await resolve_task_storage_dir(
+            slayer_storage_root=self.slayer_storage_root,
+            db_name=db_name,
+            task_data=task_data,
+            query_mode=query_mode,
         )
 
         deps = TaskDeps(
@@ -477,22 +482,30 @@ class PydanticAIAgent:
             output_text = str(agent_run.output)
         except Exception as e:
             logger.error("Agent error on %s: %s", instance_id, e)
-            return {
-                "task_id": instance_id, "instance_id": instance_id,
-                "database": db_name,
-                "phase1_passed": False, "phase2_passed": False,
-                "total_reward": 0.0, "trajectory": [],
-                "error": str(e),
-            }
+            return finalize_result_row(
+                {
+                    "task_id": instance_id, "instance_id": instance_id,
+                    "database": db_name,
+                    "phase1_passed": False, "phase2_passed": False,
+                    "total_reward": 0.0, "trajectory": [],
+                    "error": str(e),
+                },
+                deleted_kb_ids=deleted_kb_ids,
+                slayer_storage_dir=slayer_storage_dir,
+            )
 
         result = deps.result or {}
-        return {
-            "task_id": instance_id,
-            "instance_id": instance_id,
-            "database": db_name,
-            "phase1_passed": result.get("phase1_passed", False),
-            "phase2_passed": result.get("phase2_passed", False),
-            "total_reward": result.get("total_reward", 0.0),
-            "trajectory": [{"final_output": output_text[:500]}],
-            "error": None,
-        }
+        return finalize_result_row(
+            {
+                "task_id": instance_id,
+                "instance_id": instance_id,
+                "database": db_name,
+                "phase1_passed": result.get("phase1_passed", False),
+                "phase2_passed": result.get("phase2_passed", False),
+                "total_reward": result.get("total_reward", 0.0),
+                "trajectory": [{"final_output": output_text[:500]}],
+                "error": None,
+            },
+            deleted_kb_ids=deleted_kb_ids,
+            slayer_storage_dir=slayer_storage_dir,
+        )

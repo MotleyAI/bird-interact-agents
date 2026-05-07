@@ -1,0 +1,187 @@
+version: 3
+name: reviewsandimprovements
+sql_table: reviewsandimprovements
+query_variables: {}
+data_source: cold_chain_pharma_compliance
+columns:
+- name: reckeyrev
+  sql: reckeyrev
+  type: string
+  primary_key: true
+  hidden: false
+- name: procimprove
+  sql: procimprove
+  type: string
+  primary_key: false
+  description: 'Process improvement actions: Yes / No / In Progress. KB #56 (GDP Corrective
+    Action Categories) names the standard CAPA buckets recorded here: Training Enhancement,
+    Documentation Update, Process Modification, Equipment Upgrade, Supplier Management,
+    Transport Adjustment, Monitoring Improvement, Regulatory Compliance Actions.'
+  hidden: false
+  meta:
+    kb_id: 56
+- name: trainneeds
+  sql: trainneeds
+  type: string
+  primary_key: false
+  hidden: false
+- name: sop_update
+  sql: sop_update
+  type: string
+  primary_key: false
+  hidden: false
+- name: vendorimpact
+  sql: vendorimpact
+  type: string
+  primary_key: false
+  hidden: false
+- name: nextshipchg
+  sql: nextshipchg
+  type: string
+  primary_key: false
+  hidden: false
+- name: monfreqchg
+  sql: monfreqchg
+  type: string
+  primary_key: false
+  hidden: false
+- name: routeriskreassess
+  sql: routeriskreassess
+  type: string
+  primary_key: false
+  hidden: false
+- name: packspecrev
+  sql: packspecrev
+  type: string
+  primary_key: false
+  hidden: false
+- name: lanequalstat
+  sql: lanequalstat
+  type: string
+  primary_key: false
+  description: "Transport lane quality status: 'Valid', 'Invalid', 'Review Required'.\
+    \ KB #54 (Serialization Maturity Model) classifies tracking maturity Level 0-4\
+    \ from 'no serialization' through 'end-to-end serialized supply chain with real-time\
+    \ visibility' \u2014 lane qualification status is the schema's nearest indicator\
+    \ of supply-chain visibility maturity."
+  hidden: false
+  meta:
+    kb_id: 54
+- name: techupgrade
+  sql: techupgrade
+  type: string
+  primary_key: false
+  hidden: false
+- name: costoptpot
+  sql: costoptpot
+  type: string
+  primary_key: false
+  hidden: false
+- name: sustainimpact
+  sql: sustainimpact
+  type: string
+  primary_key: false
+  hidden: false
+- name: carbonkg
+  sql: carbonkg
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: energyscore
+  sql: energyscore
+  type: string
+  primary_key: false
+  hidden: false
+- name: docformat
+  sql: docformat
+  type: string
+  primary_key: false
+  description: 'Review document format: Paper / Electronic / Hybrid. KB #53 (Validation
+    Documentation Requirements) lists the master plan, qualifications, mapping studies,
+    and final report that this review record references.'
+  hidden: false
+  meta:
+    kb_id: 53
+- name: dataintegrity
+  sql: dataintegrity
+  type: string
+  primary_key: false
+  description: "Data integrity verification status: 'Verified' / 'Under Review' /\
+    \ 'Compromised'. KB #59 (Data Integrity Components) describes the ALCOA+ principles\
+    \ \u2014 Attributable, Legible, Contemporaneous, Original, Accurate, plus Complete,\
+    \ Consistent, Enduring, Available \u2014 used to classify integrity at this stage."
+  hidden: false
+  meta:
+    kb_id: 59
+- name: audittrailcomplete
+  sql: audittrailcomplete
+  type: string
+  primary_key: false
+  description: 'Audit-trail completeness percent. KB #46 (Quality Management System
+    Maturity Model) ranks QMS at Level 1 (Basic, minimal documentation) up to Level
+    5 (Optimized, fully integrated continuous improvement). audittrailcomplete is
+    the closest column-level proxy for the documentation-and-audit dimension of the
+    maturity model.'
+  hidden: false
+  meta:
+    kb_id: 46
+- name: e_sigstat
+  sql: e_sigstat
+  type: string
+  primary_key: false
+  hidden: false
+- name: sysaccessctrl
+  sql: sysaccessctrl
+  type: string
+  primary_key: false
+  hidden: false
+- name: databackupstat
+  sql: databackupstat
+  type: string
+  primary_key: false
+  hidden: false
+- name: reportgenstat
+  sql: reportgenstat
+  type: string
+  primary_key: false
+  hidden: false
+- name: distlist
+  sql: distlist
+  type: string
+  primary_key: false
+  hidden: false
+- name: archivestat
+  sql: archivestat
+  type: string
+  primary_key: false
+  hidden: false
+- name: reviewnotes
+  sql: reviewnotes
+  type: string
+  primary_key: false
+  hidden: false
+- name: nextrevts
+  sql: nextrevts
+  type: string
+  primary_key: false
+  hidden: false
+- name: closestat
+  sql: closestat
+  type: string
+  primary_key: false
+  hidden: false
+measures: []
+aggregations: []
+joins:
+- target_model: shipments
+  join_pairs:
+  - - reckeyrev
+    - reckey
+  join_type: left
+filters: []
+description: 'Per-shipment post-mortem review and process improvement record. Carries
+  data-integrity (KB #59 ALCOA+ context), document-format and audit-trail metrics
+  linked back to the shipment.'
+hidden: false

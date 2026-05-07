@@ -1,0 +1,188 @@
+version: 3
+name: maintenance
+sql_table: maintenance
+query_variables: {}
+data_source: solar
+columns:
+- name: maintregistry
+  sql: maintregistry
+  type: string
+  primary_key: true
+  hidden: false
+- name: powerref
+  sql: powerref
+  type: string
+  primary_key: false
+  hidden: false
+- name: compref
+  sql: compref
+  type: string
+  primary_key: false
+  hidden: false
+- name: obsref
+  sql: obsref
+  type: string
+  primary_key: false
+  hidden: false
+- name: inspectmeth
+  sql: inspectmeth
+  type: string
+  primary_key: false
+  hidden: false
+- name: inspectres
+  sql: inspectres
+  type: string
+  primary_key: false
+  hidden: false
+- name: inspectdate
+  sql: inspectdate
+  type: string
+  primary_key: false
+  hidden: false
+- name: maintsched
+  sql: maintsched
+  type: string
+  primary_key: false
+  hidden: false
+- name: wtystatus
+  sql: wtystatus
+  type: string
+  primary_key: false
+  hidden: false
+- name: wtyclaimcnt
+  sql: wtyclaimcnt
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: maintcostusd
+  sql: maintcostusd
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: cleancostusd
+  sql: cleancostusd
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: replacecostusd
+  sql: replacecostusd
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: revlossusd
+  sql: revlossusd
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: mce
+  sql: CASE WHEN plant.gencapmw > 0 THEN (COALESCE(maintcostusd, 0) + COALESCE(cleancostusd,
+    0) + COALESCE(replacecostusd, 0)) / plant.gencapmw ELSE NULL END
+  type: number
+  primary_key: false
+  description: 'Maintenance Cost Efficiency (MCE, KB#7): (MaintenanceCostUSD + CleaningCostUSD
+    + ReplacementCostUSD) / GenCapMW. Lower = more cost-effective maintenance.'
+  hidden: false
+  meta:
+    kb_id: 7
+- name: rlr
+  sql: CASE WHEN plant.gencapmw > 0 THEN COALESCE(revlossusd, 0) / plant.gencapmw
+    ELSE NULL END
+  type: number
+  primary_key: false
+  description: 'Revenue Loss Rate (RLR, KB#8): RevenueLossUSD / GenCapMW. Higher =
+    greater financial impact from downtime.'
+  hidden: false
+  meta:
+    kb_id: 8
+- name: mroi
+  sql: CASE WHEN (COALESCE(maintcostusd, 0) + COALESCE(cleancostusd, 0) + COALESCE(replacecostusd,
+    0)) > 0 AND plant.gencapmw > 0 THEN (COALESCE(revlossusd, 0) / plant.gencapmw)
+    / ((COALESCE(maintcostusd, 0) + COALESCE(cleancostusd, 0) + COALESCE(replacecostusd,
+    0)) / plant.gencapmw) ELSE NULL END
+  type: number
+  primary_key: false
+  description: 'Maintenance Return on Investment (MROI, KB#32): RLR / MCE. Higher
+    values indicate better return on maintenance investments.'
+  hidden: false
+  meta:
+    kb_id: 32
+- name: premium_maintenance_candidate
+  sql: CASE WHEN (COALESCE(maintcostusd, 0) + COALESCE(cleancostusd, 0) + COALESCE(replacecostusd,
+    0)) > 0 AND plant.gencapmw > 0 AND panel_performance__panel.powratew > 0 AND ((COALESCE(revlossusd,
+    0) / plant.gencapmw) / ((COALESCE(maintcostusd, 0) + COALESCE(cleancostusd, 0)
+    + COALESCE(replacecostusd, 0)) / plant.gencapmw)) > 2.0 AND ((panel_performance.measpoww
+    * 1.0 / panel_performance__panel.powratew * 100) * (1 - panel_performance__panel__environment.soillosspct
+    / 100.0) * (1 - CAST(json_extract(panel_performance.efficiency_profile, '$.degradation.cumdegpct')
+    AS REAL) / 100.0)) BETWEEN 75 AND 90 THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: "Premium Maintenance Candidate (KB#41): 1 when MROI > 2.0 AND 75% <\
+    \ EPE < 90%; else 0. EPE = PPR \xD7 (1 - SoilingLossPct/100) \xD7 (1 - CumDegPct/100),\
+    \ inlined here from panel_performance, panel, and environment via the maintenance\
+    \ \u2192 panel_performance \u2192 panel \u2192 environment chain."
+  hidden: false
+  meta:
+    kb_id: 41
+- name: has_critical_alert
+  sql: CASE WHEN EXISTS (SELECT 1 FROM alerts a WHERE a.deviceref = maintenance.compref
+    AND a.alertstat = 'Critical') THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Helper for Maintenance Urgency Classification (KB#50): 1 iff there
+    exists at least one alert with status ''Critical'' for the same panel as this
+    maintenance row, else 0.'
+  hidden: false
+- name: maintenance_urgency
+  sql: CASE WHEN EXISTS (SELECT 1 FROM alerts a WHERE a.deviceref = maintenance.compref
+    AND a.alertstat = 'Critical') AND (COALESCE(maintcostusd, 0) + COALESCE(cleancostusd,
+    0) + COALESCE(replacecostusd, 0)) > 0 AND plant.gencapmw > 0 AND ((COALESCE(revlossusd,
+    0) / plant.gencapmw) / ((COALESCE(maintcostusd, 0) + COALESCE(cleancostusd, 0)
+    + COALESCE(replacecostusd, 0)) / plant.gencapmw)) > 2.0 THEN 'URGENT' WHEN EXISTS
+    (SELECT 1 FROM alerts a WHERE a.deviceref = maintenance.compref AND a.alertstat
+    = 'Critical') THEN 'HIGH' WHEN (COALESCE(maintcostusd, 0) + COALESCE(cleancostusd,
+    0) + COALESCE(replacecostusd, 0)) > 0 AND plant.gencapmw > 0 AND ((COALESCE(revlossusd,
+    0) / plant.gencapmw) / ((COALESCE(maintcostusd, 0) + COALESCE(cleancostusd, 0)
+    + COALESCE(replacecostusd, 0)) / plant.gencapmw)) > 2.0 THEN 'MEDIUM' ELSE 'LOW'
+    END
+  type: string
+  primary_key: false
+  description: 'Maintenance Urgency Classification (KB#50): URGENT (critical alert
+    AND MROI>2), HIGH (critical alert), MEDIUM (MROI>2), LOW (else). ''Critical alert''
+    is a correlated EXISTS into the alerts table on the same panel.'
+  hidden: false
+  meta:
+    kb_id: 50
+measures: []
+aggregations: []
+joins:
+- target_model: panel
+  join_pairs:
+  - - compref
+    - panemark
+  join_type: left
+- target_model: plant
+  join_pairs:
+  - - powerref
+    - growregistry
+  join_type: left
+- target_model: panel_performance
+  join_pairs:
+  - - obsref
+    - perfregistry
+  join_type: left
+filters: []
+description: 'Maintenance / inspection event for a plant or panel. Joins to `plant`
+  (via `powerref`), `panel` (via `compref`), and `panel_performance` (via `obsref`).
+  Holds inspection metadata, warranty status, and the cost components used by MCE
+  / RLR / MROI: `maintcostusd`, `cleancostusd`, `replacecostusd`, `revlossusd`.'
+hidden: false

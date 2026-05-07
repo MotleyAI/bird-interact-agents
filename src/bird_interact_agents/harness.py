@@ -7,9 +7,15 @@ BIRD_BIRD_INTERACT_ROOT environment variable (or in .env).
 import os
 import shutil
 import sys
+import tempfile
 from pathlib import Path
+from typing import Optional, Tuple
 
 from bird_interact_agents.config import settings
+from bird_interact_agents.hard8_preprocessor import (
+    build_task_variant_storage,
+    extract_deleted_kb_ids,
+)
 
 
 def _ensure_bird_interact_on_path() -> None:
@@ -169,6 +175,73 @@ def _resolve_slayer_command() -> str:
         "slayer CLI not found. Install with `uv pip install motley-slayer` "
         "or `uv pip install -e ../slayer` and try again."
     )
+
+
+def finalize_result_row(
+    row: dict,
+    *,
+    deleted_kb_ids: list[int],
+    slayer_storage_dir: str,
+) -> dict:
+    """Stamp HARD-8 bookkeeping onto an adapter's result row.
+
+    ``variant_storage_path`` is set only when the row's task actually
+    used a deletion variant (i.e. ``deleted_kb_ids`` is non-empty);
+    otherwise it stays ``None`` so canonical-storage rows can be told
+    apart from variant rows in the results JSON.
+    """
+    row["deleted_kb_ids"] = deleted_kb_ids
+    row["variant_storage_path"] = slayer_storage_dir if deleted_kb_ids else None
+    return row
+
+
+def _task_variant_workdir(instance_id: str) -> Path:
+    """Per-task scratch dir for HARD-8 variant storage.
+
+    Lives under ``$TMPDIR/bird_interact_w5_variants/<instance_id>/``.
+    Reused (overwritten) across runs of the same task — content is
+    rewritten from scratch each time so stale deletions don't leak.
+    """
+    p = Path(tempfile.gettempdir()) / "bird_interact_w5_variants" / instance_id
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+async def resolve_task_storage_dir(
+    *,
+    slayer_storage_root: Optional[str],
+    db_name: str,
+    task_data: dict,
+    query_mode: str,
+) -> Tuple[str, list[int]]:
+    """Resolve the per-task SLayer storage path, applying HARD-8 deletions.
+
+    Returns ``(slayer_storage_dir, deleted_kb_ids)``.
+
+    - In raw mode or when ``slayer_storage_root`` is unset: returns
+      ``("", [])``. (The downstream slayer MCP launch is gated on
+      ``query_mode == "slayer"`` in each adapter, so the empty string
+      never reaches ``slayer_mcp_stdio_config``.)
+    - In slayer mode without HARD-8 deletions: returns
+      ``("<root>/<db_name>", [])`` — the canonical per-DB YAML.
+    - In slayer mode with deletions: builds a task-scoped variant
+      under ``$TMPDIR/bird_interact_w5_variants/<instance_id>/`` with
+      matching entities dropped, and returns its path + the sorted
+      deletion list.
+    """
+    if query_mode != "slayer" or not slayer_storage_root:
+        return "", []
+    deleted = sorted(extract_deleted_kb_ids(task_data))
+    if not deleted:
+        return f"{slayer_storage_root}/{db_name}", []
+    instance_id = task_data["instance_id"]
+    variant_dir = await build_task_variant_storage(
+        canonical_storage_root=Path(slayer_storage_root),
+        db_name=db_name,
+        deleted_kb_ids=set(deleted),
+        work_dir=_task_variant_workdir(instance_id),
+    )
+    return str(variant_dir), deleted
 
 
 def slayer_mcp_stdio_config(storage_dir: str) -> dict:

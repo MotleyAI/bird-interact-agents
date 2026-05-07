@@ -1,0 +1,94 @@
+version: 3
+name: scanregistration
+sql_table: scanregistration
+query_variables: {}
+data_source: archeology
+columns:
+- name: logregistry
+  sql: logregistry
+  type: number
+  primary_key: true
+  hidden: false
+  format:
+    type: integer
+- name: crewref
+  sql: crewref
+  type: string
+  primary_key: false
+  hidden: false
+- name: arcref
+  sql: arcref
+  type: string
+  primary_key: false
+  hidden: false
+- name: logaccumm
+  sql: logaccumm
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: refmark
+  sql: refmark
+  type: string
+  primary_key: false
+  hidden: false
+- name: ctrlpts
+  sql: ctrlpts
+  type: string
+  primary_key: false
+  hidden: false
+- name: logmethod
+  sql: logmethod
+  type: string
+  primary_key: false
+  description: 'Registration Method (KB #28). Values: ''ICP'' (Iterative Closest Point),
+    ''Target-based'' (alignment via physical reference markers), ''Hybrid'' (automatic
+    + manual), ''SLAM'' (Simultaneous Localization and Mapping). Each has distinct
+    accuracy characteristics.'
+  hidden: false
+  meta:
+    kb_id: 28
+- name: transform
+  sql: transform
+  type: string
+  primary_key: false
+  hidden: false
+- name: errscale
+  sql: errscale
+  type: string
+  primary_key: false
+  hidden: false
+- name: errvalmm
+  sql: errvalmm
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: is_registration_quality_threshold_met
+  sql: CASE WHEN logaccumm < 1.0 AND errvalmm < 2.0 THEN 1 ELSE 0 END
+  type: boolean
+  primary_key: false
+  description: "Registration Quality Threshold (KB #18): LogAccuMm < 1.0 AND ErrValMm\
+    \ < 2.0 \u2014 sufficient accuracy for reliable spatial analysis."
+  hidden: false
+  meta:
+    kb_id: 18
+measures: []
+aggregations: []
+joins:
+- target_model: projects
+  join_pairs:
+  - - arcref
+    - arcregistry
+  join_type: left
+- target_model: personnel
+  join_pairs:
+  - - crewref
+    - crewregistry
+  join_type: left
+filters: []
+description: 'Per-scan registration / alignment logs. Hosts the Registration Quality
+  Threshold predicate (KB #18).'
+hidden: false

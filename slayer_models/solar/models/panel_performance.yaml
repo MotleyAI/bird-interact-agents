@@ -1,0 +1,327 @@
+version: 3
+name: panel_performance
+sql_table: performance
+query_variables: {}
+data_source: solar
+columns:
+- name: perfregistry
+  sql: perfregistry
+  type: string
+  primary_key: true
+  hidden: false
+- name: solmodref
+  sql: solmodref
+  type: string
+  primary_key: false
+  hidden: false
+- name: perfmoment
+  sql: perfmoment
+  type: string
+  primary_key: false
+  hidden: false
+- name: measpoww
+  sql: measpoww
+  type: number
+  primary_key: false
+  description: 'MeasuredPowerW: actual measured panel power output in watts at perfmoment.'
+  hidden: false
+- name: powlossw
+  sql: powlossw
+  type: number
+  primary_key: false
+  hidden: false
+- name: efficiency_profile
+  sql: efficiency_profile
+  type: string
+  primary_key: false
+  description: 'JSON: {degradation:{cumdegpct,anndegrate}, current_efficiency:{curreffpct,efflosspct}}.'
+  hidden: false
+  meta:
+    kb_ids:
+    - 26
+    - 27
+- name: curreffpct
+  sql: json_extract(efficiency_profile, '$.current_efficiency.curreffpct')
+  type: number
+  primary_key: false
+  description: 'CurrentEfficiencyPercent (extracted from efficiency_profile JSON):
+    the panel''s current measured efficiency %.'
+  hidden: false
+- name: efflosspct
+  sql: json_extract(efficiency_profile, '$.current_efficiency.efflosspct')
+  type: number
+  primary_key: false
+  description: EfficiencyLossPercent (extracted from efficiency_profile JSON).
+  hidden: false
+- name: cumdegpct
+  sql: json_extract(efficiency_profile, '$.degradation.cumdegpct')
+  type: number
+  primary_key: false
+  description: 'CumDegPct (KB#27): cumulative degradation % since installation. Extracted
+    from efficiency_profile.degradation.cumdegpct.'
+  hidden: false
+  meta:
+    kb_id: 27
+- name: anndegrate
+  sql: json_extract(efficiency_profile, '$.degradation.anndegrate')
+  type: number
+  primary_key: false
+  description: 'AnnDegRate (KB#26): annual degradation rate %. Extracted from efficiency_profile.degradation.anndegrate.'
+  hidden: false
+  meta:
+    kb_id: 26
+- name: ppr
+  sql: CASE WHEN panel.powratew > 0 THEN measpoww * 1.0 / panel.powratew * 100 ELSE
+    NULL END
+  type: number
+  primary_key: false
+  description: 'Panel Performance Ratio (PPR, KB#0): MeasuredPowerW / PowerRatedW
+    expressed as a percentage. Indicates how a panel performs vs its rated nameplate
+    power.'
+  hidden: false
+  meta:
+    kb_id: 0
+- name: years_since_install
+  sql: (julianday(perfmoment) - julianday(panel__plant.initdate)) / 365.25
+  type: number
+  primary_key: false
+  description: Years between panel installation (plant.initdate) and the performance
+    measurement. Used as the denominator in PELR (KB#1) and FFDR (KB#5).
+  hidden: false
+- name: pelr
+  sql: CASE WHEN ((julianday(perfmoment) - julianday(panel__plant.initdate)) / 365.25)
+    > 0 THEN (CAST(json_extract(efficiency_profile, '$.current_efficiency.curreffpct')
+    AS REAL) - panel.paneeffpct) / ((julianday(perfmoment) - julianday(panel__plant.initdate))
+    / 365.25) * 100 ELSE NULL END
+  type: number
+  primary_key: false
+  description: "Panel Efficiency Loss Rate (PELR, KB#1): (CurrentEfficiencyPercent\
+    \ - InitialEfficiencyPercent) / Years_Since_Installation \xD7 100. CurrentEfficiencyPercent\
+    \ is from efficiency_profile.current_efficiency.curreffpct; InitialEfficiencyPercent\
+    \ is panel.paneeffpct."
+  hidden: false
+  meta:
+    kb_id: 1
+- name: ndi
+  sql: CASE WHEN ((julianday(perfmoment) - julianday(panel__plant.initdate)) / 365.25)
+    > 0 AND CAST(json_extract(efficiency_profile, '$.degradation.anndegrate') AS REAL)
+    > 0 THEN ((CAST(json_extract(efficiency_profile, '$.current_efficiency.curreffpct')
+    AS REAL) - panel.paneeffpct) / ((julianday(perfmoment) - julianday(panel__plant.initdate))
+    / 365.25) * 100) / CAST(json_extract(efficiency_profile, '$.degradation.anndegrate')
+    AS REAL) ELSE NULL END
+  type: number
+  primary_key: false
+  description: 'Normalized Degradation Index (NDI, KB#34): PELR / AnnDegRate. Values
+    > 1.0 indicate faster than expected degradation. AnnDegRate is from efficiency_profile.degradation.anndegrate.'
+  hidden: false
+  meta:
+    kb_id: 34
+- name: degradation_severity
+  sql: CASE WHEN CAST(json_extract(efficiency_profile, '$.degradation.anndegrate')
+    AS REAL) > 0 AND ((julianday(perfmoment) - julianday(panel__plant.initdate)) /
+    365.25) > 0 THEN CASE WHEN ((CAST(json_extract(efficiency_profile, '$.current_efficiency.curreffpct')
+    AS REAL) - panel.paneeffpct) / ((julianday(perfmoment) - julianday(panel__plant.initdate))
+    / 365.25) * 100) / CAST(json_extract(efficiency_profile, '$.degradation.anndegrate')
+    AS REAL) > 1.5 THEN 'High Degradation' WHEN ((CAST(json_extract(efficiency_profile,
+    '$.current_efficiency.curreffpct') AS REAL) - panel.paneeffpct) / ((julianday(perfmoment)
+    - julianday(panel__plant.initdate)) / 365.25) * 100) / CAST(json_extract(efficiency_profile,
+    '$.degradation.anndegrate') AS REAL) >= 1.0 THEN 'Moderate Degradation' ELSE 'Normal
+    Degradation' END ELSE NULL END
+  type: string
+  primary_key: false
+  description: 'Degradation Severity Classification (KB#52): ''High Degradation''
+    if NDI > 1.5; ''Moderate Degradation'' if NDI in [1.0, 1.5]; ''Normal Degradation''
+    if NDI < 1.0.'
+  hidden: false
+  meta:
+    kb_id: 52
+- name: tpci
+  sql: panel.powratew * panel.tempcoef * (panel__environment.celltempc - 25)
+  type: number
+  primary_key: false
+  description: "Temperature Performance Coefficient Impact (TPCI, KB#2): PowerRatedW\
+    \ \xD7 TempCoef \xD7 (CellTempC - 25). 25 C is the Standard Test Conditions baseline.\
+    \ Cross-table: PowerRatedW from panel, TempCoef from panel, CellTempC from environment\
+    \ (via panel \u2192 plant \u2194 environment)."
+  hidden: false
+  meta:
+    kb_id: 2
+- name: iel
+  sql: measpoww * (1 - CAST(json_extract(panel__inverter.power_metrics, '$.inverteffpct')
+    AS REAL) / 100.0)
+  type: number
+  primary_key: false
+  description: "Inverter Efficiency Loss (IEL, KB#4): MeasuredPowerW \xD7 (1 - InverterEffPct/100).\
+    \ InverterEffPct from inverter.power_metrics.inverteffpct. Cross-table via panel\
+    \ \u2194 inverter."
+  hidden: false
+  meta:
+    kb_id: 4
+- name: epe
+  sql: CASE WHEN panel.powratew > 0 THEN (measpoww * 1.0 / panel.powratew * 100) *
+    (1 - panel__environment.soillosspct / 100.0) * (1 - CAST(json_extract(efficiency_profile,
+    '$.degradation.cumdegpct') AS REAL) / 100.0) ELSE NULL END
+  type: number
+  primary_key: false
+  description: "Energy Production Efficiency (EPE, KB#3): PPR \xD7 (1 - SoilingLossPct/100)\
+    \ \xD7 (1 - CumulativeDegradationPercent/100). Combines nameplate-derived PPR\
+    \ with the two main loss factors."
+  hidden: false
+  meta:
+    kb_id: 3
+- name: tapr
+  sql: CASE WHEN panel.powratew > 0 THEN (measpoww * 1.0 / panel.powratew * 100) +
+    (panel.powratew * panel.tempcoef * (panel__environment.celltempc - 25)) / panel.powratew
+    ELSE NULL END
+  type: number
+  primary_key: false
+  description: 'Temperature Adjusted Performance Ratio (TAPR, KB#30): PPR + (TPCI
+    / PowerRatedW). Adjusts the Panel Performance Ratio for the temperature performance
+    coefficient impact.'
+  hidden: false
+  meta:
+    kb_id: 30
+- name: tsl
+  sql: (panel.powratew * CAST(json_extract(efficiency_profile, '$.degradation.cumdegpct')
+    AS REAL) / 100.0) + (measpoww * panel__environment.soillosspct / 100.0) + (measpoww
+    * (1 - CAST(json_extract(panel__inverter.power_metrics, '$.inverteffpct') AS REAL)
+    / 100.0))
+  type: number
+  primary_key: false
+  description: "Total System Loss (TSL, KB#31): (PowerRatedW \xD7 CumDegPct/100) +\
+    \ (MeasuredPowerW \xD7 SoilingLossPct/100) + IEL. Combined power loss from degradation,\
+    \ soiling, and inverter inefficiency."
+  hidden: false
+  meta:
+    kb_id: 31
+- name: wce
+  sql: CASE WHEN CAST(json_extract(panel__environment.irradiance_conditions, '$.irradiance_types[3]')
+    AS REAL) > 0 THEN CAST(json_extract(efficiency_profile, '$.current_efficiency.curreffpct')
+    AS REAL) * (1 + panel.tempcoef * (25 - panel__environment.celltempc) / 100.0)
+    * (1000.0 / CAST(json_extract(panel__environment.irradiance_conditions, '$.irradiance_types[3]')
+    AS REAL)) ELSE NULL END
+  type: number
+  primary_key: false
+  description: "Weather Corrected Efficiency (WCE, KB#35): CurrentEfficiencyPercent\
+    \ \xD7 (1 + TempCoef \xD7 (25 - CellTempC) / 100) \xD7 (1000 / POAIrradianceWM2).\
+    \ Adjusts the measured efficiency to STC-equivalent conditions."
+  hidden: false
+  meta:
+    kb_id: 35
+- name: eey
+  sql: CASE WHEN panel.powratew > 0 AND panel__environment.dustdengm2 > 0 THEN panel.powratew
+    * (CASE WHEN panel.powratew > 0 THEN (measpoww * 1.0 / panel.powratew * 100) *
+    (1 - panel__environment.soillosspct / 100.0) * (1 - CAST(json_extract(efficiency_profile,
+    '$.degradation.cumdegpct') AS REAL) / 100.0) ELSE NULL END) * (panel__environment.soillosspct
+    / panel__environment.dustdengm2) * CAST(json_extract(panel__environment.irradiance_conditions,
+    '$.irradiance_types[3]') AS REAL) / 1000.0 ELSE NULL END
+  type: number
+  primary_key: false
+  description: "Expected Energy Yield (EEY, KB#36): PowerRatedW \xD7 EPE \xD7 SIF\
+    \ \xD7 POAIrradianceWM2 / 1000. EPE is the Energy Production Efficiency (KB#3)\
+    \ and SIF is the Soiling Impact Factor (KB#6)."
+  hidden: false
+  meta:
+    kb_id: 36
+- name: expected_ppr_for_age
+  sql: CASE WHEN ((julianday(perfmoment) - julianday(panel__plant.initdate)) / 365.25)
+    > 0 AND CAST(json_extract(efficiency_profile, '$.degradation.anndegrate') AS REAL)
+    > 0 THEN 100.0 - ((julianday(perfmoment) - julianday(panel__plant.initdate)) /
+    365.25) * CAST(json_extract(efficiency_profile, '$.degradation.anndegrate') AS
+    REAL) ELSE 100.0 END
+  type: number
+  primary_key: false
+  description: "Expected PPR % for the panel's age, applying normal annual degradation:\
+    \ 100 - Years_Since_Installation \xD7 AnnDegRate. Used as the reference curve\
+    \ in the Critical Performance Threshold (KB#10)."
+  hidden: false
+- name: below_critical_performance_threshold
+  sql: CASE WHEN ((julianday(perfmoment) - julianday(panel__plant.initdate)) / 365.25)
+    > 0 AND CAST(json_extract(efficiency_profile, '$.degradation.anndegrate') AS REAL)
+    > 0 AND panel.powratew > 0 THEN CASE WHEN (measpoww * 1.0 / panel.powratew * 100)
+    < 0.8 * (100.0 - ((julianday(perfmoment) - julianday(panel__plant.initdate)) /
+    365.25) * CAST(json_extract(efficiency_profile, '$.degradation.anndegrate') AS
+    REAL)) THEN 1 ELSE 0 END ELSE 0 END
+  type: number
+  primary_key: false
+  description: "Critical Performance Threshold (KB#10): 1 when PPR < 80% of the expected\
+    \ value for the panel's age, accounting for normal degradation; else 0. Expected\
+    \ value uses age \xD7 AnnDegRate."
+  hidden: false
+  meta:
+    kb_id: 10
+- name: advanced_degradation_alert
+  sql: CASE WHEN panel.powratew > 0 AND CAST(json_extract(efficiency_profile, '$.degradation.anndegrate')
+    AS REAL) > 0 AND ((julianday(perfmoment) - julianday(panel__plant.initdate)) /
+    365.25) > 0 THEN CASE WHEN (((CAST(json_extract(efficiency_profile, '$.current_efficiency.curreffpct')
+    AS REAL) - panel.paneeffpct) / ((julianday(perfmoment) - julianday(panel__plant.initdate))
+    / 365.25) * 100) / CAST(json_extract(efficiency_profile, '$.degradation.anndegrate')
+    AS REAL)) > 1.5 AND ((measpoww * 1.0 / panel.powratew * 100) + (panel.powratew
+    * panel.tempcoef * (panel__environment.celltempc - 25)) / panel.powratew) < 0.8
+    * (100.0 - ((julianday(perfmoment) - julianday(panel__plant.initdate)) / 365.25)
+    * CAST(json_extract(efficiency_profile, '$.degradation.anndegrate') AS REAL))
+    THEN 1 ELSE 0 END ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Advanced Performance Degradation Alert (KB#40): 1 when NDI > 1.5 AND
+    TAPR is below the Critical Performance Threshold (i.e., TAPR < 80% of the age-expected
+    PPR); else 0.'
+  hidden: false
+  meta:
+    kb_id: 40
+- name: end_of_warranty_review_candidate
+  sql: CASE WHEN ((julianday(perfmoment) - julianday(panel__plant.initdate)) / 365.25)
+    > 0 AND CAST(json_extract(efficiency_profile, '$.degradation.anndegrate') AS REAL)
+    > 0 THEN CASE WHEN ((CAST(json_extract(efficiency_profile, '$.current_efficiency.curreffpct')
+    AS REAL) - panel.paneeffpct) / ((julianday(perfmoment) - julianday(panel__plant.initdate))
+    / 365.25) * 100) / CAST(json_extract(efficiency_profile, '$.degradation.anndegrate')
+    AS REAL) > 0.9 THEN 1 ELSE 0 END ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'End-of-Warranty Optimization (KB#44, encodable portion): 1 when NDI
+    > 0.9 (the encodable half of the rule). The ''fails Warranty Claim Threshold''
+    branch (KB#17) requires the manufacturer''s warranty curve which isn''t available
+    in this DB; that branch is deferred.'
+  hidden: false
+  meta:
+    kb_id: 44
+- name: end_of_life_indicator
+  sql: CASE WHEN CAST(json_extract(efficiency_profile, '$.degradation.cumdegpct')
+    AS REAL) > 20 THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'End-of-Life Indicator (KB#14, partial): 1 when CumDegPct > 20%, else
+    0. The KB also allows triggering on ''12-month maintenance costs > 30% of replacement
+    value''; that branch needs a 12-month windowed aggregation across maintenance
+    and is deferred. The CumDegPct branch is the one usually decisive at panel grain.'
+  hidden: false
+  meta:
+    kb_id: 14
+- name: optimal_cleaning_schedule_trigger
+  sql: CASE WHEN panel__environment.soillosspct > 5 OR panel__environment.dustdengm2
+    > 0.15 THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: "Optimal Cleaning Schedule (KB#42, partial): 1 when SIF \xD7 DustDensityGM2\
+    \ = SoilingLossPct exceeds the Soiling Cleaning Threshold (KB#13), else 0. The\
+    \ 'EEY reduced by more than 3% due to soiling' branch requires a counterfactual\
+    \ EEY (EEY at SoilingLossPct=0) and is deferred; the soiling-threshold branch\
+    \ is the one usually decisive in practice."
+  hidden: false
+  meta:
+    kb_id: 42
+measures: []
+aggregations: []
+joins:
+- target_model: panel
+  join_pairs:
+  - - solmodref
+    - panemark
+  join_type: left
+filters: []
+description: "A measured power-output observation for a panel at a moment in time.\
+  \ Joins to `panel` via `solmodref \u2192 panemark`. Holds raw `measpoww` (MeasuredPowerW)\
+  \ and `powlossw`, plus the JSON `efficiency_profile` whose `degradation.{cumdegpct,\
+  \ anndegrate}` and `current_efficiency.{curreffpct, efflosspct}` fields drive PPR\
+  \ / PELR / NDI / EPE / TSL / EPI calculations."
+hidden: false

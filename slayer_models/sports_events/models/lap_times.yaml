@@ -1,0 +1,108 @@
+version: 3
+name: lap_times
+sql_table: lap_times
+query_variables: {}
+data_source: sports_events
+columns:
+- name: rc_index
+  sql: rc_index
+  type: number
+  primary_key: true
+  description: Foreign key to races.
+  hidden: false
+  format:
+    type: integer
+- name: wheel_unit
+  sql: wheel_unit
+  type: number
+  primary_key: true
+  description: Foreign key to drivers.
+  hidden: false
+  format:
+    type: integer
+- name: lapval
+  sql: lapval
+  type: number
+  primary_key: true
+  description: Lap number.
+  hidden: false
+  format:
+    type: integer
+- name: pp
+  sql: pp
+  type: number
+  primary_key: false
+  description: Driver's position at this lap.
+  hidden: false
+  format:
+    type: integer
+- name: tmdesc
+  sql: tmdesc
+  type: string
+  primary_key: false
+  description: Lap time as 'M:SS.fff' string. NULL = lap time was not captured or
+    is invalid.
+  hidden: false
+- name: msec_val
+  sql: msec_val
+  type: number
+  primary_key: false
+  description: Lap time in milliseconds.
+  hidden: false
+  format:
+    type: integer
+- name: lap_seconds
+  sql: msec_val / 1000.0
+  type: number
+  primary_key: false
+  description: 'Lap Time in Seconds (KB #21): T_seconds = T_milliseconds / 1000.'
+  hidden: false
+  meta:
+    kb_id: 21
+- name: lap_seconds_for_avg
+  sql: msec_val / 1000.0
+  type: number
+  primary_key: false
+  description: 'Helper anchor for KB #23 Driver''s Average Lap Time (exposed as the
+    average_lap_seconds measure).'
+  hidden: true
+  meta:
+    kb_id: 23
+- name: lap_seconds_for_consistency
+  sql: msec_val / 1000.0
+  type: number
+  primary_key: false
+  description: 'Helper anchor for KB #32 Lap Time Consistency (exposed as the lap_time_consistency
+    measure).'
+  hidden: true
+  meta:
+    kb_id: 32
+measures:
+- formula: lap_seconds:avg
+  name: average_lap_seconds
+  label: Driver's Average Lap Time
+  description: 'Driver''s Average Lap Time (KB #23): mean of Lap Time in Seconds across
+    the laps in the group (typically grouped by race + driver). Uses KB #21 Lap Time
+    in Seconds.'
+- formula: lap_seconds:stddev_pop
+  name: lap_time_consistency
+  label: Lap Time Consistency
+  description: 'Lap Time Consistency (KB #32): population standard deviation of Lap
+    Time in Seconds for the group (typically race + driver). Lower is better. Uses
+    KB #21 / KB #23.'
+aggregations: []
+joins:
+- target_model: races
+  join_pairs:
+  - - rc_index
+    - rak_id
+  join_type: left
+- target_model: drivers
+  join_pairs:
+  - - wheel_unit
+    - drv_main
+  join_type: left
+filters: []
+description: Per-driver per-lap timing data for races. One row per (race, driver,
+  lap).
+hidden: false

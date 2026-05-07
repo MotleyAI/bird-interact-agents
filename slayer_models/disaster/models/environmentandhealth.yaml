@@ -1,0 +1,199 @@
+version: 3
+name: environmentandhealth
+sql_table: environmentandhealth
+query_variables: {}
+data_source: disaster
+columns:
+- name: envhealthregistry
+  sql: envhealthregistry
+  type: string
+  primary_key: true
+  hidden: false
+- name: envdistref
+  sql: envdistref
+  type: string
+  primary_key: false
+  hidden: false
+- name: envimpactrate
+  sql: envimpactrate
+  type: string
+  primary_key: false
+  hidden: false
+- name: wastemanagementstate
+  sql: wastemanagementstate
+  type: string
+  primary_key: false
+  hidden: false
+- name: recyclepct
+  sql: recyclepct
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: carbontons
+  sql: carbontons
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: renewenergypct
+  sql: renewenergypct
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: waterqualityindex
+  sql: waterqualityindex
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: sanitationcoverage
+  sql: sanitationcoverage
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: diseaserisk
+  sql: diseaserisk
+  type: string
+  primary_key: false
+  hidden: false
+- name: medicalemergencycapacity
+  sql: medicalemergencycapacity
+  type: string
+  primary_key: false
+  hidden: false
+- name: vaccinationcoverage
+  sql: vaccinationcoverage
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: mentalhealthaid
+  sql: mentalhealthaid
+  type: string
+  primary_key: false
+  hidden: false
+- name: medcap_numeric
+  sql: CASE medicalemergencycapacity WHEN 'Adequate' THEN 1.0 WHEN 'Limited' THEN
+    0.6 WHEN 'Critical' THEN 0.3 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Numeric factor used by KB #37 (HSCI): Adequate=1.0, Limited=0.6, Critical=0.3,
+    else=0.'
+  hidden: false
+- name: eif
+  sql: carbontons * (1 - renewenergypct / 100.0) + (100 - recyclepct) * 0.5
+  type: number
+  primary_key: false
+  description: 'Environmental Impact Factor (EIF, KB #16): carbontons*(1 - renewenergypct/100)
+    + (100 - recyclepct)*0.5.'
+  hidden: false
+  meta:
+    kb_id: 16
+- name: phrs
+  sql: waterqualityindex * 0.4 + sanitationcoverage * 0.3 + vaccinationcoverage *
+    0.3
+  type: number
+  primary_key: false
+  description: 'Public Health Resilience Score (PHRS, KB #17): waterqualityindex*0.4
+    + sanitationcoverage*0.3 + vaccinationcoverage*0.3.'
+  hidden: false
+  meta:
+    kb_id: 17
+- name: scsi
+  sql: 100 - (carbontons * (1 - renewenergypct / 100.0) + (100 - recyclepct) * 0.5)
+    * (transportation.totaldeliverytons / 1000.0) * (transportation.fuelefficiencylpk
+    / 20.0)
+  type: number
+  primary_key: false
+  description: 'Supply Chain Sustainability Index (SCSI, KB #33): 100 - EIF * (transportation.totaldeliverytons/1000)
+    * (transportation.fuelefficiencylpk/20).'
+  hidden: false
+  meta:
+    kb_id: 33
+- name: hsci
+  sql: (waterqualityindex * 0.4 + sanitationcoverage * 0.3 + vaccinationcoverage *
+    0.3) * (CASE medicalemergencycapacity WHEN 'Adequate' THEN 1.0 WHEN 'Limited'
+    THEN 0.6 WHEN 'Critical' THEN 0.3 ELSE 0 END) * (1 - CAST(SUBSTR(disasterevents.hazlevel,
+    7) AS INTEGER) / 6.0)
+  type: number
+  primary_key: false
+  description: 'Health System Capacity Index (HSCI, KB #37): PHRS * medcap_numeric
+    * (1 - hazlevel_numeric/6).'
+  hidden: false
+  meta:
+    kb_id: 37
+- name: is_sustainable_response
+  sql: (carbontons * (1 - renewenergypct / 100.0) + (100 - recyclepct) * 0.5) < 50
+    AND renewenergypct > 30 AND recyclepct > 60
+  type: boolean
+  primary_key: false
+  description: 'Sustainable Response Operation (KB #25): EIF<50 AND renewenergypct>30
+    AND recyclepct>60.'
+  hidden: false
+  meta:
+    kb_id: 25
+- name: is_public_health_emergency
+  sql: diseaserisk = 'High' AND waterqualityindex < 50 AND (waterqualityindex * 0.4
+    + sanitationcoverage * 0.3 + vaccinationcoverage * 0.3) < 40
+  type: boolean
+  primary_key: false
+  description: 'Public Health Emergency (KB #26): diseaserisk=''High'' AND waterqualityindex<50
+    AND PHRS<40.'
+  hidden: false
+  meta:
+    kb_id: 26
+- name: is_critical_health_response
+  sql: diseaserisk = 'High' AND waterqualityindex < 50 AND (waterqualityindex * 0.4
+    + sanitationcoverage * 0.3 + vaccinationcoverage * 0.3) < 40 AND ((waterqualityindex
+    * 0.4 + sanitationcoverage * 0.3 + vaccinationcoverage * 0.3) * (CASE medicalemergencycapacity
+    WHEN 'Adequate' THEN 1.0 WHEN 'Limited' THEN 0.6 WHEN 'Critical' THEN 0.3 ELSE
+    0 END) * (1 - CAST(SUBSTR(disasterevents.hazlevel, 7) AS INTEGER) / 6.0)) < 30
+    AND (humanresources.staffingprofile ->> '$.readiness.ppe_status') = 'Critical'
+  type: boolean
+  primary_key: false
+  description: 'Critical Health Response Requirement (KB #44): is_public_health_emergency
+    AND HSCI<30 AND staffingProfile.readiness.ppe_status=''Critical''.'
+  hidden: false
+  meta:
+    kb_id: 44
+- name: eif_classification
+  sql: CASE WHEN (carbontons * (1 - renewenergypct / 100.0) + (100 - recyclepct) *
+    0.5) < 50 THEN 'Sustainable' WHEN (carbontons * (1 - renewenergypct / 100.0) +
+    (100 - recyclepct) * 0.5) < 100 THEN 'Moderate Impact' ELSE 'High Impact' END
+  type: string
+  primary_key: false
+  description: 'Environmental Impact Classification (KB #51): Sustainable (EIF<50),
+    Moderate (50<=EIF<100), High (EIF>=100).'
+  hidden: false
+  meta:
+    kb_id: 51
+measures: []
+aggregations: []
+joins:
+- target_model: disasterevents
+  join_pairs:
+  - - envdistref
+    - distregistry
+  join_type: left
+- target_model: transportation
+  join_pairs:
+  - - envdistref
+    - transportdistref
+  join_type: left
+- target_model: humanresources
+  join_pairs:
+  - - envdistref
+    - hrdistref
+  join_type: left
+filters: []
+description: Environmental and health profile per disaster event; 1:1 with disasterevents.
+hidden: false

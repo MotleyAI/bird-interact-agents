@@ -1,0 +1,245 @@
+version: 3
+name: environment
+sql_table: environment
+query_variables: {}
+data_source: solar
+columns:
+- name: envregistry
+  sql: envregistry
+  type: string
+  primary_key: true
+  hidden: false
+- name: arearegistry
+  sql: arearegistry
+  type: string
+  primary_key: false
+  hidden: false
+- name: envmoment
+  sql: envmoment
+  type: string
+  primary_key: false
+  hidden: false
+- name: celltempc
+  sql: celltempc
+  type: number
+  primary_key: false
+  description: 'CellTempC (KB#23): operating temperature of the solar cells in C.
+    Typically 40-70C; >80C accelerates degradation.'
+  hidden: false
+  format:
+    type: float
+  meta:
+    kb_id: 23
+- name: ambtempc
+  sql: ambtempc
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: soillosspct
+  sql: soillosspct
+  type: number
+  primary_key: false
+  description: 'SoilingLossPct (KB#25): power-output loss % due to dust/dirt accumulation.
+    Clean ~0%, heavily soiled >15%; well-maintained 2-5%.'
+  hidden: false
+  format:
+    type: float
+  meta:
+    kb_id: 25
+- name: dustdengm2
+  sql: dustdengm2
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: cleancycledays
+  sql: cleancycledays
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: integer
+- name: lastcleandt
+  sql: lastcleandt
+  type: string
+  primary_key: false
+  hidden: false
+- name: relhumpct
+  sql: relhumpct
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: windspdms
+  sql: windspdms
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: winddirdeg
+  sql: winddirdeg
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: preciptmm
+  sql: preciptmm
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: airpresshpa
+  sql: airpresshpa
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: uv_idx
+  sql: uv_idx
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: cloudcovpct
+  sql: cloudcovpct
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: snowcovpct
+  sql: snowcovpct
+  type: number
+  primary_key: false
+  hidden: false
+  format:
+    type: float
+- name: irradiance_conditions
+  sql: irradiance_conditions
+  type: string
+  primary_key: false
+  description: 'JSON: {specmisfac, irradiance_types: [global, direct, diffuse, POA]
+    in W/m^2}.'
+  hidden: false
+  meta:
+    kb_ids:
+    - 28
+- name: poa_irradiance_wm2
+  sql: CAST(json_extract(irradiance_conditions, '$.irradiance_types[3]') AS REAL)
+  type: number
+  primary_key: false
+  description: 'POAIrradianceWM2 (KB#28): Plane-of-Array irradiance reaching the panel
+    surface, in W/m^2. Extracted from irradiance_conditions.irradiance_types[3]. Typical
+    200 (overcast) to 1000+ (clear noon).'
+  hidden: false
+  meta:
+    kb_id: 28
+- name: global_irradiance_wm2
+  sql: CAST(json_extract(irradiance_conditions, '$.irradiance_types[0]') AS REAL)
+  type: number
+  primary_key: false
+  description: Global solar irradiance in W/m^2 (irradiance_types[0]).
+  hidden: false
+- name: direct_irradiance_wm2
+  sql: CAST(json_extract(irradiance_conditions, '$.irradiance_types[1]') AS REAL)
+  type: number
+  primary_key: false
+  description: Direct normal irradiance in W/m^2 (irradiance_types[1]).
+  hidden: false
+- name: diffuse_irradiance_wm2
+  sql: CAST(json_extract(irradiance_conditions, '$.irradiance_types[2]') AS REAL)
+  type: number
+  primary_key: false
+  description: Diffuse irradiance in W/m^2 (irradiance_types[2]).
+  hidden: false
+- name: specmisfac
+  sql: CAST(json_extract(irradiance_conditions, '$.specmisfac') AS REAL)
+  type: number
+  primary_key: false
+  description: Spectral mismatch factor.
+  hidden: false
+- name: sif
+  sql: CASE WHEN dustdengm2 > 0 THEN soillosspct / dustdengm2 ELSE NULL END
+  type: number
+  primary_key: false
+  description: 'Soiling Impact Factor (SIF, KB#6): SoilingLossPct / DustDensityGM2.
+    Higher = greater sensitivity of power loss to dust accumulation.'
+  hidden: false
+  meta:
+    kb_id: 6
+- name: days_since_last_clean
+  sql: CASE WHEN lastcleandt IS NOT NULL THEN julianday(envmoment) - julianday(lastcleandt)
+    ELSE NULL END
+  type: number
+  primary_key: false
+  description: Days elapsed between the environmental reading and the last cleaning.
+    Used by the Cleaning Triggers rule (KB#51).
+  hidden: false
+- name: soiling_cleaning_threshold_met
+  sql: CASE WHEN soillosspct > 5 OR dustdengm2 > 0.15 THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Soiling Cleaning Threshold (KB#13): 1 when SoilingLossPct > 5% OR
+    DustDensityGM2 > 0.15 g/m^2 (whichever occurs first), else 0.'
+  hidden: false
+  meta:
+    kb_id: 13
+- name: cleaning_trigger
+  sql: CASE WHEN soillosspct > 5 OR dustdengm2 > 0.15 OR (lastcleandt IS NOT NULL
+    AND julianday(envmoment) - julianday(lastcleandt) > 30) THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Cleaning Triggers (KB#51): 1 when (Soiling Cleaning Threshold met)
+    OR (>30 days since last cleaning) - whichever occurs first.'
+  hidden: false
+  meta:
+    kb_id: 51
+- name: in_optimal_window
+  sql: CASE WHEN celltempc BETWEEN 25 AND 45 AND CAST(json_extract(irradiance_conditions,
+    '$.irradiance_types[3]') AS REAL) > 800 AND soillosspct < 2 THEN 1 ELSE 0 END
+  type: number
+  primary_key: false
+  description: 'Optimal Performance Window (KB#15): 1 when CellTempC in [25, 45] C
+    AND POAIrradianceWM2 > 800 W/m^2 AND SoilingLossPct < 2%, else 0.'
+  hidden: false
+  meta:
+    kb_id: 15
+- name: weather_severity_inputs
+  sql: json_object('celltempc', celltempc, 'ambtempc', ambtempc, 'relhumpct', relhumpct,
+    'windspdms', windspdms, 'preciptmm', preciptmm)
+  type: string
+  primary_key: false
+  description: 'Weather Severity Index (KB#18): a composite index calculated from
+    extreme values of temperature (celltempc, ambtempc), humidity (relhumpct), wind
+    speed (windspdms), and precipitation (preciptmm). Higher values indicate more
+    severe operating conditions and increased risk of performance issues. KB#18 doesn''t
+    pin a closed-form composite, so this column exposes the five raw inputs as a JSON
+    bundle for query-side composition.'
+  hidden: false
+  meta:
+    kb_id: 18
+measures: []
+aggregations: []
+joins:
+- target_model: plant
+  join_pairs:
+  - - arearegistry
+    - growregistry
+  join_type: left
+filters: []
+description: 'Environmental conditions at a plant area at a moment in time. Joins
+  to `plant` via `arearegistry`. Includes weather (`celltempc`, `ambtempc`, `relhumpct`,
+  `windspdms`, `preciptmm`, `airpresshpa`), soiling (`soillosspct`, `dustdengm2`,
+  `cleancycledays`, `lastcleandt`), and the JSON `irradiance_conditions` (with the
+  four-element `irradiance_types` array: global, direct, diffuse, plane-of-array irradiance,
+  plus `specmisfac`).'
+hidden: false
