@@ -95,68 +95,42 @@ columns:
     THEN 50 WHEN 'Poor' THEN 70 WHEN 'Critical' THEN 90 ELSE NULL END
   type: DOUBLE
   primary_key: false
-  description: "PresStat-to-PS mapping (KB #35 component): Excellent=10, Good=30,\
-    \ Fair=50, Poor=70, Critical=90.\n\n[kb=35]\nCPI = \\begin{cases} 100 - PS + AF\
-    \ \\times \\left(1 + \\frac{TS}{10}\\right), & \\text{if in a Degradation Risk\
-    \ Zone} \\\\ 50 - PS + AF \\times \\left(1 + \\frac{TS}{20}\\right), & \\text{otherwise}\
-    \ \\end{cases}, \\text{ where PS is 0-100 based on PresStat condition ('Excellent'=10,\
-    \ 'Good'=30, 'Fair'=50, 'Poor'=70, 'Critical'=90), AF is approximate age in millennia\
-    \ derived from GuessDate, and TS is 0-10 based on TypeSite rarity.} \u2014 Quantifies\
-    \ the urgency of conservation efforts based on site condition, historical significance\
-    \ and structural stability.\n[/kb=35]"
-  label: Conservation Priority Index (CPI)
+  description: 'PresStat-to-PS mapping (KB #35 component): Excellent=10, Good=30,
+    Fair=50, Poor=70, Critical=90; unrecognized values resolve to NULL. Component
+    of `cpi`.'
+  label: Preservation Status Score (PS)
   hidden: false
-  meta:
-    kb_id: 35
 - name: af_millennia
   sql: abs(CAST(sites.guessdate AS REAL)) / 1000.0
   type: DOUBLE
   primary_key: false
-  description: "Approximate Age in millennia (KB #35 component) derived from GuessDate.\
-    \ Best-effort: leading numeric portion of GuessDate, absolute, divided by 1000.\
-    \ Non-numeric labels (e.g. 'Iron Age') resolve to 0; underlying KB doesn't fully\
-    \ specify the mapping for label-only dates.\n\n[kb=35]\nCPI = \\begin{cases} 100\
-    \ - PS + AF \\times \\left(1 + \\frac{TS}{10}\\right), & \\text{if in a Degradation\
-    \ Risk Zone} \\\\ 50 - PS + AF \\times \\left(1 + \\frac{TS}{20}\\right), & \\\
-    text{otherwise} \\end{cases}, \\text{ where PS is 0-100 based on PresStat condition\
-    \ ('Excellent'=10, 'Good'=30, 'Fair'=50, 'Poor'=70, 'Critical'=90), AF is approximate\
-    \ age in millennia derived from GuessDate, and TS is 0-10 based on TypeSite rarity.}\
-    \ \u2014 Quantifies the urgency of conservation efforts based on site condition,\
-    \ historical significance and structural stability.\n[/kb=35]"
-  label: Conservation Priority Index (CPI)
+  description: 'Approximate Age in millennia (KB #35 component) derived from GuessDate.
+    Best-effort: leading numeric portion of GuessDate, absolute, divided by 1000.
+    Non-numeric labels (e.g. ''Iron Age'') resolve to 0; underlying KB doesn''t fully
+    specify the mapping for label-only dates. Component of `cpi`.'
+  label: Approximate Age (AF, millennia)
   hidden: false
-  meta:
-    kb_id: 35
 - name: ts_rarity
   sql: CASE sites.typesite WHEN 'Religious' THEN 10 WHEN 'Military' THEN 8 WHEN 'Settlement'
     THEN 6 WHEN 'Industrial' THEN 4 WHEN 'Burial' THEN 2 ELSE 0 END
   type: DOUBLE
   primary_key: false
-  description: "TypeSite rarity score (KB #35 component): 0-10 based on type. Religious=10,\
-    \ Military=8, Settlement=6, Industrial=4, Burial=2, other=0. KB #35 doesn't specify\
-    \ the exact mapping; this is a best-effort archaeology-domain ranking.\n\n[kb=35]\n\
-    CPI = \\begin{cases} 100 - PS + AF \\times \\left(1 + \\frac{TS}{10}\\right),\
-    \ & \\text{if in a Degradation Risk Zone} \\\\ 50 - PS + AF \\times \\left(1 +\
-    \ \\frac{TS}{20}\\right), & \\text{otherwise} \\end{cases}, \\text{ where PS is\
-    \ 0-100 based on PresStat condition ('Excellent'=10, 'Good'=30, 'Fair'=50, 'Poor'=70,\
-    \ 'Critical'=90), AF is approximate age in millennia derived from GuessDate, and\
-    \ TS is 0-10 based on TypeSite rarity.} \u2014 Quantifies the urgency of conservation\
-    \ efforts based on site condition, historical significance and structural stability.\n\
-    [/kb=35]"
-  label: Conservation Priority Index (CPI)
+  description: 'TypeSite rarity score (KB #35 component): 0-10 based on type. Religious=10,
+    Military=8, Settlement=6, Industrial=4, Burial=2, other=0. KB #35 doesn''t specify
+    the exact mapping; this is a best-effort archaeology-domain ranking. Component
+    of `cpi`.'
+  label: TypeSite Rarity Score (TS)
   hidden: false
-  meta:
-    kb_id: 35
 - name: cpi
   sql: CASE WHEN (sites.presstat LIKE '%Poor%' OR sites.presstat LIKE '%Critical%')
     AND (structstate IS NULL OR structstate <> 'Stable') THEN 100 - (CASE sites.presstat
     WHEN 'Excellent' THEN 10 WHEN 'Good' THEN 30 WHEN 'Fair' THEN 50 WHEN 'Poor' THEN
-    70 WHEN 'Critical' THEN 90 ELSE 0 END) + (abs(CAST(sites.guessdate AS REAL)) /
-    1000.0) * (1 + (CASE sites.typesite WHEN 'Religious' THEN 10 WHEN 'Military' THEN
-    8 WHEN 'Settlement' THEN 6 WHEN 'Industrial' THEN 4 WHEN 'Burial' THEN 2 ELSE
-    0 END) / 10.0) ELSE 50 - (CASE sites.presstat WHEN 'Excellent' THEN 10 WHEN 'Good'
-    THEN 30 WHEN 'Fair' THEN 50 WHEN 'Poor' THEN 70 WHEN 'Critical' THEN 90 ELSE 0
-    END) + (abs(CAST(sites.guessdate AS REAL)) / 1000.0) * (1 + (CASE sites.typesite
+    70 WHEN 'Critical' THEN 90 ELSE NULL END) + (abs(CAST(sites.guessdate AS REAL))
+    / 1000.0) * (1 + (CASE sites.typesite WHEN 'Religious' THEN 10 WHEN 'Military'
+    THEN 8 WHEN 'Settlement' THEN 6 WHEN 'Industrial' THEN 4 WHEN 'Burial' THEN 2
+    ELSE 0 END) / 10.0) ELSE 50 - (CASE sites.presstat WHEN 'Excellent' THEN 10 WHEN
+    'Good' THEN 30 WHEN 'Fair' THEN 50 WHEN 'Poor' THEN 70 WHEN 'Critical' THEN 90
+    ELSE NULL END) + (abs(CAST(sites.guessdate AS REAL)) / 1000.0) * (1 + (CASE sites.typesite
     WHEN 'Religious' THEN 10 WHEN 'Military' THEN 8 WHEN 'Settlement' THEN 6 WHEN
     'Industrial' THEN 4 WHEN 'Burial' THEN 2 ELSE 0 END) / 20.0) END
   type: DOUBLE
@@ -178,18 +152,12 @@ columns:
     kb_id: 35
 - name: is_conservation_emergency
   sql: CASE WHEN (sites.presstat LIKE '%Poor%' OR sites.presstat LIKE '%Critical%')
-    AND (structstate IS NULL OR structstate <> 'Stable') AND (CASE WHEN (sites.presstat
-    LIKE '%Poor%' OR sites.presstat LIKE '%Critical%') AND (structstate IS NULL OR
-    structstate <> 'Stable') THEN 100 - (CASE sites.presstat WHEN 'Excellent' THEN
-    10 WHEN 'Good' THEN 30 WHEN 'Fair' THEN 50 WHEN 'Poor' THEN 70 WHEN 'Critical'
-    THEN 90 ELSE 0 END) + (abs(CAST(sites.guessdate AS REAL)) / 1000.0) * (1 + (CASE
-    sites.typesite WHEN 'Religious' THEN 10 WHEN 'Military' THEN 8 WHEN 'Settlement'
-    THEN 6 WHEN 'Industrial' THEN 4 WHEN 'Burial' THEN 2 ELSE 0 END) / 10.0) ELSE
-    50 - (CASE sites.presstat WHEN 'Excellent' THEN 10 WHEN 'Good' THEN 30 WHEN 'Fair'
-    THEN 50 WHEN 'Poor' THEN 70 WHEN 'Critical' THEN 90 ELSE 0 END) + (abs(CAST(sites.guessdate
-    AS REAL)) / 1000.0) * (1 + (CASE sites.typesite WHEN 'Religious' THEN 10 WHEN
-    'Military' THEN 8 WHEN 'Settlement' THEN 6 WHEN 'Industrial' THEN 4 WHEN 'Burial'
-    THEN 2 ELSE 0 END) / 20.0) END) > 75 THEN 1 ELSE 0 END
+    AND (structstate IS NULL OR structstate <> 'Stable') AND (100 - (CASE sites.presstat
+    WHEN 'Excellent' THEN 10 WHEN 'Good' THEN 30 WHEN 'Fair' THEN 50 WHEN 'Poor' THEN
+    70 WHEN 'Critical' THEN 90 ELSE NULL END) + (abs(CAST(sites.guessdate AS REAL))
+    / 1000.0) * (1 + (CASE sites.typesite WHEN 'Religious' THEN 10 WHEN 'Military'
+    THEN 8 WHEN 'Settlement' THEN 6 WHEN 'Industrial' THEN 4 WHEN 'Burial' THEN 2
+    ELSE 0 END) / 10.0)) > 75 THEN 1 ELSE 0 END
   type: BOOLEAN
   primary_key: false
   description: "Conservation Emergency (KB #42): in a Degradation Risk Zone (KB #14)\
