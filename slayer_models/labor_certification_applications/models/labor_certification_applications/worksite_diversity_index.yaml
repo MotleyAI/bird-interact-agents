@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: worksite_diversity_index
 source_queries:
 - version: 3
@@ -19,7 +19,7 @@ source_queries:
     source_name: ws_workers
     columns:
     - name: share_sq
-      type: number
+      type: DOUBLE
       sql: (wsheads_sum * 1.0 / SUM(wsheads_sum) OVER (PARTITION BY homefirm)) * (wsheads_sum
         * 1.0 / SUM(wsheads_sum) OVER (PARTITION BY homefirm))
   dimensions:
@@ -63,18 +63,18 @@ data_source: labor_certification_applications
 columns:
 - name: homefirm
   sql: homefirm
-  type: string
+  type: TEXT
   primary_key: false
   description: Employer (homefirm) for the case, denormalized via cases join.
   hidden: false
 - name: share_sq_sum
   sql: share_sq_sum
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: wdi
   sql: wdi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

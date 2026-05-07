@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: signalclassification
 sql_table: signalclassification
 query_variables: {}
@@ -6,12 +6,12 @@ data_source: alien
 columns:
 - name: signalref
   sql: signalref
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: sigclasstype
   sql: sigclasstype
-  type: string
+  type: TEXT
   primary_key: false
   description: "Classification Type. sigclasstype='Broadband Transient' describes\
     \ short-duration signals (SigDurSec typically < 5) that span a large portion of\
@@ -28,54 +28,54 @@ columns:
     kb_id: 25
 - name: sigpattern
   sql: sigpattern
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: repeatcount
   sql: repeatcount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: periodsec
   sql: periodsec
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: complexidx
   sql: complexidx
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: entropyval
   sql: entropyval
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: infodense
   sql: infodense
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: classconf
   sql: classconf
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: scr
   sql: (complexidx * infodense) / log10(signals.bwhz)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Signal Complexity Ratio (SCR) = (ComplexIdx * InfoDense) / log10(BwHz).\
     \ ComplexIdx and InfoDense are local; BwHz is reached through the signalclassification.signalref\
@@ -92,7 +92,7 @@ columns:
 - name: prc
   sql: (CASE WHEN repeatcount > 1 THEN 1 + log10(repeatcount) ELSE 0.5 END) * (CASE
     WHEN entropyval < 0.9 THEN 1 ELSE 0.3 END) * ((complexidx * infodense) / log10(signals.bwhz))
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Pattern Recognition Confidence (PRC) = (RepeatCount>1 ? 1+log10(RepeatCount)\
     \ : 0.5) * (EntropyVal<0.9 ? 1 : 0.3) * SCR. SCR is the local signalclassification.scr\

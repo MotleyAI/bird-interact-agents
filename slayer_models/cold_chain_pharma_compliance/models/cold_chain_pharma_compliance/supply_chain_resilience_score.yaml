@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: supply_chain_resilience_score
 source_queries:
 - version: 3
@@ -19,7 +19,7 @@ source_queries:
         - k
     columns:
     - name: scrs
-      type: number
+      type: DOUBLE
       sql: 0.4 * art_score_avg + 0.3 * rrd_avg.rrd_score_avg + 0.2 * sbp_avg.sbp_score_avg
         + 0.1 * smc_avg.smc_score_avg
   dimensions:
@@ -62,7 +62,7 @@ data_source: cold_chain_pharma_compliance
 columns:
 - name: scrs
   sql: scrs
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: qualifying
 sql_table: qualifying
 query_variables: {}
@@ -6,7 +6,7 @@ data_source: sports_events
 columns:
 - name: qualkey
   sql: qualkey
-  type: number
+  type: INT
   primary_key: true
   description: Unique qualifying record identifier.
   hidden: false
@@ -14,7 +14,7 @@ columns:
     type: integer
 - name: rbind
   sql: rbind
-  type: number
+  type: INT
   primary_key: false
   description: Foreign key to races.
   hidden: false
@@ -22,7 +22,7 @@ columns:
     type: integer
 - name: pilotrec
   sql: pilotrec
-  type: number
+  type: INT
   primary_key: false
   description: Foreign key to drivers.
   hidden: false
@@ -30,7 +30,7 @@ columns:
     type: integer
 - name: corptag
   sql: corptag
-  type: number
+  type: INT
   primary_key: false
   description: Foreign key to constructors.
   hidden: false
@@ -38,7 +38,7 @@ columns:
     type: integer
 - name: regno
   sql: regno
-  type: number
+  type: INT
   primary_key: false
   description: Driver registration number for the event.
   hidden: false
@@ -46,7 +46,7 @@ columns:
     type: integer
 - name: px_pos
   sql: px_pos
-  type: number
+  type: INT
   primary_key: false
   description: 'Final qualifying position (1 = Pole Position, KB #10).'
   hidden: false
@@ -54,28 +54,28 @@ columns:
     type: integer
 - name: q1_r
   sql: q1_r
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Q1 qualifying time as ''M:SS.fff'' string. NULL = no Q1 time recorded
     (KB #1).'
   hidden: false
 - name: q2_r
   sql: q2_r
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Q2 qualifying time as ''M:SS.fff'' string. NULL = driver did not advance
     to Q2 or no time recorded (KB #1).'
   hidden: false
 - name: q3_r
   sql: q3_r
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Q3 qualifying time as ''M:SS.fff'' string. NULL = driver did not advance
     to Q3 (KB #1).'
   hidden: false
 - name: is_pole_position
   sql: px_pos = 1
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Pole Position (KB #10): TRUE iff the driver set the fastest qualifying\
     \ time (px_pos = 1).\n\n[kb=10]\nA driver achieves Pole Position by setting the\
@@ -89,7 +89,7 @@ columns:
   sql: CASE WHEN q1_r IS NULL OR INSTR(q1_r, ':') = 0 THEN NULL ELSE CAST(SUBSTR(q1_r,
     1, INSTR(q1_r, ':') - 1) AS REAL) * 60 + CAST(SUBSTR(q1_r, INSTR(q1_r, ':') +
     1) AS REAL) END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Q1 time converted from ''M:SS.fff'' to seconds (KB #21).'
   hidden: false
@@ -97,7 +97,7 @@ columns:
   sql: CASE WHEN q2_r IS NULL OR INSTR(q2_r, ':') = 0 THEN NULL ELSE CAST(SUBSTR(q2_r,
     1, INSTR(q2_r, ':') - 1) AS REAL) * 60 + CAST(SUBSTR(q2_r, INSTR(q2_r, ':') +
     1) AS REAL) END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Q2 time converted from ''M:SS.fff'' to seconds (KB #21).'
   hidden: false
@@ -105,7 +105,7 @@ columns:
   sql: CASE WHEN q3_r IS NULL OR INSTR(q3_r, ':') = 0 THEN NULL ELSE CAST(SUBSTR(q3_r,
     1, INSTR(q3_r, ':') - 1) AS REAL) * 60 + CAST(SUBSTR(q3_r, INSTR(q3_r, ':') +
     1) AS REAL) END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Q3 time converted from ''M:SS.fff'' to seconds (KB #21).'
   hidden: false
@@ -118,7 +118,7 @@ columns:
     WHEN q3_r IS NULL OR INSTR(q3_r, ':') = 0 THEN NULL ELSE CAST(SUBSTR(q3_r, 1,
     INSTR(q3_r, ':') - 1) AS REAL) * 60 + CAST(SUBSTR(q3_r, INSTR(q3_r, ':') + 1)
     AS REAL) END, 1e18))
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Driver''s best qualifying time (across Q1/Q2/Q3) in seconds. Used
     as T_driver in KB #28 Qualifying Time Deficit to Pole.'

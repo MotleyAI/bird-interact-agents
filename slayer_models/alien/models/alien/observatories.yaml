@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: observatories
 sql_table: observatories
 query_variables: {}
@@ -6,12 +6,12 @@ data_source: alien
 columns:
 - name: observstation
   sql: observstation
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: weathprofile
   sql: weathprofile
-  type: string
+  type: TEXT
   primary_key: false
   description: "Weather Profile. WeathProfile='Clear' indicates pristine sky conditions\
     \ with no clouds, usually associated with AtmosTransparency > 0.9, low HumidityRate\
@@ -28,7 +28,7 @@ columns:
     kb_id: 20
 - name: seeingprofile
   sql: seeingprofile
-  type: string
+  type: TEXT
   primary_key: false
   description: "Seeing Profile. SeeingProfile='Excellent' describes atmospheric conditions\
     \ with minimal turbulence, allowing for sharp, detailed observations. Typically\
@@ -45,31 +45,31 @@ columns:
     kb_id: 21
 - name: atmostransparency
   sql: atmostransparency
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: lunarstage
   sql: lunarstage
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: lunardistdeg
   sql: lunardistdeg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: solarstatus
   sql: solarstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: geomagstatus
   sql: geomagstatus
-  type: string
+  type: TEXT
   primary_key: false
   description: "Geomagnetic Activity status. GeomagStatus='Storm' (or 'Major Storm'\
     \ in domain prose) indicates intense solar-induced geomagnetic activity (Kp index\
@@ -87,40 +87,40 @@ columns:
     kb_id: 23
 - name: sidereallocal
   sql: sidereallocal
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: airtempc
   sql: airtempc
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: humidityrate
   sql: humidityrate
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: windspeedms
   sql: windspeedms
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: presshpa
   sql: presshpa
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: aoi
   sql: atmostransparency * (1 - humidityrate / 100.0) * (1 - 0.02 * windspeedms)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Atmospheric Observability Index (AOI) = AtmosTransparency * (1 - HumidityRate/100)\
     \ * (1 - 0.02 * WindSpeedMs). Values closer to 1 indicate ideal observation conditions.\n\
@@ -135,7 +135,7 @@ columns:
 - name: disf
   sql: (10 - ABS(airtempc - 15) / 10.0) * atmostransparency * (1 - humidityrate /
     200.0) * (100 - lunardistdeg) / 100.0
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Detection Instrument Sensitivity Factor (DISF) = (10 - |AirTempC-15|/10)\
     \ * AtmosTransparency * (1 - HumidityRate/200) * (100 - LunarDistDeg)/100. Values\
@@ -151,7 +151,7 @@ columns:
     kb_id: 5
 - name: lif
   sql: (1 - lunardistdeg / 180.0) * (1 - atmostransparency)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Lunar Interference Factor (LIF) = (1 - LunarDistDeg/180) * (1 - AtmosTransparency).\
     \ Higher values indicate more lunar interference; values above 0.5 suggest significant\
@@ -168,7 +168,7 @@ columns:
   sql: CASE WHEN (atmostransparency * (1 - humidityrate / 100.0) * (1 - 0.02 * windspeedms))
     > 0.85 AND lunarstage IN ('New', 'First Quarter') AND lunardistdeg > 45 AND solarstatus
     IN ('Low', 'Moderate') THEN 1 ELSE 0 END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Optimal Observing Window (OOW): periods when AOI > 0.85, LunarStage\
     \ in ('New','First Quarter'), LunarDistDeg > 45, SolarStatus in ('Low','Moderate').\n\
@@ -183,7 +183,7 @@ columns:
 - name: is_sds
   sql: CASE WHEN atmostransparency < 0.7 OR humidityrate > 70 OR windspeedms > 8 OR
     geomagstatus LIKE '%Storm%' THEN 1 ELSE 0 END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Signal Degradation Scenario (SDS): observation conditions where AtmosTransparency<0.7\
     \ OR HumidityRate>70 OR WindSpeedMs>8 OR GeomagStatus contains 'Storm'.\n\n[kb=14]\n\
@@ -198,7 +198,7 @@ columns:
 - name: is_high_lif
   sql: CASE WHEN ((1 - lunardistdeg / 180.0) * (1 - atmostransparency)) > 0.5 THEN
     1 ELSE 0 END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "High Lunar Interference Events: observations where LIF > 0.5, indicating\
     \ strong lunar contamination in the data.\n\n[kb=53]\nEvents where the calculated\

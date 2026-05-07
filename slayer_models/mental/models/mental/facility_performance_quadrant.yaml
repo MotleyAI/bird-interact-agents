@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: facility_performance_quadrant
 source_queries:
 - version: 3
@@ -8,7 +8,7 @@ source_queries:
     columns:
     - name: _one
       sql: '1'
-      type: number
+      type: DOUBLE
   measures:
   - formula: tox_per_fac__tar:avg
     name: tar
@@ -50,7 +50,7 @@ source_queries:
         - _one
     columns:
     - name: quadrant
-      type: string
+      type: TEXT
       sql: CASE WHEN tar >= med_tar.median_tar AND psm >= med_psm.median_psm THEN
         'High Adherence, High Stability' WHEN tar >= med_tar.median_tar AND psm <
         med_psm.median_psm THEN 'High Adherence, Low Stability' WHEN tar < med_tar.median_tar
@@ -752,26 +752,26 @@ data_source: mental
 columns:
 - name: fackey
   sql: fackey
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: tar
   sql: tar
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: psm
   sql: psm
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: quadrant
   sql: quadrant
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

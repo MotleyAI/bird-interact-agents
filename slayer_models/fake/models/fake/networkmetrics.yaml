@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: networkmetrics
 sql_table: networkmetrics
 query_variables: {}
@@ -6,17 +6,17 @@ data_source: fake
 columns:
 - name: netkey
   sql: netkey
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: netsessref
   sql: netsessref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: network_engagement_metrics
   sql: network_engagement_metrics
-  type: string
+  type: TEXT
   primary_key: false
   description: "JSONB column grouping connection metrics (follownum, followgrowrate,\
     \ followinggrowrate, connqualscore, ...), engagement metrics (engauth, engrate,\
@@ -31,63 +31,63 @@ columns:
     kb_id: 22
 - name: follownum
   sql: json_extract(network_engagement_metrics, '$.connection_metrics.follownum')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Follower count.
   hidden: false
 - name: followingnum
   sql: json_extract(network_engagement_metrics, '$.connection_metrics.followingnum')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Following count.
   hidden: false
 - name: followgrowrate
   sql: json_extract(network_engagement_metrics, '$.connection_metrics.followgrowrate')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Follower growth rate (component of NGV, KB #2).'
   hidden: false
 - name: followinggrowrate
   sql: json_extract(network_engagement_metrics, '$.connection_metrics.followinggrowrate')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Following growth rate (component of NGV, KB #2).'
   hidden: false
 - name: connqualscore
   sql: json_extract(network_engagement_metrics, '$.connection_metrics.connqualscore')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Connection-quality score (component of NIC, KB #51).'
   hidden: false
 - name: engauth
   sql: json_extract(network_engagement_metrics, '$.engagement_metrics.engauth')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Engagement authenticity (KB #22). Range 0-1; >0.9 highly authentic,
     <0.4 artificial / automated.'
   hidden: false
 - name: engrate
   sql: json_extract(network_engagement_metrics, '$.engagement_metrics.engrate')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Engagement rate.
   hidden: false
 - name: interactdiv
   sql: json_extract(network_engagement_metrics, '$.interaction_metrics.interactdiv')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Interaction diversity (component of NIC, KB #51).'
   hidden: false
 - name: tempinteractpat
   sql: json_extract(network_engagement_metrics, '$.interaction_metrics.tempinteractpat')
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Temporal interaction pattern enum (Natural / Periodic / Random / Automated).
     KB #17 (Engagement Manipulator) checks tempinteractpat=''Automated''.'
   hidden: false
 - name: interactreci
   sql: json_extract(network_engagement_metrics, '$.interaction_metrics.interactreci')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Interaction reciprocity.
   hidden: false

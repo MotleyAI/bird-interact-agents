@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: qualifying_with_pole_deficit
 source_queries:
 - version: 3
@@ -17,24 +17,24 @@ source_queries:
     source_name: best_qual_per_driver
     columns:
     - name: pole_seconds
-      type: number
+      type: DOUBLE
       sql: MIN(best_qualifying_seconds) OVER (PARTITION BY rbind)
       description: Pole-sitter's best qualifying time in seconds for this race (window
         function over qualifying).
     - name: qualifying_time_deficit_to_pole
-      type: number
+      type: DOUBLE
       sql: best_qualifying_seconds - MIN(best_qualifying_seconds) OVER (PARTITION
         BY rbind)
       description: 'Qualifying Time Deficit to Pole (KB #28): driver''s best qualifying
         time minus pole sitter''s, in seconds.'
     - name: is_qualifying_specialist
-      type: boolean
+      type: BOOLEAN
       sql: (best_qualifying_seconds - MIN(best_qualifying_seconds) OVER (PARTITION
         BY rbind)) < 0.2
       description: 'Qualifying Specialist (KB #41): TRUE iff Qualifying Time Deficit
         to Pole < 0.2 s.'
     - name: qualifying_performance_cluster
-      type: string
+      type: TEXT
       sql: CASE WHEN (best_qualifying_seconds - MIN(best_qualifying_seconds) OVER
         (PARTITION BY rbind)) < 0.15 THEN 'Pole Threat' WHEN (best_qualifying_seconds
         - MIN(best_qualifying_seconds) OVER (PARTITION BY rbind)) < 0.4 THEN 'Mid
@@ -103,7 +103,7 @@ data_source: sports_events
 columns:
 - name: qualkey
   sql: qualkey
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Unique qualifying record identifier.
   hidden: false
@@ -111,7 +111,7 @@ columns:
     type: integer
 - name: rbind
   sql: rbind
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Foreign key to races.
   hidden: false
@@ -119,7 +119,7 @@ columns:
     type: integer
 - name: pilotrec
   sql: pilotrec
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Foreign key to drivers.
   hidden: false
@@ -127,7 +127,7 @@ columns:
     type: integer
 - name: corptag
   sql: corptag
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Foreign key to constructors.
   hidden: false
@@ -135,7 +135,7 @@ columns:
     type: integer
 - name: px_pos
   sql: px_pos
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Final qualifying position (1 = Pole Position, KB #10).'
   hidden: false
@@ -143,35 +143,35 @@ columns:
     type: integer
 - name: best_qualifying_seconds
   sql: best_qualifying_seconds
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Driver''s best qualifying time (across Q1/Q2/Q3) in seconds. Used
     as T_driver in KB #28 Qualifying Time Deficit to Pole.'
   hidden: false
 - name: pole_seconds
   sql: pole_seconds
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Pole-sitter's best qualifying time in seconds for this race (window
     function over qualifying).
   hidden: false
 - name: qualifying_time_deficit_to_pole
   sql: qualifying_time_deficit_to_pole
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Qualifying Time Deficit to Pole (KB #28): driver''s best qualifying
     time minus pole sitter''s, in seconds.'
   hidden: false
 - name: is_qualifying_specialist
   sql: is_qualifying_specialist
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: 'Qualifying Specialist (KB #41): TRUE iff Qualifying Time Deficit to
     Pole < 0.2 s.'
   hidden: false
 - name: qualifying_performance_cluster
   sql: qualifying_performance_cluster
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Qualifying Performance Cluster (KB #53): ''Pole Threat'' (<0.15 s),
     ''Mid Gap'' (0.15-0.4 s), ''Backmarker'' (>=0.4 s) by qualifying deficit to pole.'

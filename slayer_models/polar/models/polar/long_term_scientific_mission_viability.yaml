@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: long_term_scientific_mission_viability
 source_queries:
 - version: 3
@@ -7,7 +7,7 @@ source_queries:
     source_name: scientific_mission_success_probability
     columns:
     - name: smsp_ok_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN smsp > 0.8 THEN 1 ELSE 0 END
   measures:
   - formula: smsp_ok_flag:min
@@ -21,7 +21,7 @@ source_queries:
     source_name: comprehensive_operational_reliability_indicator
     columns:
     - name: cori_ok_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN cori > 0.75 THEN 1 ELSE 0 END
   measures:
   - formula: cori_ok_flag:min
@@ -35,7 +35,7 @@ source_queries:
     source_name: scientific
     columns:
     - name: sci_ok_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN calibrationstatus = 'Valid' AND dataloggingstatus = 'Active'
         THEN 1 ELSE 0 END
   measures:
@@ -200,29 +200,29 @@ data_source: polar
 columns:
 - name: scieqref
   sql: scieqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sci_ok_min
   sql: sci_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_lsmv
   sql: is_lsmv
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: cori_p_eq_lsmv__cori_ok_min
   sql: cori_p_eq_lsmv__cori_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: smsp_p_eq_lsmv__smsp_ok_min
   sql: smsp_p_eq_lsmv__smsp_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

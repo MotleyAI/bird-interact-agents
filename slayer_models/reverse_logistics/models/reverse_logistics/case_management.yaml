@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: case_management
 sql_table: case_management
 query_variables: {}
@@ -6,12 +6,12 @@ data_source: reverse_logistics
 columns:
 - name: casetie
   sql: casetie
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: satisfscore
   sql: satisfscore
-  type: number
+  type: INT
   primary_key: false
   description: "Satisfaction Scores \u2014 5-point ordinal scale: 1=Very Dissatisfied,\
     \ 2=Dissatisfied, 3=Neutral, 4=Satisfied, 5=Very Satisfied. Larger = more satisfied.\n\
@@ -27,136 +27,136 @@ columns:
     kb_id: 26
 - name: commstate
   sql: commstate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: resptime
   sql: resptime
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: resolsatis
   sql: resolsatis
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: hasfeedback
   sql: hasfeedback
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: feedbacktype
   sql: feedbacktype
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: vendornotice
   sql: vendornotice
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: vendoraction
   sql: vendoraction
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: preventopp
   sql: preventopp
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: actionident
   sql: actionident
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: actionstate
   sql: actionstate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: kbupdated
   sql: kbupdated
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: trainident
   sql: trainident
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: needsprocimprove
   sql: needsprocimprove
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: needsdocupdate
   sql: needsdocupdate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: needssysupdate
   sql: needssysupdate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: reportstate
   sql: reportstate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: analysisstate
   sql: analysisstate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: hastrendanalysis
   sql: hastrendanalysis
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: hascostanalysis
   sql: hascostanalysis
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: recstate
   sql: recstate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: actioncount
   sql: actioncount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: needsfollowup
   sql: needsfollowup
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: nextreview
   sql: nextreview
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: closestate
   sql: closestate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: closedate
   sql: closedate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: closenotes
   sql: closenotes
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

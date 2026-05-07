@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: circuits
 sql_table: circuits
 query_variables: {}
@@ -6,7 +6,7 @@ data_source: sports_events
 columns:
 - name: cctkey
   sql: cctkey
-  type: number
+  type: INT
   primary_key: true
   description: Unique circuit identifier.
   hidden: false
@@ -14,7 +14,7 @@ columns:
     type: integer
 - name: location_metadata
   sql: location_metadata
-  type: string
+  type: TEXT
   primary_key: false
   description: 'JSONB column. Encapsulates all geographical and identification data
     related to the circuit''s location: name, reference_code, location.{city,country},
@@ -23,19 +23,19 @@ columns:
   meta: {}
 - name: circuit_name
   sql: json_extract(location_metadata, '$.name')
-  type: string
+  type: TEXT
   primary_key: false
   description: Circuit name (extracted from location_metadata).
   hidden: false
 - name: reference_code
   sql: json_extract(location_metadata, '$.reference_code')
-  type: string
+  type: TEXT
   primary_key: false
   description: Short circuit reference code (extracted).
   hidden: false
 - name: city
   sql: json_extract(location_metadata, '$.location.city')
-  type: string
+  type: TEXT
   primary_key: false
   description: "City of the circuit (extracted from location_metadata). NULL means\
     \ the locality is not supplied or unknown in the source feed (KB #3 Data Unavailability\
@@ -49,13 +49,13 @@ columns:
     kb_id: 3
 - name: country
   sql: json_extract(location_metadata, '$.location.country')
-  type: string
+  type: TEXT
   primary_key: false
   description: Country of the circuit (extracted).
   hidden: false
 - name: latitude
   sql: json_extract(location_metadata, '$.coordinates.latitude')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Latitude of the circuit (extracted). NULL = unknown / not supplied\
     \ in the source feed (KB #3 Data Unavailability for Circuit Location).\n\n[kb=3]\n\
@@ -68,7 +68,7 @@ columns:
     kb_id: 3
 - name: longitude
   sql: json_extract(location_metadata, '$.coordinates.longitude')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Longitude of the circuit (extracted). NULL = unknown / not supplied\
     \ in the source feed (KB #3 Data Unavailability for Circuit Location).\n\n[kb=3]\n\
@@ -81,7 +81,7 @@ columns:
     kb_id: 3
 - name: elevation_m
   sql: json_extract(location_metadata, '$.coordinates.elevation_m')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Circuit elevation in metres (extracted from location_metadata). NULL\
     \ = elevation was not recorded for the circuit (KB #4 Data Unavailability for\
@@ -96,7 +96,7 @@ columns:
 - name: is_high_altitude
   sql: CASE WHEN CAST(json_extract(location_metadata, '$.coordinates.elevation_m')
     AS REAL) > 800 THEN 1 ELSE 0 END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "High-Altitude Circuit (KB #14): elevation > 800 m above sea level.\n\
     \n[kb=14]\nA circuit is considered a High-Altitude Circuit if its elevation is\

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: cases
 sql_table: cases
 query_variables: {}
@@ -6,32 +6,32 @@ data_source: labor_certification_applications
 columns:
 - name: filekey
   sql: filekey
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: statustag
   sql: statustag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: recvday
   sql: recvday
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: decisionday
   sql: decisionday
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: origcertday
   sql: origcertday
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: visacls
   sql: visacls
-  type: string
+  type: TEXT
   primary_key: false
   description: "Visa classification (KB #1). Possible values include H-1B (specialty\
     \ occupations), H-1B1 Singapore, H-1B1 Chile, E-3 Australian.\n\n[kb=1]\nThe visa\
@@ -47,12 +47,12 @@ columns:
     kb_id: 1
 - name: jobtag
   sql: jobtag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: soccd
   sql: soccd
-  type: string
+  type: TEXT
   primary_key: false
   description: "Standard Occupational Classification (SOC) code (KB #7). E.g. 15-1253.00\
     \ = Software Quality Assurance Analysts and Testers; 29-1141.00 = Registered Nurses.\n\
@@ -70,12 +70,12 @@ columns:
     kb_id: 7
 - name: soctitle
   sql: soctitle
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: fulltimeind
   sql: fulltimeind
-  type: string
+  type: TEXT
   primary_key: false
   description: "Full-Time Position Indicator (KB #4). 'Y'/'1' = full-time (\u2265\
     35 hours/week), 'N'/'0' = part-time. May vary by employer.\n\n[kb=4]\nA full-time\
@@ -90,78 +90,78 @@ columns:
     kb_id: 4
 - name: beginday
   sql: beginday
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: endday
   sql: endday
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: headct
   sql: headct
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: newemp
   sql: newemp
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: contemp
   sql: contemp
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: changeprev
   sql: changeprev
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: concurrentlynew
   sql: concurrentlynew
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: changefirm
   sql: changefirm
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: amendflag
   sql: amendflag
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: siteslots
   sql: siteslots
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: agreelc
   sql: agreelc
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: h1bdep
   sql: h1bdep
-  type: string
+  type: TEXT
   primary_key: false
   description: "H-1B Dependency Status (KB #2). 'Yes' indicates the employer is H-1B\
     \ dependent (proportion of H-1B workers exceeds thresholds: >15% for >50 employees,\
@@ -178,7 +178,7 @@ columns:
     kb_id: 2
 - name: willfulv
   sql: willfulv
-  type: string
+  type: TEXT
   primary_key: false
   description: "Willful Violator status (KB #3). 'Yes' indicates the employer was\
     \ found by DOL to have committed a willful failure to meet LCA conditions or material\
@@ -195,22 +195,22 @@ columns:
     kb_id: 3
 - name: supporth
   sql: supporth
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: statbasis
   sql: statbasis
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: appa
   sql: appa
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: pubdisc
   sql: pubdisc
-  type: string
+  type: TEXT
   primary_key: false
   description: "Public Disclosure Options (KB #10). 'Disclose Business' indicates\
     \ employer consents to public disclosure of business info; other options may restrict\
@@ -227,22 +227,22 @@ columns:
     kb_id: 10
 - name: homefirm
   sql: homefirm
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: homezip
   sql: homezip
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: preplink
   sql: preplink
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: status_norm
   sql: LOWER(TRIM(statustag))
-  type: string
+  type: TEXT
   primary_key: false
   description: "Lowercased+trimmed statustag for case-insensitive matching ('certified',\
     \ 'denied', 'withdrawn', 'certified-withdrawn').\n\n[kb=47]\nPossible outcomes\
@@ -256,7 +256,7 @@ columns:
     kb_id: 47
 - name: is_certified
   sql: CASE WHEN LOWER(TRIM(statustag)) = 'certified' THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "1 if statustag='certified' (case-insensitive), else 0. Used for approval\
     \ rate (KB #13).\n\n[kb=13]\nAR = (Number of Certified Applications / Total Number\
@@ -269,7 +269,7 @@ columns:
     kb_id: 13
 - name: is_denied
   sql: CASE WHEN LOWER(TRIM(statustag)) = 'denied' THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "1 if denied else 0 (KB #47).\n\n[kb=47]\nPossible outcomes for a visa\
     \ application include: Certified (approved), Denied (rejected), Withdrawn (voluntarily\
@@ -282,7 +282,7 @@ columns:
     kb_id: 47
 - name: is_withdrawn
   sql: CASE WHEN LOWER(TRIM(statustag)) = 'withdrawn' THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "1 if withdrawn else 0 (KB #47).\n\n[kb=47]\nPossible outcomes for\
     \ a visa application include: Certified (approved), Denied (rejected), Withdrawn\
@@ -295,7 +295,7 @@ columns:
     kb_id: 47
 - name: is_certified_withdrawn
   sql: CASE WHEN LOWER(TRIM(statustag)) = 'certified-withdrawn' THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "1 if certified-withdrawn else 0 (KB #47).\n\n[kb=47]\nPossible outcomes\
     \ for a visa application include: Certified (approved), Denied (rejected), Withdrawn\
@@ -308,7 +308,7 @@ columns:
     kb_id: 47
 - name: is_h1b
   sql: CASE WHEN visacls = 'H-1B' THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "1 if visa class = H-1B else 0. KB #15.\n\n[kb=15]\nEHC = (Number of\
     \ H-1B Applications by Employer / Total Number of H-1B Applications) \xD7 100%.\
@@ -321,7 +321,7 @@ columns:
     kb_id: 15
 - name: is_continuation
   sql: CASE WHEN contemp > 0 THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "1 if continuation petition (contemp>0). KB #25.\n\n[kb=25]\nERR =\
     \ (Number of Continuation Applications / Total Number of Applications by Employer)\
@@ -335,7 +335,7 @@ columns:
 - name: has_attorney
   sql: CASE WHEN filekey IN (SELECT case_attorney.docketkey FROM case_attorney) THEN
     1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "1 if case has at least one attorney. KB #26.\n\n[kb=26]\nECR = (Number\
     \ of Applications with Attorney / Total Number of Applications) \xD7 100%. Attorney\
@@ -347,7 +347,7 @@ columns:
     kb_id: 26
 - name: is_premium_processing
   sql: CASE WHEN supporth = 'Yes' THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "1 if supporth='Yes'; proxy for premium processing (no explicit column).\
     \ KB #39.\n\n[kb=39]\nPPR = (Number of Premium Processing Applications / Total\
@@ -360,19 +360,19 @@ columns:
     kb_id: 39
 - name: recv_date
   sql: DATE(REPLACE(recvday, '/', '-'))
-  type: date
+  type: DATE
   primary_key: false
   description: Receipt date as a real DATE (input is '2023/12/21').
   hidden: false
 - name: decision_date
   sql: DATE(decisionday)
-  type: date
+  type: DATE
   primary_key: false
   description: Decision date as a real DATE (input '2023-12-29').
   hidden: false
 - name: application_processing_time
   sql: CAST(julianday(decisionday) - julianday(REPLACE(recvday, '/', '-')) AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Application Processing Time (APT, KB #12): days between recvday and\
     \ decisionday.\n\n[kb=12]\nAPT is the number of days between the date the application\
@@ -385,7 +385,7 @@ columns:
     kb_id: 12
 - name: recv_month
   sql: CAST(SUBSTR(recvday, 6, 2) AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Month of receipt (1-12), parsed from recvday 'YYYY/MM/DD'. Used for\
     \ KB #23/50 seasonal analysis.\n\n[kb=23]\nSAI = (Number of Applications in Month\
@@ -398,7 +398,7 @@ columns:
     kb_id: 23
 - name: is_amended
   sql: CASE WHEN amendflag > 0 THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "1 if amended petition. KB #37 component.\n\n[kb=37]\nACS is calculated\
     \ as a weighted sum of factors such as H-1B dependency, willful violator status,\
@@ -411,7 +411,7 @@ columns:
     kb_id: 37
 - name: is_new_employment
   sql: CASE WHEN newemp > 0 THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "1 if new-employment petition. KB #37 component.\n\n[kb=37]\nACS is\
     \ calculated as a weighted sum of factors such as H-1B dependency, willful violator\
@@ -424,7 +424,7 @@ columns:
     kb_id: 37
 - name: is_h1b_dependent_yes
   sql: CASE WHEN h1bdep = 'Yes' THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "1 if h1bdep='Yes'. KB #2 / KB #37 component.\n\n[kb=37]\nACS is calculated\
     \ as a weighted sum of factors such as H-1B dependency, willful violator status,\
@@ -437,7 +437,7 @@ columns:
     kb_id: 37
 - name: is_willful_violator_yes
   sql: CASE WHEN willfulv = 'Yes' THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "1 if willfulv='Yes'. KB #3 / KB #37 component.\n\n[kb=37]\nACS is\
     \ calculated as a weighted sum of factors such as H-1B dependency, willful violator\
@@ -452,7 +452,7 @@ columns:
   sql: CAST(CASE WHEN h1bdep = 'Yes' THEN 1 ELSE 0 END + CASE WHEN willfulv = 'Yes'
     THEN 1 ELSE 0 END + CASE WHEN newemp > 0 THEN 1 ELSE 0 END + CASE WHEN amendflag
     > 0 THEN 1 ELSE 0 END AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Application Complexity Score (KB #37): unweighted sum of binary factors\
     \ h1bdep='Yes', willfulv='Yes', newemp>0, amendflag>0. Range 0-4. KB doesn't pin\
@@ -468,7 +468,7 @@ columns:
 - name: complexity_tier
   sql: CASE WHEN h1bdep = 'Yes' OR willfulv = 'Yes' OR statbasis IS NOT NULL AND statbasis
     <> '' THEN 'Complex' ELSE 'Standard' END
-  type: string
+  type: TEXT
   primary_key: false
   description: "Application Complexity Tier (KB #51): Complex if h1bdep='Yes' OR willfulv='Yes'\
     \ OR statbasis present (special attestation), else Standard.\n\n[kb=51]\nApplications\
@@ -488,7 +488,7 @@ columns:
     willfulv = 'Yes' THEN 1 ELSE 0 END + CASE WHEN newemp > 0 THEN 1 ELSE 0 END +
     CASE WHEN amendflag > 0 THEN 1 ELSE 0 END AS INTEGER)) BETWEEN 1 AND 2 THEN 'Moderate
     Risk' ELSE 'Low Risk' END
-  type: string
+  type: TEXT
   primary_key: false
   description: "Application Delay Risk Profile (KB #57): High Risk if willfulv='Yes'\
     \ OR ACS\u22653; Moderate if ACS in 1-2; else Low.\n\n[kb=57]\nApplications are\
@@ -510,7 +510,7 @@ columns:
     THEN '1-3 Months Before' WHEN CAST(julianday(REPLACE(SUBSTR(beginday,7,4)||'-'||SUBSTR(beginday,4,2)||'-'||SUBSTR(beginday,1,2),
     '/','-')) - julianday(REPLACE(recvday, '/', '-')) AS INTEGER) BETWEEN 0 AND 29
     THEN 'Same Month' ELSE 'After Start Date' END
-  type: string
+  type: TEXT
   primary_key: false
   description: "Visa Filing Window (KB #41): Early Filing (>6mo), Optimal Window (4-6mo),\
     \ 1-3 Months Before, Same Month, After Start Date. beginday is in DD/MM/YYYY format.\n\
@@ -528,20 +528,20 @@ columns:
     kb_id: 41
 - name: naics_code
   sql: CAST(employer.employer_contact_info ->> '$.naics_code' AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Employer NAICS code (KB #6) resolved via the employer join.'
   hidden: false
 - name: naics_2digit
   sql: SUBSTR(CAST(CAST(employer.employer_contact_info ->> '$.naics_code' AS INTEGER)
     AS TEXT), 1, 2)
-  type: string
+  type: TEXT
   primary_key: false
   description: First 2 digits of NAICS (industry sector) via employer join.
   hidden: false
 - name: asr_certified_helper
   sql: CASE WHEN LOWER(TRIM(statustag)) = 'certified' THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Helper for Application Success Rate (ASR, KB #18). Same expression\
     \ as is_certified but stamped for KB #18 so the ASR measure (application_success_rate,\
@@ -555,7 +555,7 @@ columns:
     kb_id: 18
 - name: sad_application_helper
   sql: '1'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Helper marking each row as one application for State Application Distribution\
     \ (SAD, KB #19). The SAD measure (state_application_distribution, formula *:count)\
@@ -569,7 +569,7 @@ columns:
     kb_id: 19
 - name: iad_application_helper
   sql: '1'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Helper marking each row as one application for Industry Application\
     \ Distribution (IAD, KB #20). The IAD measure (industry_application_distribution,\
@@ -584,7 +584,7 @@ columns:
     kb_id: 20
 - name: vcd_application_helper
   sql: '1'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Helper marking each row as one application for Visa Class Distribution\
     \ (VCD, KB #29). The VCD measure (visa_class_distribution, formula *:count) groups\
@@ -600,7 +600,7 @@ columns:
   sql: AVG(CAST(julianday(decisionday) - julianday(REPLACE(recvday, '/', '-')) AS
     INTEGER)) OVER () * 1.0 / NULLIF(CAST(julianday(decisionday) - julianday(REPLACE(recvday,
     '/', '-')) AS INTEGER), 0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Processing Efficiency Ratio (PER, KB #32): (global average APT) /\
     \ (this row's APT). Values >1 indicate faster than average processing.\n\n[kb=32]\n\

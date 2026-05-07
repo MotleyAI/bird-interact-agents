@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: communication
 sql_table: communication
 query_variables: {}
@@ -6,26 +6,26 @@ data_source: cybermarket
 columns:
 - name: commregistry
   sql: commregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: iptally
   sql: iptally
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: tornodecount
   sql: tornodecount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: vpnflag
   sql: vpnflag
-  type: string
+  type: TEXT
   primary_key: false
   description: "VPN detection: 'Yes' = confirmed VPN usage (deliberate masking); 'No'\
     \ = direct connection (potentially revealing real location); 'Suspected' = patterns\
@@ -42,50 +42,50 @@ columns:
     kb_id: 5
 - name: brwsrunique
   sql: brwsrunique
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: devfpscore
   sql: devfpscore
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: connpatscore
   sql: connpatscore
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: encryptmethod
   sql: encryptmethod
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: commchannel
   sql: commchannel
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: msgtally
   sql: msgtally
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: commfreq
   sql: commfreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: langpattern
   sql: langpattern
-  type: string
+  type: TEXT
   primary_key: false
   description: "Language / writing-style pattern: 'Consistent' = uniform pattern,\
     \ single user with established habits; 'Variable' = significant variations (multiple\
@@ -104,46 +104,46 @@ columns:
     kb_id: 6
 - name: sentiscore
   sql: sentiscore
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: keymatchcount
   sql: keymatchcount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: susppatscore
   sql: susppatscore
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: riskindiccount
   sql: riskindiccount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: txref
   sql: txref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: prodref
   sql: prodref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: vpnflag_numeric
   sql: CASE vpnflag WHEN 'Yes' THEN 1 WHEN 'Suspected' THEN 0.5 WHEN 'No' THEN 0 ELSE
     0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Numeric mapping of vpnflag used by CSR / APL / CPR: Yes=1, Suspected=0.5,\
     \ No=0.\n\n[kb=5]\n'Yes' indicates confirmed VPN usage, demonstrating deliberate\
@@ -159,7 +159,7 @@ columns:
 - name: encryptmethod_numeric
   sql: CASE encryptmethod WHEN 'Standard' THEN 1 WHEN 'Enhanced' THEN 2 WHEN 'Custom'
     THEN 3 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Numeric mapping of encryptmethod used by APL / OSI: Standard=1, Enhanced=2,\
     \ Custom=3, else=0.\n\n[kb=5]\n'Yes' indicates confirmed VPN usage, demonstrating\
@@ -176,7 +176,7 @@ columns:
 - name: langpattern_numeric
   sql: CASE langpattern WHEN 'Consistent' THEN 1 WHEN 'Variable' THEN 2 WHEN 'Suspicious'
     THEN 3 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Numeric mapping of langpattern used by CPR: Consistent=1, Variable=2,\
     \ Suspicious=3.\n\n[kb=6]\n'Consistent' indicates uniform linguistic patterns\
@@ -194,7 +194,7 @@ columns:
   sql: (iptally * 5) + (tornodecount * 2) + ((CASE vpnflag WHEN 'Yes' THEN 1 WHEN
     'Suspected' THEN 0.5 WHEN 'No' THEN 0 ELSE 0 END) * 30) + (brwsrunique * 1.0 /
     10) + (susppatscore * 3) + (riskindiccount * 4)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Communication Security Risk (CSR): 5*iptally + 2*tornodecount + 30*vpnflag_numeric\
     \ + brwsrunique/10 + 3*susppatscore + 4*riskindiccount. Higher = greater security\
@@ -212,7 +212,7 @@ columns:
     ELSE 0 END) * 30) + (tornodecount * 2) + ((CASE encryptmethod WHEN 'Standard'
     THEN 1 WHEN 'Enhanced' THEN 2 WHEN 'Custom' THEN 3 ELSE 0 END) * 15) + (connpatscore
     * 0.2) + (brwsrunique * 1.0 / 20)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Anonymity Protection Level (APL): 30*vpnflag_numeric + 2*tornodecount\
     \ + 15*encryptmethod_numeric + 0.2*connpatscore + brwsrunique/20. Higher = stronger\
@@ -233,7 +233,7 @@ columns:
     + (brwsrunique * 1.0 / 10) + (susppatscore * 3) + (riskindiccount * 4)) * 0.2)
     + (msgtally * 0.5) - (1 - (CASE vpnflag WHEN 'Yes' THEN 1 WHEN 'Suspected' THEN
     0.5 WHEN 'No' THEN 0 ELSE 0 END)) * 20
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Communication Pattern Risk (CPR): 15*langpattern_numeric + 0.2*CSR\
     \ + 0.5*msgtally - 20*(1 - vpnflag_numeric). Higher = more suspicious communication.\n\
@@ -253,7 +253,7 @@ columns:
     THEN 1 WHEN 'Enhanced' THEN 2 WHEN 'Custom' THEN 3 ELSE 0 END) * 15) + (connpatscore
     * 0.2) + (brwsrunique * 1.0 / 20)) > 100 AND tornodecount > 20 AND vpnflag = 'Yes'
     AND encryptmethod = 'Custom'
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Identity-Protected User (KB #26): APL > 100, tornodecount > 20, vpnflag='Yes',\
     \ encryptmethod='Custom'.\n\n[kb=26]\nA user with APL > 100, consistently using\
@@ -275,7 +275,7 @@ columns:
     ((iptally * 5) + (tornodecount * 2) + ((CASE vpnflag WHEN 'Yes' THEN 1 WHEN 'Suspected'
     THEN 0.5 WHEN 'No' THEN 0 ELSE 0 END) * 30) + (brwsrunique * 1.0 / 10) + (susppatscore
     * 3) + (riskindiccount * 4)) > 80
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Deceptive Communication Pattern (KB #43): CPR > 70, langpattern='Suspicious',\
     \ CSR > 80. (KB also mentions 'frequently changing connection parameters' but\
@@ -291,7 +291,7 @@ columns:
     kb_id: 43
 - name: is_cross_platform_operator
   sql: keymatchcount > 30 AND 1 >= 3
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Cross-Platform Operator (KB #29): identifies entities with keymatchcount\
     \ > 30 operating on three or more markets simultaneously, with consistent security\

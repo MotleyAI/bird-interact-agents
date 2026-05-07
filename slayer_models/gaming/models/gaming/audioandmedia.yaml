@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: audioandmedia
 sql_table: audioandmedia
 query_variables: {}
@@ -6,74 +6,74 @@ data_source: gaming
 columns:
 - name: audregistry
   sql: audregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: auddevref
   sql: auddevref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: audperfref
   sql: audperfref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sndleveldb
   sql: sndleveldb
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: sndsig
   sql: sndsig
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: noiseisodb
   sql: noiseisodb
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: audlatms
   sql: audlatms
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: micsensedb
   sql: micsensedb
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: micfreqresp
   sql: micfreqresp
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: spkimpohm
   sql: spkimpohm
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: spksensedb
   sql: spksensedb
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: thdpct
   sql: thdpct
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Total harmonic distortion (KB #26: <0.1% audiophile, 0.1-0.5% excellent\
     \ gaming, 0.5-1.0% acceptable, >1.0% noticeable).\n\n[kb=26]\nMeasured as a percentage,\
@@ -91,76 +91,76 @@ columns:
     kb_id: 26
 - name: freqresp
   sql: freqresp
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: drvszmm
   sql: drvszmm
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: surrsnd
   sql: surrsnd
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: eqcount
   sql: eqcount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: micmon
   sql: micmon
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: noisecanc
   sql: noisecanc
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: btversion
   sql: btversion
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: btrangem
   sql: btrangem
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: btlatms
   sql: btlatms
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: multidev
   sql: multidev
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: autoslpmin
   sql: autoslpmin
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: wakems
   sql: wakems
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
@@ -168,7 +168,7 @@ columns:
 - name: aqi
   sql: (1 - thdpct * 1.0 / 2) * (spksensedb * 1.0 / 100) * (1 - audlatms * 1.0 / 100)
     * 10
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Audio Quality Index (AQI) \u2014 (1 - ThdPct/2) \xD7 SpkSenseDb/100\
     \ \xD7 (1 - AudLatMs/100) \xD7 10. Higher = better quality with minimal distortion.\n\
@@ -185,7 +185,7 @@ columns:
   sql: ((1 - thdpct * 1.0 / 2) * (spksensedb * 1.0 / 100) * (1 - audlatms * 1.0 /
     100) * 10) > 8.0 AND freqresp LIKE '10%-22%' AND thdpct < 0.5 AND noiseisodb >
     15
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Audiophile Gaming Headset (KB #12): AQI > 8.0 AND FreqResp covers\
     \ 10Hz-22kHz AND ThdPct < 0.5 AND NoiseIsoDb > 15.\n\n[kb=12]\nA headset with\
@@ -200,7 +200,7 @@ columns:
 - name: is_streaming_optimized
   sql: micsensedb < -45 AND (micfreqresp LIKE '50%-18%' OR micfreqresp LIKE '50%-2%')
     AND deviceidentity.mcresptime < 1.0 AND deviceidentity.profcount >= 5
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Streaming-Optimized Device (KB #15): MicSenseDb < -45 AND MicFreqResp\
     \ covers '50Hz-18kHz' AND McRespTime < 1.0 AND ProfCount >= 5.\n\n[kb=15]\nA device\
@@ -216,7 +216,7 @@ columns:
 - name: is_subpar_audio_device
   sql: ((1 - thdpct * 1.0 / 2) * (spksensedb * 1.0 / 100) * (1 - audlatms * 1.0 /
     100) * 10) <= 8.0 OR thdpct >= 0.5 OR noiseisodb <= 15 OR freqresp NOT LIKE '10%-22%'
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Subpar Audio Device (KB #52): AQI <= 8.0 OR ThdPct >= 0.5 OR NoiseIsoDb\
     \ <= 15 OR FreqResp NOT covering 10Hz-22kHz.\n\n[kb=52]\nAudio devices with one\

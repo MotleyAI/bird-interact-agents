@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: signal_is_frt
 source_queries:
 - version: 3
@@ -11,7 +11,7 @@ source_queries:
         - signalref
     columns:
     - name: is_frt
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN sigdursec < 0.1 AND sigstrdb > 15 AND bwhz > 1000000 AND signalclassification.repeatcount
         = 1 THEN 1 ELSE 0 END
   dimensions:
@@ -30,12 +30,12 @@ data_source: alien
 columns:
 - name: signalregistry
   sql: signalregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_frt
   sql: is_frt
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

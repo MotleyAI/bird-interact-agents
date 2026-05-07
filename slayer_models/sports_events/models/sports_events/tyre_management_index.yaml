@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: tyre_management_index
 source_queries:
 - version: 3
@@ -7,7 +7,7 @@ source_queries:
     source_name: lap_times
     columns:
     - name: n_stops_for_lap
-      type: number
+      type: DOUBLE
       sql: (SELECT COUNT(*) FROM pit_stops p WHERE p.matchidx = lap_times.rc_index
         AND p.wunit = lap_times.wheel_unit)
       description: Number of pit stops the driver made in this race (correlated subquery).
@@ -25,7 +25,7 @@ source_queries:
     source_name: ltc_with_stops
     columns:
     - name: tmi
-      type: number
+      type: DOUBLE
       sql: 1.0 / NULLIF(ltc * (1 + COALESCE(n_stops, 0)), 0)
       description: "Tyre Management Index (KB #39): 1 / (LTC \xD7 (1 + N_stops))."
   dimensions:
@@ -56,7 +56,7 @@ data_source: sports_events
 columns:
 - name: rc_index
   sql: rc_index
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Foreign key to races.
   hidden: false
@@ -64,7 +64,7 @@ columns:
     type: integer
 - name: wheel_unit
   sql: wheel_unit
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Foreign key to drivers.
   hidden: false
@@ -72,17 +72,17 @@ columns:
     type: integer
 - name: ltc
   sql: ltc
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: n_stops
   sql: n_stops
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: tmi
   sql: tmi
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Tyre Management Index (KB #39): 1 / (LTC \xD7 (1 + N_stops))."
   hidden: false

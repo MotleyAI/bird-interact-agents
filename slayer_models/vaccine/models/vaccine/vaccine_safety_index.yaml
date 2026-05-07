@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: vaccine_safety_index
 source_queries:
 - version: 3
@@ -24,7 +24,7 @@ source_queries:
         - containlink
     columns:
     - name: vsi
-      type: number
+      type: DOUBLE
       sql: ((JULIANDAY(expireday) - JULIANDAY('now')) * agg_per_container_vsi.tss)
         / 365.0 * agg_per_container_vsi.cei * (1 - agg_per_container_vsi.trs)
   dimensions:
@@ -82,40 +82,40 @@ data_source: vaccine
 columns:
 - name: vacregistry
   sql: vacregistry
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: containvac
   sql: containvac
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: agg_per_container_vsi__tss
   sql: agg_per_container_vsi__tss
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: agg_per_container_vsi__cei
   sql: agg_per_container_vsi__cei
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: agg_per_container_vsi__trs
   sql: agg_per_container_vsi__trs
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: vsi
   sql: vsi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

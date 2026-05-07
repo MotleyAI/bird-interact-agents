@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: news_devices
 sql_table: devices
 query_variables: {}
@@ -6,25 +6,25 @@ data_source: news
 columns:
 - name: devkey
   sql: devkey
-  type: number
+  type: INT
   primary_key: true
   description: Primary key.
   hidden: false
 - name: devtype
   sql: devtype
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Device type enum: iOS, Windows, MacOS, Android.'
   hidden: false
 - name: brwtype
   sql: brwtype
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Browser: Safari, Edge, Chrome, Firefox.'
   hidden: false
 - name: osver
   sql: osver
-  type: string
+  type: TEXT
   primary_key: false
   description: "OS version (KB #21 illustrates: values like 'Windows10.0.19042' provide\
     \ insights into compatibility and performance benchmarks).\n\n[kb=21]\nOS version\
@@ -37,7 +37,7 @@ columns:
     kb_id: 21
 - name: appver
   sql: appver
-  type: string
+  type: TEXT
   primary_key: false
   description: "App version (KB #25 illustrates: versions like 'v3.1.2' suggest iterative\
     \ improvements that enhance UI performance and stability).\n\n[kb=25]\nVersions\
@@ -51,7 +51,7 @@ columns:
     kb_id: 25
 - name: scrres
   sql: scrres
-  type: string
+  type: TEXT
   primary_key: false
   description: "Screen resolution (KB #20 illustrates: values like '1920x1080' indicate\
     \ clarity and detail of the display, impacting readability and visual appeal).\n\
@@ -64,19 +64,19 @@ columns:
     kb_id: 20
 - name: vpsize
   sql: vpsize
-  type: string
+  type: TEXT
   primary_key: false
   description: Viewport size in the browser/app.
   hidden: false
 - name: conntype
   sql: conntype
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Connection type: Cable, 5G, 4G, WiFi.'
   hidden: false
 - name: netspd
   sql: netspd
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Network speed in Mbps. KB #23 illustrates: speeds (e.g. 25.75 Mbps)\
     \ help assess buffering, latency and overall delivery quality.\n\n[kb=23]\nNetwork\
@@ -89,7 +89,7 @@ columns:
     kb_id: 23
 - name: uselink
   sql: uselink
-  type: number
+  type: INT
   primary_key: false
   description: FK to news_users.userkey.
   hidden: false

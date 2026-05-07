@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: smart_money_accuracy
 source_queries:
 - version: 3
@@ -47,7 +47,7 @@ source_queries:
         - marketdata__timetrack
     columns:
     - name: is_correct
-      type: number
+      type: DOUBLE
       sql: CASE WHEN (flow_per_pair_hour.smartforce_avg > flow_per_pair_hour.retailflow_avg
         AND flow_per_pair_hour.smartforce_avg > flow_per_pair_hour.instflow_avg AND
         midquote_with_lead.midquote_next_4h > midquote_with_lead.midquote_now) OR
@@ -113,19 +113,19 @@ data_source: crypto
 columns:
 - name: mktcombo
   sql: mktcombo
-  type: string
+  type: TEXT
   primary_key: false
   description: Trading pair (e.g. BTC-USDT).
   hidden: false
 - name: timetrack
   sql: timetrack
-  type: time
+  type: TIMESTAMP
   primary_key: false
   description: Timestamp the snapshot was recorded.
   hidden: false
 - name: midquote_now
   sql: midquote_now
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Midpoint price.
   hidden: false
@@ -133,14 +133,14 @@ columns:
     type: float
 - name: midquote_next_4h
   sql: midquote_next_4h
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: is_correct
   sql: is_correct
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures:

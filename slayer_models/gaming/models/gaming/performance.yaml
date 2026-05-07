@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: performance
 sql_table: performance
 query_variables: {}
@@ -6,76 +6,76 @@ data_source: gaming
 columns:
 - name: perfregistry
   sql: perfregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: perfsessionref
   sql: perfsessionref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: accelmax
   sql: accelmax
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: speedips
   sql: speedips
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: liftdistmm
   sql: liftdistmm
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: angsnap
   sql: angsnap
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: btntens
   sql: btntens
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: clklat
   sql: clklat
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: clkdur
   sql: clkdur
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: screnctyp
   sql: screnctyp
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: scrsteps
   sql: scrsteps
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: scraccy
   sql: scraccy
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

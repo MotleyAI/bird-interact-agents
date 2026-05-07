@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: transportation
 sql_table: transportation
 query_variables: {}
@@ -6,69 +6,69 @@ data_source: disaster
 columns:
 - name: transportregistry
   sql: transportregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: transportdistref
   sql: transportdistref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: transporthubref
   sql: transporthubref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: transportsupref
   sql: transportsupref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: vehiclecount
   sql: vehiclecount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: trucksavailable
   sql: trucksavailable
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: helosavailable
   sql: helosavailable
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: boatsavailable
   sql: boatsavailable
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: totaldeliverytons
   sql: totaldeliverytons
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: dailydeliverytons
   sql: dailydeliverytons
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: lastmilestatus
   sql: lastmilestatus
-  type: string
+  type: TEXT
   primary_key: false
   description: "Last-mile delivery state (KB #3). On Track = proceeding as scheduled;\
     \ Delayed = non-critical setbacks; Suspended = temporarily halted due to severe\
@@ -82,45 +82,45 @@ columns:
     kb_id: 3
 - name: distributionpoints
   sql: distributionpoints
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: avgdeliveryhours
   sql: avgdeliveryhours
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: deliverysuccessrate
   sql: deliverysuccessrate
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: routeoptstatus
   sql: routeoptstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: fuelefficiencylpk
   sql: fuelefficiencylpk
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: maintenancestate
   sql: maintenancestate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: vehiclebreakrate
   sql: vehiclebreakrate
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
@@ -128,7 +128,7 @@ columns:
 - name: lastmile_factor
   sql: CASE lastmilestatus WHEN 'On Track' THEN 1.0 WHEN 'Delayed' THEN 0.7 WHEN 'Suspended'
     THEN 0.4 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Numeric factor used by KB #36 (LNR): On Track=1.0, Delayed=0.7, Suspended=0.4,
     else=0.'
@@ -136,7 +136,7 @@ columns:
 - name: oei
   sql: (deliverysuccessrate / 100.0) * (1 - avgdeliveryhours / 24.0) * (1 + distributionpoints
     / 10.0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Operational Efficiency Index (OEI, KB #11): (deliverysuccessrate/100)\
     \ * (1 - avgdeliveryhours/24) * (1 + distributionpoints/10).\n\n[kb=11]\nOEI =\
@@ -150,7 +150,7 @@ columns:
 - name: lpm
   sql: (totaldeliverytons * 1.0 / NULLIF(distributionhubs.hubcaptons, 0)) * deliverysuccessrate
     * (1 - vehiclebreakrate / 100.0) * 100
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Logistics Performance Metric (LPM, KB #15): (totaldeliverytons/distributionhubs.hubcaptons)\
     \ * deliverysuccessrate * (1 - vehiclebreakrate/100) * 100.\n\n[kb=15]\nLPM =\
@@ -166,7 +166,7 @@ columns:
     * (1 - vehiclebreakrate / 100.0) * 100) * (vehiclecount / 20.0) * (CASE lastmilestatus
     WHEN 'On Track' THEN 1.0 WHEN 'Delayed' THEN 0.7 WHEN 'Suspended' THEN 0.4 ELSE
     0 END)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Logistics Network Resilience (LNR, KB #36): LPM * (vehiclecount/20)\
     \ * lastmile_factor.\n\n[kb=36]\nLNR = LPM \\times \\frac{vehiclecount}{20} \\\
@@ -181,7 +181,7 @@ columns:
   sql: ((totaldeliverytons * 1.0 / NULLIF(distributionhubs.hubcaptons, 0)) * deliverysuccessrate
     * (1 - vehiclebreakrate / 100.0) * 100) < 30 AND lastmilestatus = 'Suspended'
     AND vehiclebreakrate > 15
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Logistics Breakdown (KB #29): LPM<30 AND lastmilestatus='Suspended'\
     \ AND vehiclebreakrate>15.\n\n[kb=29]\nSituations where LPM < 30 AND lastmilestatus\
@@ -199,7 +199,7 @@ columns:
     0)) * deliverysuccessrate * (1 - vehiclebreakrate / 100.0) * 100) * (vehiclecount
     / 20.0) * (CASE lastmilestatus WHEN 'On Track' THEN 1.0 WHEN 'Delayed' THEN 0.7
     WHEN 'Suspended' THEN 0.4 ELSE 0 END)) < 20 AND vehiclebreakrate > 25
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Logistics System Collapse Risk (KB #45): is_logistics_breakdown AND\
     \ LNR<20 AND vehiclebreakrate>25.\n\n[kb=45]\nOperations experiencing Logistics\

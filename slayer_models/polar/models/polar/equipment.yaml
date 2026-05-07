@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: equipment
 sql_table: equipment
 query_variables: {}
@@ -6,37 +6,37 @@ data_source: polar
 columns:
 - name: equipmentcode
   sql: equipmentcode
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: equipmenttype
   sql: equipmenttype
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: equipmentmodel
   sql: equipmentmodel
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: manufacturer
   sql: manufacturer
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: servicelifeyears
   sql: servicelifeyears
-  type: number
+  type: INT
   primary_key: false
   hidden: false
 - name: equipmentutilizationpercent
   sql: equipmentutilizationpercent
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: reliabilityindex
   sql: reliabilityindex
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Reliability index 0-1. <0.5 = frequent failures, 0.5-0.8 = good standard,\
     \ >0.8 = excellent (KB #20).\n\n[kb=20]\nThe reliability index typically ranges\
@@ -52,17 +52,17 @@ columns:
     kb_id: 20
 - name: performanceindex
   sql: performanceindex
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: efficiencyindex
   sql: efficiencyindex
-  type: number
+  type: INT
   primary_key: false
   hidden: false
 - name: safetyindex
   sql: safetyindex
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Safety index 0-1. <0.5 = significant safety concerns, 0.5-0.7 = standard\
     \ (KB #28).\n\n[kb=28]\nSafety index typically ranges from 0 to 1, where values\
@@ -79,13 +79,13 @@ columns:
     kb_id: 28
 - name: environmentalimpactindex
   sql: environmentalimpactindex
-  type: number
+  type: INT
   primary_key: false
   hidden: false
 - name: eer
   sql: (performanceindex + reliabilityindex) / 2.0 * (1 - environmentalimpactindex
     / 10.0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Equipment Efficiency Rating (KB #0): mean of perf/reliability x (1\
     \ - env-impact/10).\n\n[kb=0]\nEER = \\frac{performanceindex + reliabilityindex}{2}\
@@ -100,7 +100,7 @@ columns:
 - name: ospi
   sql: safetyindex * ((performanceindex + reliabilityindex) / 2.0 * (1 - environmentalimpactindex
     / 10.0)) * 0.8
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Overall Safety Performance Index (KB #30): safetyindex x EER x 0.8.\n\
     \n[kb=30]\nOSPI = safetyindex \xD7 EER \xD7 0.8 \u2014 Comprehensively evaluates\
@@ -112,7 +112,7 @@ columns:
     kb_id: 30
 - name: is_critical_equipment
   sql: equipmenttype = 'Safety' AND safetyindex > 0.8
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Critical Equipment (KB #11): Safety-typed equipment with safetyindex\
     \ > 0.8. (KB also names life-critical system associations - deferred to query-time\

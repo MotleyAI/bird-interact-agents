@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: spatial_density_index
 source_queries:
 - version: 3
@@ -74,19 +74,19 @@ data_source: archeology
 columns:
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: totalpts_avg
   sql: totalpts_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: pointdense_avg
   sql: pointdense_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Point Density (points/m^2). ~100 captures basic topography; ~1,000
     captures structural details; >=10,000 enables surface-texture / fine-engraving
@@ -96,21 +96,21 @@ columns:
     type: float
 - name: clouddense_avg
   sql: clouddense_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: sdi
   sql: sdi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: sp_per_arcref__aream2_avg
   sql: sp_per_arcref__aream2_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: energy_water_resource_integration_index
 source_queries:
 - version: 3
@@ -93,12 +93,12 @@ data_source: polar
 columns:
 - name: pwrbatteqref
   sql: pwrbatteqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: esi_avg
   sql: esi_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Energy Sustainability Index (KB #2): efficiency% x powersource multiplier
     (Solar/Wind=1.5, Hybrid=1.2, Battery=1.0, Diesel=0.7, otherwise 0).'
@@ -107,21 +107,21 @@ columns:
     type: float
 - name: ewrii
   sql: ewrii
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: wrmi_per_eq_ewrii__wrmi_avg
   sql: wrmi_per_eq_ewrii__wrmi_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: heater_per_eq_ewrii__heater_temp_avg
   sql: heater_per_eq_ewrii__heater_temp_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: artifact_value_categories
 sql: SELECT s.artref AS artref, s.insvalueusd AS insvalueusd, r.histsignrating AS
   histsignrating, r.cultscore AS cultscore, NTILE(10) OVER (ORDER BY r.histsignrating
@@ -15,37 +15,37 @@ data_source: museum
 columns:
 - name: artref
   sql: artref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: insvalueusd
   sql: insvalueusd
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: histsignrating
   sql: histsignrating
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: cultscore
   sql: cultscore
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: hist_decile
   sql: hist_decile
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: cult_decile
   sql: cult_decile
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_high_value_full
   sql: is_high_value_full
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "[kb=11]\nAn artifact is considered high-value when its InsValueUSD\
     \ exceeds $1,000,000 OR when both HistSignRating and CultScore are in the top\
@@ -57,7 +57,7 @@ columns:
     kb_id: 11
 - name: value_category
   sql: value_category
-  type: string
+  type: TEXT
   primary_key: false
   description: "[kb=51]\nAn artifact falls into 'Monetary High-Value' category when\
     \ its InsValueUSD exceeds $1,000,000. It qualifies as 'Cultural/Historical High-Value'\

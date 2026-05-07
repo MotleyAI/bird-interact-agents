@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: polar_vehicle_safe_operation_conditions
 source_queries:
 - version: 3
@@ -7,7 +7,7 @@ source_queries:
     source_name: chassisandvehicle
     columns:
     - name: vpc_ok_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN ((1 - (brakepadwearpercent + trackwearpercent) / 200.0) * (vehiclespeedkmh
         / 50.0) * (engineandfluids.engineloadpercent / 100.0)) > 0.75 THEN 1 ELSE
         0 END
@@ -23,7 +23,7 @@ source_queries:
     source_name: polar_transportation_efficiency_coefficient
     columns:
     - name: ptec_ok_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN ptec > 0.7 THEN 1 ELSE 0 END
   measures:
   - formula: ptec_ok_flag:min
@@ -37,7 +37,7 @@ source_queries:
     source_name: operationmaintenance
     columns:
     - name: opstat_active_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN operationalstatus = 'Active' THEN 1 ELSE 0 END
   measures:
   - formula: opstat_active_flag:min
@@ -51,7 +51,7 @@ source_queries:
     source_name: equipment
     columns:
     - name: safety_ok_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN safetyindex >= 0.8 THEN 1 ELSE 0 END
   measures:
   - formula: safety_ok_flag:min
@@ -186,34 +186,34 @@ data_source: polar
 columns:
 - name: equipmentcode
   sql: equipmentcode
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: safety_ok_min
   sql: safety_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_pvsoc
   sql: is_pvsoc
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: opstat_p_eq_pvsoc__opstat_ok_min
   sql: opstat_p_eq_pvsoc__opstat_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: ptec_flag_p_eq_pvsoc__ptec_ok_min
   sql: ptec_flag_p_eq_pvsoc__ptec_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: vpc_flag_p_eq_pvsoc__vpc_ok_min
   sql: vpc_flag_p_eq_pvsoc__vpc_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

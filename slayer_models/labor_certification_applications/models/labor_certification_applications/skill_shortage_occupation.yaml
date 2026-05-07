@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: skill_shortage_occupation
 source_queries:
 - version: 3
@@ -15,7 +15,7 @@ source_queries:
     source_name: soc_metrics
     columns:
     - name: is_skill_shortage
-      type: boolean
+      type: BOOLEAN
       sql: wage_differential_rate_avg > 10 AND _count >= 5
   dimensions:
   - name: soccd
@@ -61,13 +61,13 @@ data_source: labor_certification_applications
 columns:
 - name: soccd
   sql: soccd
-  type: string
+  type: TEXT
   primary_key: false
   description: 'SOC code (KB #7) for this case_worksite, denormalized via cases join.'
   hidden: false
 - name: wage_differential_rate_avg
   sql: wage_differential_rate_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'WDR for this case_worksite, denormalized via prevailing_wage join.
     Used for KB #31 (Industry Wage Differential).'
@@ -76,14 +76,14 @@ columns:
     type: float
 - name: _count
   sql: _count
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: is_skill_shortage
   sql: is_skill_shortage
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

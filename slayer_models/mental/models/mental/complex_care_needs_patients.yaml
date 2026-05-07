@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: complex_care_needs_patients
 source_queries:
 - version: 3
@@ -230,17 +230,17 @@ data_source: mental
 columns:
 - name: asrkey
   sql: asrkey
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: subuse
   sql: subuse
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: encounters__facid
   sql: encounters__facid
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

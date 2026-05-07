@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: quality_assessment
 sql_table: quality_assessment
 query_variables: {}
@@ -6,17 +6,17 @@ data_source: reverse_logistics
 columns:
 - name: inspectref
   sql: inspectref
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: assessment_summary
   sql: assessment_summary
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: item_condition
   sql: TRIM(json_extract(assessment_summary, '$.condition.item_condition'), '"')
-  type: string
+  type: TEXT
   primary_key: false
   description: "Item Condition States \u2014 'New', 'Like New', 'Used', or 'Damaged'.\n\
     \n[kb=22]\nThere are 4 different states: 'New', 'Like New', 'Used' and 'Damaged'.\

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: driver_standings
 sql_table: driver_standings
 query_variables: {}
@@ -6,7 +6,7 @@ data_source: sports_events
 columns:
 - name: drv_stnd
   sql: drv_stnd
-  type: number
+  type: INT
   primary_key: true
   description: Unique standings record identifier.
   hidden: false
@@ -14,7 +14,7 @@ columns:
     type: integer
 - name: rlink
   sql: rlink
-  type: number
+  type: INT
   primary_key: false
   description: Foreign key to races (the race after which this standing was computed).
   hidden: false
@@ -22,7 +22,7 @@ columns:
     type: integer
 - name: drive_link
   sql: drive_link
-  type: number
+  type: INT
   primary_key: false
   description: Foreign key to drivers.
   hidden: false
@@ -30,7 +30,7 @@ columns:
     type: integer
 - name: acc_pt
   sql: acc_pt
-  type: number
+  type: INT
   primary_key: false
   description: Driver's cumulative season points after this race. NULL = not yet scored
     or tally not updated.
@@ -39,7 +39,7 @@ columns:
     type: integer
 - name: px
   sql: px
-  type: number
+  type: INT
   primary_key: false
   description: Driver's championship rank in standings. NULL = not computed.
   hidden: false
@@ -47,13 +47,13 @@ columns:
     type: integer
 - name: px_desc
   sql: px_desc
-  type: string
+  type: TEXT
   primary_key: false
   description: Descriptive rank label.
   hidden: false
 - name: topmark
   sql: topmark
-  type: number
+  type: INT
   primary_key: false
   description: Total wins by the driver at this point in the season. NULL = not entered.
   hidden: false

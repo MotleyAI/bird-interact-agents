@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: extreme_climate_adaptation_coefficient
 source_queries:
 - version: 3
@@ -7,7 +7,7 @@ source_queries:
     source_name: weatherandstructure
     columns:
     - name: ext_temp_factor
-      type: number
+      type: DOUBLE
       sql: CASE WHEN externaltemperaturec < -30 THEN 0.7 WHEN externaltemperaturec
         < -15 THEN 0.85 ELSE 1.0 END
   measures:
@@ -89,19 +89,19 @@ data_source: polar
 columns:
 - name: operationmaintenance__opmainteqref
   sql: operationmaintenance__opmainteqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: ext_factor_avg
   sql: ext_factor_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: ssf_avg
   sql: ssf_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Structural Safety Factor (KB #3): (100 \u2212 structuralloadpercent)/100\
     \ \xD7 weather multiplier."
@@ -110,14 +110,14 @@ columns:
     type: float
 - name: ecac
   sql: ecac
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tie_per_eq__tie_avg
   sql: tie_per_eq__tie_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

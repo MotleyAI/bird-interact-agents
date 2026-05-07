@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: products
 sql_table: products
 query_variables: {}
@@ -6,12 +6,12 @@ data_source: cybermarket
 columns:
 - name: prodregistry
   sql: prodregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: prodtheme
   sql: prodtheme
-  type: string
+  type: TEXT
   primary_key: false
   description: "Product theme classification, used for enforcement risk: 'Digital'\
     \ = software, credentials, virtual goods (no shipping); 'Data' = databases, PII,\
@@ -30,32 +30,32 @@ columns:
     kb_id: 4
 - name: prodsubcat
   sql: prodsubcat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: prodlistdays
   sql: prodlistdays
-  type: number
+  type: INT
   primary_key: false
   hidden: false
 - name: prodpriceusd
   sql: prodpriceusd
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: prodqty
   sql: prodqty
-  type: number
+  type: INT
   primary_key: false
   hidden: false
 - name: vendref
   sql: vendref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: buyref
   sql: buyref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

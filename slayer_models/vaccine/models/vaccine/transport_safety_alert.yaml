@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: transport_safety_alert
 source_queries:
 - version: 3
@@ -24,13 +24,13 @@ source_queries:
         - vehsenseref
     columns:
     - name: rrf
-      type: number
+      type: DOUBLE
       sql: (1 - rcp / 100.0) * trs_cei_hqi_per_vehicle_tsa.trs * (1 - trs_cei_hqi_per_vehicle_tsa.cei)
     - name: tsr
-      type: number
+      type: DOUBLE
       sql: rcp / 100.0 * (1 - trs_cei_hqi_per_vehicle_tsa.trs) * trs_cei_hqi_per_vehicle_tsa.hqi
     - name: is_transport_safety_alert
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN (rcp / 100.0 * (1 - trs_cei_hqi_per_vehicle_tsa.trs) * trs_cei_hqi_per_vehicle_tsa.hqi)
         < 0.5 AND ((1 - rcp / 100.0) * trs_cei_hqi_per_vehicle_tsa.trs * (1 - trs_cei_hqi_per_vehicle_tsa.cei))
         > 0.7 THEN 1 ELSE 0 END
@@ -85,22 +85,22 @@ data_source: vaccine
 columns:
 - name: vehiclereg
   sql: vehiclereg
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: rrf
   sql: rrf
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: tsr
   sql: tsr
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_transport_safety_alert
   sql: is_transport_safety_alert
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: transportinfo
 sql_table: transportinfo
 query_variables: {}
@@ -6,12 +6,12 @@ data_source: vaccine
 columns:
 - name: vehiclereg
   sql: vehiclereg
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: vehiclekind
   sql: vehiclekind
-  type: string
+  type: TEXT
   primary_key: false
   description: "Vehicle type. 'Reefer Container' is a self-powered refrigeration unit\
     \ maintaining -20 C to +30 C with R-134a refrigerant and an independent power\
@@ -24,55 +24,55 @@ columns:
     kb_id: 25
 - name: vehtempc
   sql: vehtempc
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: speedkm
   sql: speedkm
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: distdonekm
   sql: distdonekm
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: distleftkm
   sql: distleftkm
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: eta
   sql: eta
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: departsite
   sql: departsite
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: currentsite
   sql: currentsite
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: destsite
   sql: destsite
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: gpsflag
   sql: gpsflag
-  type: string
+  type: TEXT
   primary_key: false
   description: "GPS tracking status. 'Active' indicates GPS tracking is operational\
     \ and accurately reporting location data (KB #28).\n\n[kb=28]\nIndicates that\
@@ -84,65 +84,65 @@ columns:
     kb_id: 28
 - name: latvalue
   sql: latvalue
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: lonvalue
   sql: lonvalue
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: altmeter
   sql: altmeter
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: locupdatemin
   sql: locupdatemin
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: locupdatemark
   sql: locupdatemark
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: transmode
   sql: transmode
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: carrlabel
   sql: carrlabel
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: carrcert
   sql: carrcert
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: shiptransit
   sql: shiptransit
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: containtransit
   sql: containtransit
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: rcp
   sql: CAST(distdonekm AS REAL) / NULLIF(distdonekm + distleftkm, 0) * 100
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Route Completion Percentage (RCP). Percentage of route completed:\
     \ DistDoneKm / (DistDoneKm + DistLeftKm) * 100 (KB #4).\n\n[kb=4]\nRCP = \\frac{DistDoneKm}{DistDoneKm\

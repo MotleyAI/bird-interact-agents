@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: constructor_results
 sql_table: constructor_results
 query_variables: {}
@@ -6,7 +6,7 @@ data_source: sports_events
 columns:
 - name: cresref
   sql: cresref
-  type: number
+  type: INT
   primary_key: true
   description: Unique result identifier.
   hidden: false
@@ -14,7 +14,7 @@ columns:
     type: integer
 - name: matchref
   sql: matchref
-  type: number
+  type: INT
   primary_key: false
   description: Foreign key to races.
   hidden: false
@@ -22,7 +22,7 @@ columns:
     type: integer
 - name: unitnode
   sql: unitnode
-  type: number
+  type: INT
   primary_key: false
   description: Foreign key to constructors.
   hidden: false
@@ -30,7 +30,7 @@ columns:
     type: integer
 - name: scoreval
   sql: scoreval
-  type: number
+  type: INT
   primary_key: false
   description: "Points scored by the constructor in this race (sum of the constructor's\
     \ drivers' points). Implements KB #25 Constructor's Total Race Points: \u03A3\
@@ -46,7 +46,7 @@ columns:
     kb_id: 25
 - name: st_mark
   sql: st_mark
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Status mark for the result. Per KB #27, NULL means the constructor''s
     car(s) were classified as finishers in the race; non-NULL (e.g. ''D'') means specially
@@ -54,7 +54,7 @@ columns:
   hidden: false
 - name: is_finish
   sql: st_mark IS NULL
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "TRUE iff the team's race is classified as a finish (st_mark IS NULL).\
     \ Used by KB #27 Constructor Reliability Rate.\n\n[kb=27]\nR_{reliability} = \\\
@@ -70,7 +70,7 @@ columns:
     kb_id: 27
 - name: finish_count
   sql: cresref
-  type: number
+  type: INT
   primary_key: false
   description: 'Filtered count helper: rows that are finishes (st_mark IS NULL). Numerator
     of KB #27 Constructor Reliability Rate.'
@@ -78,7 +78,7 @@ columns:
   filter: st_mark IS NULL
 - name: start_count
   sql: cresref
-  type: number
+  type: INT
   primary_key: false
   description: "Helper: every constructor_results row counts as a race start. Denominator\
     \ of KB #27 Constructor Reliability Rate. Threshold for KB #50 Significant Participation\
@@ -92,7 +92,7 @@ columns:
     kb_id: 50
 - name: constructor_performance_score_helper
   sql: scoreval * (CASE WHEN st_mark IS NULL THEN 1.0 ELSE 0.0 END)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Helper anchor for KB #31 Constructor's Performance Score (CPS). The\
     \ actual CPS is exposed as the constructor_performance_score measure: scoreval:sum\

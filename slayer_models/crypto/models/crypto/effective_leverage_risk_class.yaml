@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: effective_leverage_risk_class
 source_queries:
 - version: 3
@@ -6,7 +6,7 @@ source_queries:
     source_name: effective_leverage
     columns:
     - name: el_risk_class
-      type: string
+      type: TEXT
       sql: CASE WHEN el_value > 20 THEN 'High Risk' ELSE 'Normal' END
   dimensions:
   - name: recordvault
@@ -38,17 +38,17 @@ data_source: crypto
 columns:
 - name: recordvault
   sql: recordvault
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: userlink
   sql: userlink
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: el_risk_class
   sql: el_risk_class
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: scans
 sql_table: scans
 query_variables: {}
@@ -6,68 +6,68 @@ data_source: archeology
 columns:
 - name: questregistry
   sql: questregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: chronotag
   sql: chronotag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: crewref
   sql: crewref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: zoneref
   sql: zoneref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: scancount
   sql: scancount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: climtune
   sql: climtune
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: huecatch
   sql: huecatch
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: fmtfile
   sql: fmtfile
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: gbsize
   sql: gbsize
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: pressratio
   sql: pressratio
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: spanmin
   sql: spanmin
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

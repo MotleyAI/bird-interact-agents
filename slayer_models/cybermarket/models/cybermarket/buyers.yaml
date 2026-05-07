@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: buyers
 sql_table: buyers
 query_variables: {}
@@ -6,53 +6,53 @@ data_source: cybermarket
 columns:
 - name: buyregistry
   sql: buyregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: buyspan
   sql: buyspan
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: buytxtally
   sql: buytxtally
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: buyspending
   sql: buyspending
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: buyfreqcat
   sql: buyfreqcat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: buychecklvl
   sql: buychecklvl
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: buyriskrate
   sql: buyriskrate
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: mktref
   sql: mktref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: vendref
   sql: vendref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

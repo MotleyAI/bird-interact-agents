@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: profile
 sql_table: profile
 query_variables: {}
@@ -6,17 +6,17 @@ data_source: fake
 columns:
 - name: profkey
   sql: profkey
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: profaccref
   sql: profaccref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: profile_composition
   sql: profile_composition
-  type: string
+  type: TEXT
   primary_key: false
   description: "JSONB column. Consolidates username, picture, bio, location, and contact-credibility\
     \ attributes for profile-quality checks. completeness sub-field extracted as column;\
@@ -29,7 +29,7 @@ columns:
     kb_id: 26
 - name: completeness
   sql: json_extract(profile_composition, '$.completeness')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Profile completeness score (KB #26). Range 0-1; >0.8 well-maintained,
     <0.4 placeholder / abandoned. Component of PCI (KB #5).'

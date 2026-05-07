@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: critically_over_leveraged_position
 source_queries:
 - version: 3
@@ -42,7 +42,7 @@ source_queries:
         - recordvault
     columns:
     - name: is_critical
-      type: boolean
+      type: BOOLEAN
       sql: olp.is_olp = 1 AND el.el_v > 20 AND mu.mu_v > 90
   dimensions:
   - name: recordvault
@@ -133,12 +133,12 @@ data_source: crypto
 columns:
 - name: recordvault
   sql: recordvault
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_critical
   sql: is_critical
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

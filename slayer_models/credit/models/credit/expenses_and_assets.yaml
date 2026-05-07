@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: expenses_and_assets
 sql_table: expenses_and_assets
 query_variables: {}
@@ -6,68 +6,68 @@ data_source: credit
 columns:
 - name: expemplref
   sql: expemplref
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: mthexp
   sql: mthexp
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: fixexpratio
   sql: fixexpratio
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: discexpratio
   sql: discexpratio
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: savamount
   sql: savamount
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: investamt
   sql: investamt
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: liqassets
   sql: liqassets
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: totassets
   sql: totassets
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: totliabs
   sql: totliabs
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: networth
   sql: networth
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Net Worth. Total Assets - Total Liabilities (totassets - totliabs).\
     \ Stored directly here.\n\n[kb=4]\nNet Worth = \\text{Total Assets} - \\text{Total\
@@ -81,40 +81,40 @@ columns:
     kb_id: 4
 - name: vehown
   sql: vehown
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: vehvalue
   sql: vehvalue
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: bankacccount
   sql: bankacccount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: bankaccage
   sql: bankaccage
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: bankaccbal
   sql: bankaccbal
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: propfinancialdata
   sql: propfinancialdata
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Property/housing JSON: propown (Rent/Living with Parents/Own), proptype
     (Apartment/House/Condo), propvalue (DECIMAL), rentpayhist enum, and mortgagebits
@@ -123,21 +123,21 @@ columns:
   meta: {}
 - name: mortbalance
   sql: json_extract(propfinancialdata, '$.mortgagebits.mortbalance')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Mortgage balance (extracted from propfinancialdata JSON).
   hidden: false
   meta: {}
 - name: propvalue
   sql: json_extract(propfinancialdata, '$.propvalue')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Property value (extracted from propfinancialdata JSON).
   hidden: false
   meta: {}
 - name: propown
   sql: json_extract(propfinancialdata, '$.propown')
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Property ownership: Rent/Living with Parents/Own (extracted from propfinancialdata
     JSON).'
@@ -145,7 +145,7 @@ columns:
   meta: {}
 - name: proptype
   sql: json_extract(propfinancialdata, '$.proptype')
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Property classification: Apartment/House/Condo (extracted from propfinancialdata
     JSON).'
@@ -153,14 +153,14 @@ columns:
   meta: {}
 - name: rentpayhist
   sql: json_extract(propfinancialdata, '$.rentpayhist')
-  type: string
+  type: TEXT
   primary_key: false
   description: Rent payment history (extracted from propfinancialdata JSON).
   hidden: false
   meta: {}
 - name: mortpayhist
   sql: json_extract(propfinancialdata, '$.mortgagebits.mortpayhist')
-  type: string
+  type: TEXT
   primary_key: false
   description: Mortgage payment history (extracted from propfinancialdata JSON).
   hidden: false
@@ -169,7 +169,7 @@ columns:
   sql: CASE WHEN json_extract(propfinancialdata, '$.propvalue') > 0 THEN CAST(json_extract(propfinancialdata,
     '$.mortgagebits.mortbalance') AS REAL) / CAST(json_extract(propfinancialdata,
     '$.propvalue') AS REAL) END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Loan-to-Value Ratio (LTV) = mortgage balance / property value (extracted\
     \ from propfinancialdata JSON).\n\n[kb=2]\nLTV = \\frac{\\text{Mortgage Balance}}{\\\
@@ -188,7 +188,7 @@ columns:
     0 THEN CAST(json_extract(propfinancialdata, '$.mortgagebits.mortbalance') AS REAL)
     / CAST(json_extract(propfinancialdata, '$.propvalue') AS REAL) END <= 0.95 THEN
     'PMI Required' ELSE 'High Leverage' END
-  type: string
+  type: TEXT
   primary_key: false
   description: "LTV significance band derived from ltv.\n\n[kb=24]\nLoan-to-Value\
     \ ratio (LTV) typically ranges from 0-1 (or above). Below 0.80 generally avoids\

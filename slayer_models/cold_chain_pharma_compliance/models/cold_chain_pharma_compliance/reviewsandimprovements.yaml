@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: reviewsandimprovements
 sql_table: reviewsandimprovements
 query_variables: {}
@@ -6,12 +6,12 @@ data_source: cold_chain_pharma_compliance
 columns:
 - name: reckeyrev
   sql: reckeyrev
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: procimprove
   sql: procimprove
-  type: string
+  type: TEXT
   primary_key: false
   description: "Process improvement actions: Yes / No / In Progress. KB #56 (GDP Corrective\
     \ Action Categories) names the standard CAPA buckets recorded here: Training Enhancement,\
@@ -28,42 +28,42 @@ columns:
     kb_id: 56
 - name: trainneeds
   sql: trainneeds
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sop_update
   sql: sop_update
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: vendorimpact
   sql: vendorimpact
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: nextshipchg
   sql: nextshipchg
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: monfreqchg
   sql: monfreqchg
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: routeriskreassess
   sql: routeriskreassess
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: packspecrev
   sql: packspecrev
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: lanequalstat
   sql: lanequalstat
-  type: string
+  type: TEXT
   primary_key: false
   description: "Transport lane quality status: 'Valid', 'Invalid', 'Review Required'.\
     \ KB #54 (Serialization Maturity Model) classifies tracking maturity Level 0-4\
@@ -81,34 +81,34 @@ columns:
     kb_id: 54
 - name: techupgrade
   sql: techupgrade
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: costoptpot
   sql: costoptpot
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sustainimpact
   sql: sustainimpact
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: carbonkg
   sql: carbonkg
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: energyscore
   sql: energyscore
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: docformat
   sql: docformat
-  type: string
+  type: TEXT
   primary_key: false
   description: "Review document format: Paper / Electronic / Hybrid. KB #53 (Validation\
     \ Documentation Requirements) lists the master plan, qualifications, mapping studies,\
@@ -124,7 +124,7 @@ columns:
     kb_id: 53
 - name: dataintegrity
   sql: dataintegrity
-  type: string
+  type: TEXT
   primary_key: false
   description: "Data integrity verification status: 'Verified' / 'Under Review' /\
     \ 'Compromised'. KB #59 (Data Integrity Components) describes the ALCOA+ principles\
@@ -143,7 +143,7 @@ columns:
     kb_id: 59
 - name: audittrailcomplete
   sql: audittrailcomplete
-  type: string
+  type: TEXT
   primary_key: false
   description: "Audit-trail completeness percent. KB #46 (Quality Management System\
     \ Maturity Model) ranks QMS at Level 1 (Basic, minimal documentation) up to Level\
@@ -162,47 +162,47 @@ columns:
     kb_id: 46
 - name: e_sigstat
   sql: e_sigstat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sysaccessctrl
   sql: sysaccessctrl
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: databackupstat
   sql: databackupstat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: reportgenstat
   sql: reportgenstat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: distlist
   sql: distlist
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: archivestat
   sql: archivestat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: reviewnotes
   sql: reviewnotes
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: nextrevts
   sql: nextrevts
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: closestat
   sql: closestat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

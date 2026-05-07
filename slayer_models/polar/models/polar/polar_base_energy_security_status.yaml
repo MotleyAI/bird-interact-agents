@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: polar_base_energy_security_status
 source_queries:
 - version: 3
@@ -7,7 +7,7 @@ source_queries:
     source_name: thermalsolarwindandgrid
     columns:
     - name: rec_h2_ok_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN ((json_extract(renewablemetrics, '$.solar.output_w') + json_extract(renewablemetrics,
         '$.wind.output_w')) * 100.0 / NULLIF(fuelcelloutputw + json_extract(renewablemetrics,
         '$.solar.output_w') + json_extract(renewablemetrics, '$.wind.output_w'), 0))
@@ -24,7 +24,7 @@ source_queries:
     source_name: powerbattery
     columns:
     - name: esi_batt_ok_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN (energyefficiencypercent * CASE powersource WHEN 'Solar' THEN
         1.5 WHEN 'Wind' THEN 1.5 WHEN 'Hybrid' THEN 1.2 WHEN 'Battery' THEN 1.0 WHEN
         'Diesel' THEN 0.7 ELSE 0 END) > 0.7 AND json_extract(batterystatus, '$.level_percent')
@@ -41,7 +41,7 @@ source_queries:
     source_name: resource_self_sufficiency_index
     columns:
     - name: rssi_ok_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN rssi > 0.75 THEN 1 ELSE 0 END
   measures:
   - formula: rssi_ok_flag:min
@@ -159,29 +159,29 @@ data_source: polar
 columns:
 - name: thermaleqref
   sql: thermaleqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: rec_h2_ok_min
   sql: rec_h2_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_energy_secure
   sql: is_energy_secure
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: rssi_pbess__rssi_ok_min
   sql: rssi_pbess__rssi_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: esi_pbess__esi_batt_ok_min
   sql: esi_pbess__esi_batt_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

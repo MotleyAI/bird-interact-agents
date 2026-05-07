@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: geographic_hotspot
 source_queries:
 - version: 3
@@ -14,10 +14,10 @@ source_queries:
     source_name: state_apps
     columns:
     - name: national_avg
-      type: number
+      type: DOUBLE
       sql: AVG(_count) OVER ()
     - name: is_hotspot
-      type: boolean
+      type: BOOLEAN
       sql: _count > AVG(_count) OVER () * 1.5
   dimensions:
   - name: wsstate
@@ -39,24 +39,24 @@ data_source: labor_certification_applications
 columns:
 - name: wsstate
   sql: wsstate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: _count
   sql: _count
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: national_avg
   sql: national_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_hotspot
   sql: is_hotspot
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

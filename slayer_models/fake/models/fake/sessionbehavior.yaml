@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: sessionbehavior
 sql_table: sessionbehavior
 query_variables: {}
@@ -6,7 +6,7 @@ data_source: fake
 columns:
 - name: sessref
   sql: sessref
-  type: string
+  type: TEXT
   primary_key: true
   description: "Session reference (PK). KB #75 (Session Count) is defined as the count\
     \ of these records associated with an account.\n\n[kb=75]\nSC_a = \\left| \\{\
@@ -19,36 +19,36 @@ columns:
     kb_id: 75
 - name: sessprofref
   sql: sessprofref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: logintimepat
   sql: logintimepat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: loginfreq
   sql: loginfreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: loginlocvar
   sql: loginlocvar
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: sesslenmean
   sql: sesslenmean
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: sesscount
   sql: sesscount
-  type: number
+  type: INT
   primary_key: false
   description: 'Total sessions count. Numerator of AAF (KB #0).'
   hidden: false
@@ -56,14 +56,14 @@ columns:
     type: integer
 - name: actregval
   sql: actregval
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: acttimedist
   sql: acttimedist
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures:

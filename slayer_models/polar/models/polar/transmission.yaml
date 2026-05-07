@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: transmission
 sql_table: transmission
 query_variables: {}
@@ -6,61 +6,61 @@ data_source: polar
 columns:
 - name: transregistry
   sql: transregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: transeqref
   sql: transeqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: transengfluidsref
   sql: transengfluidsref
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: transmissiontemperaturec
   sql: transmissiontemperaturec
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: transmissionpressurekpa
   sql: transmissionpressurekpa
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: transmissiongear
   sql: transmissiongear
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: differentialtemperaturec
   sql: differentialtemperaturec
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: axletemperaturec
   sql: axletemperaturec
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: transopmaintref
   sql: transopmaintref
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: occupational_demand_index
 source_queries:
 - version: 3
@@ -14,7 +14,7 @@ source_queries:
     source_name: soc_apps
     columns:
     - name: odi
-      type: number
+      type: DOUBLE
       sql: _count * 1.0 / AVG(_count) OVER ()
   dimensions:
   - name: soccd
@@ -33,21 +33,21 @@ data_source: labor_certification_applications
 columns:
 - name: soccd
   sql: soccd
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Standard Occupational Classification (SOC) code (KB #7). E.g. 15-1253.00
     = Software Quality Assurance Analysts and Testers; 29-1141.00 = Registered Nurses.'
   hidden: false
 - name: _count
   sql: _count
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: odi
   sql: odi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

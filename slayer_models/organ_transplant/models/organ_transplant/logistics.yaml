@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: logistics
 sql_table: logistics
 query_variables: {}
@@ -6,25 +6,25 @@ data_source: organ_transplant
 columns:
 - name: log_match_registry
   sql: log_match_registry
-  type: string
+  type: TEXT
   primary_key: true
   description: FK to transplant_matching.match_rec_registry.
   hidden: false
 - name: trans_method
   sql: trans_method
-  type: string
+  type: TEXT
   primary_key: false
   description: Transportation method.
   hidden: false
 - name: don_ref_reg
   sql: don_ref_reg
-  type: string
+  type: TEXT
   primary_key: false
   description: FK to demographics.
   hidden: false
 - name: rec_ref_reg
   sql: rec_ref_reg
-  type: string
+  type: TEXT
   primary_key: false
   description: FK to recipients_demographics.
   hidden: false

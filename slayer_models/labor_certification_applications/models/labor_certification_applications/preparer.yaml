@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: preparer
 sql_table: preparer
 query_variables: {}
@@ -6,27 +6,27 @@ data_source: labor_certification_applications
 columns:
 - name: prepmail
   sql: prepmail
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: preplname
   sql: preplname
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: prepfname
   sql: prepfname
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: prepmi
   sql: prepmi
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: prepbiz
   sql: prepbiz
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

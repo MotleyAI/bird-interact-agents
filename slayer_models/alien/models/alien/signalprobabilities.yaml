@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: signalprobabilities
 sql_table: signalprobabilities
 query_variables: {}
@@ -6,12 +6,12 @@ data_source: alien
 columns:
 - name: signalref
   sql: signalref
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: falseposprob
   sql: falseposprob
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "False Positive Probability. FalsePosProb < 0.01 indicates less than\
     \ 1% probability that the signal is a false detection or artifact. Such low false\
@@ -31,63 +31,63 @@ columns:
     kb_id: 29
 - name: sigunique
   sql: sigunique
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: simindex
   sql: simindex
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: corrscore
   sql: corrscore
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: anomscore
   sql: anomscore
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: techsigprob
   sql: techsigprob
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: biosigprob
   sql: biosigprob
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: natsrcprob
   sql: natsrcprob
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: artsrcprob
   sql: artsrcprob
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tols
   sql: techsigprob * (1 - natsrcprob) * sigunique * (0.5 + anomscore / 10.0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Technological Origin Likelihood Score (TOLS) = TechSigProb * (1 -\
     \ NatSrcProb) * SigUnique * (0.5 + AnomScore/10). Values above 0.75 warrant further\
@@ -103,7 +103,7 @@ columns:
 - name: rpi
   sql: (techsigprob * 4 + biosigprob / 100.0 + sigunique * 2 + anomscore / 2.0) *
     (1 - falseposprob)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Research Priority Index (RPI) = (TechSigProb*4 + BioSigProb/100 +\
     \ SigUnique*2 + AnomScore/2) * (1 - FalsePosProb). Values above 3 indicate high\
@@ -120,7 +120,7 @@ columns:
   sql: CASE WHEN (techsigprob * (1 - natsrcprob) * sigunique * (0.5 + anomscore /
     10.0)) < 0.25 THEN 'Low' WHEN (techsigprob * (1 - natsrcprob) * sigunique * (0.5
     + anomscore / 10.0)) < 0.75 THEN 'Medium' ELSE 'High' END
-  type: string
+  type: TEXT
   primary_key: false
   description: "TOLS Category: 'Low' if TOLS < 0.25, 'Medium' if TOLS < 0.75, 'High'\
     \ otherwise.\n\n[kb=52]\nCategorized as 'Low' if TOLS < 0.25, 'Medium' if TOLS\
@@ -134,7 +134,7 @@ columns:
   sql: CASE WHEN ((techsigprob * 4 + biosigprob / 100.0 + sigunique * 2 + anomscore
     / 2.0) * (1 - falseposprob)) > 3.5 AND techsigprob > 0.8 AND anomscore > 5 THEN
     1 ELSE 0 END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Target of Opportunity (TOO): high-value signals with RPI>3.5 AND TechSigProb>0.8\
     \ AND AnomScore>5 that have not been previously documented or explained by known\
@@ -149,7 +149,7 @@ columns:
     kb_id: 12
 - name: is_potential_biosignature
   sql: CASE WHEN biosigprob > 0.6 AND techsigprob < 0.4 THEN 1 ELSE 0 END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Potential Biosignature: signals with BioSigProb>0.6 AND TechSigProb<0.4\
     \ (the additional clause about spectral features matching known biological emission\

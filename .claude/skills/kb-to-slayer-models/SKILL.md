@@ -1,6 +1,6 @@
 ---
 name: kb-to-slayer-models
-description: Translate a structured knowledge base (calculation entries, descriptions, enum bands, multistage formulas) into edits on a SLayer datasource via the v0.4.0+ MCP server. A recipe book — a caller picks the recipe whose trigger matches each KB entry and applies it. Domain-agnostic; downstream wrappers add domain bookkeeping.
+description: Translate a structured knowledge base (calculation entries, descriptions, enum bands, multistage formulas) into edits on a SLayer datasource via the v0.5.0+ MCP server. A recipe book — a caller picks the recipe whose trigger matches each KB entry and applies it. Domain-agnostic; downstream wrappers add domain bookkeeping.
 ---
 
 # Translate a KB into SLayer model enrichments via MCP
@@ -14,9 +14,12 @@ By the time this skill runs:
   `auto_ingest=True`, or `mcp__slayer__ingest_datasource_models`.
 - One SLayer model per table already exists, with **FK joins**, **column
   types**, and one **Column** per source column populated.
-- **SLayer 0.4.0+ MCP** is the runtime. `edit_model` and `create_model`
+- **SLayer 0.5.0+ MCP** is the runtime. `edit_model` and `create_model`
   expose the v3 unified `columns` list and the v3 named-formula
-  `measures` list with `formula` (not `sql`).
+  `measures` list with `formula` (not `sql`). The rank-family
+  transforms (`rank`, `percent_rank`, `dense_rank`, `row_number`,
+  `ntile`) and `covar_pop` / `covar_samp` / `corr` aggregations are
+  available as ModelMeasure formulas.
 
 This skill **edits the existing models in place** via the SLayer MCP
 server. **Do not recreate** auto-ingested models. Reserve `create_model`
@@ -80,7 +83,7 @@ on.
 | **R-RESOLVE** | Definition contains "where X is the …" or any unqualified reference to another already-encoded metric by name. |
 | **R-MULTISTAGE** | A row-level expression references an aggregate of child rows; one stage of arithmetic must run after a stage of aggregation. |
 | **R-PEER-JOIN** | A composite formula references measures or columns on two (or more) tables that share a common ancestor in the FK graph. **Default encoding: R-MULTISTAGE** (per-peer aggregation, then joined DAG). See "Peer-join via shared parent" below. |
-| **R-WINDOW** | "Top quartile / above median / rank ≤ N / percentile ≥ p / NTILE bucket / argmin-by-time" used as a row-level dimension or filter. Available transforms: `rank`, `first` (FIRST_VALUE asc / argmin), `last` (FIRST_VALUE desc / argmax), `lag`, `lead`, plus `percent_rank`, `dense_rank`, `row_number`, `ntile` (the last four track DEV-1353; until they ship, use a raw window inside `Column.sql` as the fallback — auto-promoted by 0.4.3). |
+| **R-WINDOW** | "Top quartile / above median / rank ≤ N / percentile ≥ p / NTILE bucket / argmin-by-time" used as a row-level dimension or filter. Available transforms: `rank`, `percent_rank`, `dense_rank`, `ntile`, `first` (FIRST_VALUE asc / argmin), `last` (FIRST_VALUE desc / argmax), `lag`, `lead`. Pass `partition_by=<dim>` (or a list) to scope the window; cross-model dotted paths work (e.g. `partition_by=actuation_data.robot_details.ctrltypeval`). For non-standard window expressions, fall back to a raw window inside `Column.sql` — SLayer auto-promotes Column-level windows so they survive the SQL generator. |
 | **R-EXISTS** | "Exists ≥1 child meeting X", "all children meet X", "% of children meeting X" as a Boolean attribute on the parent. |
 | **R-VAR** | Definition depends on a "report date" / "as of" / "past N months" — anything that's a query parameter, not data. |
 | **R-HOST** | Boolean predicate composes facts from multiple tables; no obvious host model — pick by predicate grain. |
@@ -282,8 +285,26 @@ mcp__slayer__edit_model(
 **R-AGG.** Parametrized aggregation — needs more than one column or
 tunable parameters.
 
+For the **OLS regression slope** of y on x — the canonical KB pattern
+"slope of regression(y, x) across qualifying rows" — express it as a
+ModelMeasure formula using built-in `covar_pop` / `var_pop`:
+
 ```
-# Example: MKT (uses ln/exp UDFs registered by SLayer 0.4.1+)
+measures=[{
+  "name": "y_x_regression_slope",
+  "formula": "y:covar_pop(other=x) / x:var_pop",
+  "description": "OLS slope of y on x across the queried rows",
+  "meta": {…},
+}]
+# query: filter to qualifying rows, group by whatever scope the KB defines.
+# Algebra: slope = covar_pop(x, y) / var_pop(x).
+```
+
+`corr(x, y) = covar(x,y) / (stddev(x) * stddev(y))` is also available
+via `:corr(other=…)` for Pearson correlation.
+
+```
+# Example: MKT (uses ln/exp UDFs registered by SLayer)
 mcp__slayer__edit_model(
   model_name="excursion_events",
   aggregations=[{
@@ -368,6 +389,65 @@ When the GROUP BY dim lives on a peer rather than on the parent,
 anchor stage 3 at that peer instead (and add a fourth stage if the
 peer dim itself comes from a different table). The shape generalises.
 
+**R-MULTISTAGE portfolio — many derived metrics on one per-parent view.**
+When several KBs all want their value at parent grain (e.g. EER, TWR,
+JDI, OCE all "per robot"), don't build one query-backed model per
+metric. Build *one* per-parent model that aggregates each peer child
+to per-parent in its own named stage, joins them all in the final
+stage, and exposes the derived metrics as **computed columns inside
+the final stage's `ModelExtension.columns`**. Example skeleton:
+
+```
+mcp__slayer__create_model(
+  name="<parent>_per_<parent>",
+  query=[
+    {"name": "_per_<peer_a>", "source_model": "<peer_a>",
+     "dimensions": ["<fk_to_parent>"],
+     "measures": [{"formula": "x:sum", "name": "x_total"}, …]},
+    {"name": "_per_<peer_b>", "source_model": "<peer_b>",
+     "dimensions": ["<fk_to_parent>"],
+     "measures": [{"formula": "y:max", "name": "y_max"}, …]},
+    # …one stage per peer…
+    {"source_model": {
+        "source_name": "_per_<peer_a>",
+        "joins": [
+          {"target_model": "_per_<peer_b>",
+           "join_pairs": [["<fk_a>", "<fk_b>"]]},
+          # …join every other named stage…
+        ],
+        "columns": [
+          # Derived per-parent metrics composed from joined stages.
+          # Each becomes an auto-introspected column on the model.
+          {"name": "ratio_a_over_b",
+           "sql": "CASE WHEN _per_<peer_b>.y_max > 0 THEN _per_<peer_a>.x_total / _per_<peer_b>.y_max END",
+           "type": "number"},
+          # Pass-throughs for ergonomic access:
+          {"name": "y_max", "sql": "_per_<peer_b>.y_max", "type": "number"},
+        ],
+     },
+     "dimensions": ["<fk_to_parent>", "x_total", "y_max", "ratio_a_over_b", …]},
+  ],
+)
+
+# Cascade categories ride the same per-parent view as ModelMeasures:
+mcp__slayer__edit_model(
+  model_name="<parent>_per_<parent>",
+  measures=[
+    {"name": "is_ratio_high",
+     "formula": "ratio_a_over_b:max > 0.01 and y_max:max > 1000",
+     "meta": {"kb_id": <cascade_kb>}},
+  ],
+)
+```
+
+This shape was used for `robot_per_robot`: per-child-table rollups
+for `operation`, `performance_and_safety`, `joint_condition`,
+`actuation_data`, `maintenance_and_fault`, plus a `_robot_meta`
+stage carrying the parent attributes (`modelseriesval`,
+`ctrltypeval`, …). Derived columns: `eer`, `twr`, `oce`, `jdi`.
+Measures: `eer_value`, `twr_value`, `is_energy_inefficient`,
+`is_joint_health_risk`, `eer_rank`, `model_avg_position_error` …
+
 A simpler **non-peer-join** R-MULTISTAGE — one parent + one child set:
 
 ```
@@ -399,34 +479,33 @@ mcp__slayer__edit_model(model_name="vendor_risk_amplification",
 
 **R-WINDOW — quartile / rank / percentile as a row dimension or filter.**
 
-Available transforms: `rank`, `first` (FIRST_VALUE asc / argmin),
-`last` (FIRST_VALUE desc / argmax), `lag`, `lead`, plus
-`percent_rank`, `dense_rank`, `row_number`, `ntile` (the last four
-track [DEV-1353](https://linear.app/motley-ai/issue/DEV-1353); until
-they ship, use a raw window inside `Column.sql` as the fallback —
-SLayer 0.4.3 auto-promotes Column-level windows so they survive the
-SQL generator without manual subqueries).
-
-When the new transforms are available, the natural shape is:
+Available transforms in SLayer 0.5.0+: `rank`, `percent_rank`,
+`dense_rank`, `ntile`, `first` (FIRST_VALUE asc / argmin),
+`last` (FIRST_VALUE desc / argmax), `lag`, `lead`. The natural shape
+is a ModelMeasure formula:
 
 ```
 # EER ranked per application type, descending
 mcp__slayer__edit_model(
-  model_name="robot_efficiency",
+  model_name="robot_per_robot",
   measures=[{
-    "name": "eer_pct_rank",
-    "formula": "percent_rank(eer:avg, partition_by=apptype, order=desc)",
+    "name": "eer_rank",
+    "formula": "percent_rank(eer:max, partition_by=apptypeval)",
     "description": "EER percentile rank within application type",
     "meta": {…caller bookkeeping…},
   }],
 )
 ```
 
-The transform applies after the underlying aggregate (`eer:avg`), so
-it lives in the formula layer beside `rank` / `lag` / etc.
+The transform applies after the underlying aggregate (`eer:max`), so
+it lives in the formula layer beside `rank` / `lag` / etc. Sort is
+descending by default; pass a list to `partition_by=` for multi-key
+partitions; cross-model dotted paths work
+(`partition_by=actuation_data.robot_details.ctrltypeval`).
 
-Until the transforms land, the same intent expressed as a raw window
-in a query-backed model:
+For non-standard window expressions not covered by these transforms,
+fall back to a raw window in `Column.sql` inside a query-backed
+model:
 
 ```
 # TEI quartile as a row dimension on accounts
@@ -708,6 +787,19 @@ verifier finds it.
   names go in `description` / `label`.
 - **`meta` is opaque to this skill**: pass through whatever the caller
   supplies; this skill takes no position on its content.
+- **Query-backed model namespace.** Auto-introspected columns and
+  ModelMeasures share a single namespace per model. If the final
+  stage exposes a `ratio` column, you can't add a `ratio` measure on
+  the same model — name the measure `ratio_value` (or similar).
+- **Bare ModelMeasure name on QB model queries.** When querying a
+  query-backed model, `{"formula": "<measure_name>"}` errors with
+  "use colon syntax" — bare-name resolution to a saved
+  ModelMeasure's formula isn't honored on QB models today. Use the
+  underlying expression with explicit colon syntax (e.g.
+  `{"formula": "ratio:max"}`) or define the measure with the
+  inline expression at query time. The saved ModelMeasure still
+  carries `meta.kb_id` correctly for the verifier; this only
+  affects ergonomic re-use at query time.
 - **Verification**: after Pass 4 / 5, hit a representative query and
   confirm the natural agent expression is short — measure list +
   dimensions + filters, no per-call formula re-derivation.

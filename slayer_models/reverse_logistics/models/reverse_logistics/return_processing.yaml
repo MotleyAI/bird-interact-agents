@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: return_processing
 sql_table: return_processing
 query_variables: {}
@@ -6,12 +6,12 @@ data_source: reverse_logistics
 columns:
 - name: loccode
   sql: loccode
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: procprio
   sql: procprio
-  type: string
+  type: TEXT
   primary_key: false
   description: "Processing Priorities \u2014 'Bulk' (palletised/batch in low-demand\
     \ periods), 'Standard' (default 3-5 day SLA), 'Express' (expedited for VIP/high-value/premium).\n\
@@ -25,12 +25,12 @@ columns:
     kb_id: 28
 - name: procstate
   sql: procstate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: proctime
   sql: proctime
-  type: number
+  type: INT
   primary_key: false
   description: "Processing time PT_i (calendar time spent processing this return at\
     \ the facility). Source column for the Average Processing Time (APT) measure (KB\
@@ -45,76 +45,76 @@ columns:
     kb_id: 5
 - name: handreq
   sql: handreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: needsquar
   sql: needsquar
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: quardays
   sql: quardays
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: handling_notes
   sql: handling_notes
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: dispaction
   sql: dispaction
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: dispreason
   sql: dispreason
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: needsrelabel
   sql: needsrelabel
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: repairfeas
   sql: repairfeas
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: estrepairhrs
   sql: estrepairhrs
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: partsavail
   sql: partsavail
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: policycomp
   sql: policycomp
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: exceptmade
   sql: exceptmade
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: excepttype
   sql: excepttype
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: apprlevel
   sql: apprlevel
-  type: string
+  type: TEXT
   primary_key: false
   description: "Approval Levels \u2014 hierarchy of sign-off required. 'Automatic',\
     \ 'Manager', 'Supervisor'.\n\n[kb=25]\nThere 3 levels: 'Automatic', 'Manager'\

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: high_temporal_value_site
 source_queries:
 - version: 3
@@ -33,7 +33,7 @@ source_queries:
     source_name: scans_keyed
     columns:
     - name: is_high_temporal_value_site
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN CAST(sites__guessdate AS REAL) < 500 AND cons_per_zone__cpi >
         60 THEN 1 ELSE 0 END
   measures:
@@ -107,27 +107,27 @@ data_source: archeology
 columns:
 - name: questregistry
   sql: questregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: zoneref
   sql: zoneref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_high_temporal_value_site
   sql: is_high_temporal_value_site
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 - name: cpi
   sql: cpi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

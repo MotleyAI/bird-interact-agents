@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: employer_scale_indicator
 source_queries:
 - version: 3
@@ -14,10 +14,10 @@ source_queries:
     source_name: emp_apps
     columns:
     - name: esi
-      type: number
+      type: DOUBLE
       sql: _count * 1.0 / AVG(_count) OVER ()
     - name: size_class
-      type: string
+      type: TEXT
       sql: CASE WHEN _count < 5 THEN 'Small-scale' WHEN _count <= 25 THEN 'Medium-scale'
         ELSE 'Large-scale' END
   dimensions:
@@ -41,24 +41,24 @@ data_source: labor_certification_applications
 columns:
 - name: homefirm
   sql: homefirm
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: _count
   sql: _count
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: esi
   sql: esi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: size_class
   sql: size_class
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

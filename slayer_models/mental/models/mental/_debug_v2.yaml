@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: _debug_v2
 source_queries:
 - version: 3
@@ -7,10 +7,10 @@ source_queries:
     source_name: facility_metrics
     columns:
     - name: _jk
-      type: number
+      type: DOUBLE
       sql: '1'
     - name: psm_row
-      type: number
+      type: DOUBLE
       sql: 1.0 / (1 + tb_per_fac__cif + enc_per_fac__mar)
   dimensions:
   - name: fackey
@@ -50,7 +50,7 @@ source_queries:
         - _jk
     columns:
     - name: quadrant
-      type: string
+      type: TEXT
       sql: CASE WHEN tox_per_fac__tar >= median_tar__median_tar AND psm_row >= median_psm__median_psm
         THEN 'High Adherence, High Stability' WHEN tox_per_fac__tar >= median_tar__median_tar
         AND psm_row < median_psm__median_psm THEN 'High Adherence, Low Stability'
@@ -261,12 +261,12 @@ data_source: mental
 columns:
 - name: fackey
   sql: fackey
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: quadrant
   sql: quadrant
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

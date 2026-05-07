@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: seasonal_application_pattern
 source_queries:
 - version: 3
@@ -14,7 +14,7 @@ source_queries:
     source_name: month_apps
     columns:
     - name: season_pattern
-      type: string
+      type: TEXT
       sql: CASE WHEN _count > AVG(_count) OVER () * 1.2 THEN 'Peak Season' WHEN _count
         < AVG(_count) OVER () * 0.8 THEN 'Off-Peak Season' ELSE 'Transition Period'
         END
@@ -39,21 +39,21 @@ data_source: labor_certification_applications
 columns:
 - name: recv_month
   sql: recv_month
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Month of receipt (1-12), parsed from recvday ''YYYY/MM/DD''. Used
     for KB #23/50 seasonal analysis.'
   hidden: false
 - name: _count
   sql: _count
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: season_pattern
   sql: season_pattern
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

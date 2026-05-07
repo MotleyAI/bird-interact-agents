@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: extreme_weather_ready
 source_queries:
 - version: 3
@@ -7,7 +7,7 @@ source_queries:
     source_name: weatherandstructure
     columns:
     - name: ssf_gt_07_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN (100 - structuralloadpercent) / 100.0 * CASE WHEN snowloadkgm2
         > 100 OR windspeedms > 20 THEN 0.5 WHEN snowloadkgm2 > 50 OR windspeedms >
         10 THEN 0.8 ELSE 1.0 END > 0.7 THEN 1 ELSE 0 END
@@ -24,7 +24,7 @@ source_queries:
     source_name: cabinenvironment
     columns:
     - name: heater_on_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN heaterstatus != 'Off' THEN 1 ELSE 0 END
   measures:
   - formula: heater_on_flag:min
@@ -38,7 +38,7 @@ source_queries:
     source_name: thermalsolarwindandgrid
     columns:
     - name: insul_ok_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN insulationstatus != 'Poor' THEN 1 ELSE 0 END
   measures:
   - formula: insul_ok_flag:min
@@ -52,7 +52,7 @@ source_queries:
     source_name: lightingandsafety
     columns:
     - name: emerg_ok_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN emergencylightstatus IN ('On', 'Testing') THEN 1 ELSE 0 END
   measures:
   - formula: emerg_ok_flag:min
@@ -146,34 +146,34 @@ data_source: polar
 columns:
 - name: operationmaintenance__opmainteqref
   sql: operationmaintenance__opmainteqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: ssf_ok_min
   sql: ssf_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_extreme_weather_ready
   sql: is_extreme_weather_ready
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: emerg_per_eq_ewr__emerg_ok_min
   sql: emerg_per_eq_ewr__emerg_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: insul_per_eq_ewr__insul_ok_min
   sql: insul_per_eq_ewr__insul_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: heater_per_eq_ewr__heater_on_min
   sql: heater_per_eq_ewr__heater_on_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

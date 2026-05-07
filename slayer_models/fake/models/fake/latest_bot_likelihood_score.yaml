@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: latest_bot_likelihood_score
 source_queries:
 - version: 3
@@ -14,7 +14,7 @@ source_queries:
     source_name: ranked_detections
     columns:
     - name: rn
-      type: number
+      type: DOUBLE
       sql: ROW_NUMBER() OVER (PARTITION BY account_id ORDER BY detecttime DESC)
   dimensions:
   - name: account_id
@@ -51,7 +51,7 @@ data_source: fake
 columns:
 - name: account_id
   sql: account_id
-  type: string
+  type: TEXT
   primary_key: false
   description: "Per-row account identifier resolved through the securitydetection\
     \ \u2192 technicalinfo \u2192 networkmetrics \u2192 sessionbehavior \u2192 profile\
@@ -60,14 +60,14 @@ columns:
   hidden: false
 - name: botlikscore
   sql: botlikscore
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Bot-likelihood score (KB #29). Range 0-100; >70 strongly indicates
     bot behavior.'
   hidden: false
 - name: rn
   sql: rn
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: lane_risk_potential
 source_queries:
 - version: 3
@@ -24,7 +24,7 @@ source_queries:
         - shipments__route_string
     columns:
     - name: lrp
-      type: number
+      type: DOUBLE
       sql: (te_per_lane.temp_excursion_count_sum + shipments_per_lane.is_delayed_shipment_sum
         + cd_per_lane.is_customs_delayed_sum) * 1.0 / NULLIF(shipments_per_lane._count,
         0)
@@ -70,7 +70,7 @@ data_source: cold_chain_pharma_compliance
 columns:
 - name: route_string
   sql: route_string
-  type: string
+  type: TEXT
   primary_key: false
   description: Encoded planned route (origin -> destination) string. Uses ->> to return
     the JSON scalar without surrounding quotes (json_extract gets rewritten to ->
@@ -78,7 +78,7 @@ columns:
   hidden: false
 - name: lrp
   sql: lrp
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

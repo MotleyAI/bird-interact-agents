@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: worksite
 sql_table: worksite
 query_variables: {}
@@ -6,42 +6,42 @@ data_source: labor_certification_applications
 columns:
 - name: w_addr1
   sql: w_addr1
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: wcity
   sql: wcity
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: wstate
   sql: wstate
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: wzip
   sql: wzip
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: secent
   sql: secent
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: secentname
   sql: secentname
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: waddr_2
   sql: waddr_2
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: wcnty
   sql: wcnty
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

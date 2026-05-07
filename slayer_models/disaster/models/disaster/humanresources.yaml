@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: humanresources
 sql_table: humanresources
 query_variables: {}
@@ -6,22 +6,22 @@ data_source: disaster
 columns:
 - name: hrregistry
   sql: hrregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: hrdistref
   sql: hrdistref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: hropsref
   sql: hropsref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: staffingprofile
   sql: staffingprofile
-  type: string
+  type: TEXT
   primary_key: false
   description: "JSON consolidating personnel counts and readiness. Sub-fields: personnel.{total,medical,security,logistics,volunteers},\
     \ readiness.{ppe_status (KB #8), comm_equipment, training_status, availability_percent}.\n\
@@ -35,37 +35,37 @@ columns:
     kb_id: 8
 - name: personnel_total
   sql: CAST(staffingprofile ->> '$.personnel.total' AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Total staff (parsed from staffingprofile.personnel.total).
   hidden: false
 - name: personnel_medical
   sql: CAST(staffingprofile ->> '$.personnel.medical' AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Medical personnel count.
   hidden: false
 - name: personnel_security
   sql: CAST(staffingprofile ->> '$.personnel.security' AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Security personnel count.
   hidden: false
 - name: personnel_logistics
   sql: CAST(staffingprofile ->> '$.personnel.logistics' AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Logistics personnel count.
   hidden: false
 - name: personnel_volunteers
   sql: CAST(staffingprofile ->> '$.personnel.volunteers' AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Volunteer count.
   hidden: false
 - name: ppe_status
   sql: staffingprofile ->> '$.readiness.ppe_status'
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Personal Protective Equipment availability (KB #8). Adequate / Limited
     / Critical.'
@@ -73,26 +73,26 @@ columns:
 - name: ppe_factor
   sql: CASE staffingprofile ->> '$.readiness.ppe_status' WHEN 'Adequate' THEN 1.2
     WHEN 'Limited' THEN 0.8 WHEN 'Critical' THEN 0.5 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Numeric factor used by KB #34 (SNR): Adequate=1.2, Limited=0.8, Critical=0.5,
     else=0.'
   hidden: false
 - name: availability_percent
   sql: CAST(staffingprofile ->> '$.readiness.availability_percent' AS REAL)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Staff availability percentage.
   hidden: false
 - name: training_status
   sql: staffingprofile ->> '$.readiness.training_status'
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Training progress: Complete / In Progress / Required.'
   hidden: false
 - name: comm_equipment
   sql: staffingprofile ->> '$.readiness.comm_equipment'
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Communication gear availability: Sufficient / Insufficient / Limited.'
   hidden: false
@@ -100,7 +100,7 @@ columns:
   sql: (CAST(staffingprofile ->> '$.personnel.total' AS INTEGER) * 1.0 / NULLIF(financials.personnelcostsusd
     / 10000.0, 0)) * (CAST(staffingprofile ->> '$.readiness.availability_percent'
     AS REAL) / 100.0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Personnel Effectiveness Ratio (PER, KB #13): (staffingprofile.personnel.total\
     \ / (personnelcostsusd/10000)) * (staffingprofile.readiness.availability_percent/100).\n\
@@ -119,7 +119,7 @@ columns:
     / 10000.0, 0)) * (CAST(staffingprofile ->> '$.readiness.availability_percent'
     AS REAL) / 100.0)) * (CASE staffingprofile ->> '$.readiness.ppe_status' WHEN 'Adequate'
     THEN 1.2 WHEN 'Limited' THEN 0.8 WHEN 'Critical' THEN 0.5 ELSE 0 END)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Staffing to Need Ratio (SNR, KB #34): (staffingprofile.personnel.total\
     \ / (impactMetrics.population.affected/10000)) * PER * ppe_factor.\n\n[kb=34]\n\

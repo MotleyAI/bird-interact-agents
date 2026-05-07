@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: signal_is_galactic_significance
 source_queries:
 - version: 3
@@ -23,7 +23,7 @@ source_queries:
         - signalref
     columns:
     - name: is_galactic_significance
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN ((CASE WHEN NOT sourceproperties.celestobj IS NULL AND sourceproperties.celestobj
         <> '' AND sourceproperties.celestobj <> 'Unknown' THEN 2 ELSE 1 END) * (CASE
         WHEN sourceproperties.objtype = 'Giant' AND sourceproperties.objmasssol BETWEEN
@@ -70,12 +70,12 @@ data_source: alien
 columns:
 - name: signalregistry
   sql: signalregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_galactic_significance
   sql: is_galactic_significance
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

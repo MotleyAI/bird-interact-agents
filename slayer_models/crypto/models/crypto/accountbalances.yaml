@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: accountbalances
 sql_table: accountbalances
 query_variables: {}
@@ -6,61 +6,61 @@ data_source: crypto
 columns:
 - name: accountbalancesnode
   sql: accountbalancesnode
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: walletsum
   sql: walletsum
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: availsum
   sql: availsum
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: frozensum
   sql: frozensum
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: margsum
   sql: margsum
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: unrealline
   sql: unrealline
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: realline
   sql: realline
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: usertag
   sql: usertag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: positive_realline
   sql: realline
-  type: number
+  type: INT
   primary_key: false
   description: "Helper for Profit Factor (KB #34): realline filtered to positive PnL\
     \ rows.\n\n[kb=34]\nProfit Factor = \\frac{\\sum positive\\ realline}{|\\sum negative\\\
@@ -74,7 +74,7 @@ columns:
     kb_id: 34
 - name: negative_realline
   sql: realline
-  type: number
+  type: INT
   primary_key: false
   description: "Helper for Profit Factor (KB #34): realline filtered to negative PnL\
     \ rows.\n\n[kb=34]\nProfit Factor = \\frac{\\sum positive\\ realline}{|\\sum negative\\\

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: quality_alert_status
 source_queries:
 - version: 3
@@ -43,16 +43,16 @@ source_queries:
         - shipgov
     columns:
     - name: qmi
-      type: number
+      type: DOUBLE
       sql: mcs_per_shipment_qas.mcs * (((JULIANDAY(expireday) - JULIANDAY('now'))
         * agg_per_container_qas.tss) / 365.0 * agg_per_container_qas.hqi * (1 - agg_per_container_qas.cri))
         * (1 - agg_per_container_qas.tbs / 10.0)
     - name: vsi
-      type: number
+      type: DOUBLE
       sql: ((JULIANDAY(expireday) - JULIANDAY('now')) * agg_per_container_qas.tss)
         / 365.0 * agg_per_container_qas.cei * (1 - agg_per_container_qas.trs)
     - name: is_quality_alert_status
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN (mcs_per_shipment_qas.mcs * (((JULIANDAY(expireday) - JULIANDAY('now'))
         * agg_per_container_qas.tss) / 365.0 * agg_per_container_qas.hqi * (1 - agg_per_container_qas.cri))
         * (1 - agg_per_container_qas.tbs / 10.0)) < 0.3 AND (((JULIANDAY(expireday)
@@ -139,34 +139,34 @@ data_source: vaccine
 columns:
 - name: vacregistry
   sql: vacregistry
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: containvac
   sql: containvac
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: shipinject
   sql: shipinject
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: qmi
   sql: qmi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: vsi
   sql: vsi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_quality_alert_status
   sql: is_quality_alert_status
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

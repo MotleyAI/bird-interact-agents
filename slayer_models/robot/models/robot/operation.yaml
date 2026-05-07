@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: operation
 sql_table: operation
 query_variables: {}
@@ -6,7 +6,7 @@ data_source: robot
 columns:
 - name: operreg
   sql: operreg
-  type: string
+  type: TEXT
   primary_key: true
   description: "Operation primary key. Carrier for NO row count (KB #8) and Multi-Operation\
     \ Robot (KB #18).\n\n[kb=8]\nFor a given robot R, NO = |\\{o \\in \\text{operation}\
@@ -18,17 +18,17 @@ columns:
     kb_id: 8
 - name: operbotdetref
   sql: operbotdetref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: operrecref
   sql: operrecref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: totopshrval
   sql: totopshrval
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Cumulative total operating hours up to this row. Carrier for TOH (KB\
     \ #7) and Heavily Used Robot (KB #17).\n\n[kb=7]\nFor a given robot R, TOH = \\\
@@ -43,22 +43,22 @@ columns:
     kb_id: 7
 - name: apptypeval
   sql: apptypeval
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: opermodeval
   sql: opermodeval
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: currprogval
   sql: currprogval
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: progcyclecount
   sql: progcyclecount
-  type: number
+  type: INT
   primary_key: false
   description: "Program cycle count. Carrier for TPC (KB #9) and High Cycle Count\
     \ Robot (KB #19).\n\n[kb=9]\nFor a given robot R, TPC = \\sum_{o \\in \\text{operation}\
@@ -72,7 +72,7 @@ columns:
     kb_id: 9
 - name: cycletimesecval
   sql: cycletimesecval
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Per-operation cycle time (s). Carrier for OCE (KB #33), Cycle Efficiency\
     \ Category (KB #43), and Average Cycle Time (KB #51).\n\n[kb=33]\nFor a given\
@@ -87,7 +87,7 @@ columns:
     kb_id: 33
 - name: axiscountval
   sql: axiscountval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: resource_self_sufficiency_index
 source_queries:
 - version: 3
@@ -68,12 +68,12 @@ data_source: polar
 columns:
 - name: thermaleqref
   sql: thermaleqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: rec_avg
   sql: rec_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Renewable Energy Contribution (KB #9): (solar+wind)/(solar+wind+fuelcell)\
     \ \xD7 100, %."
@@ -82,14 +82,14 @@ columns:
     type: float
 - name: rssi
   sql: rssi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: wrmi_per_eq__wrmi_avg
   sql: wrmi_per_eq__wrmi_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

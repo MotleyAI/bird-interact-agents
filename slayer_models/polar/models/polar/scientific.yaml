@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: scientific
 sql_table: scientific
 query_variables: {}
@@ -6,39 +6,39 @@ data_source: polar
 columns:
 - name: sciregistry
   sql: sciregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: scieqref
   sql: scieqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: scientificequipmentstatus
   sql: scientificequipmentstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: dataloggingstatus
   sql: dataloggingstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sensorstatus
   sql: sensorstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: calibrationstatus
   sql: calibrationstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: measurementaccuracypercent
   sql: measurementaccuracypercent
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
@@ -46,7 +46,7 @@ columns:
 - name: ser
   sql: measurementaccuracypercent * CASE calibrationstatus WHEN 'Valid' THEN 1.0 WHEN
     'Due' THEN 0.7 WHEN 'Expired' THEN 0.3 ELSE 0.0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Scientific Equipment Reliability (KB #8): accuracy% \xD7 calibration\
     \ multiplier.\n\n[kb=8]\nSER = measurementaccuracypercent \\times \\begin{cases}\
@@ -63,7 +63,7 @@ columns:
   sql: (measurementaccuracypercent * CASE calibrationstatus WHEN 'Valid' THEN 1.0
     WHEN 'Due' THEN 0.7 WHEN 'Expired' THEN 0.3 ELSE 0.0 END) > 0.9 AND calibrationstatus
     = 'Valid'
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Scientific Data Reliability (KB #16): TRUE iff SER > 0.9 AND calibration='Valid'.\n\
     \n[kb=16]\nScientific data is classified as 'Research Grade' when collected by\

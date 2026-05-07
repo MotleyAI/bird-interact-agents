@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: sbp_avg
 source_queries:
 - version: 3
@@ -7,7 +7,7 @@ source_queries:
     columns:
     - name: k
       sql: '1'
-      type: number
+      type: DOUBLE
   measures:
   - formula: sbp_score:avg
   dimensions:
@@ -23,12 +23,12 @@ data_source: cold_chain_pharma_compliance
 columns:
 - name: k
   sql: k
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: sbp_score_avg
   sql: sbp_score_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Supplier Backup Presence proxy (KB #30, SCRS sub-score, 0-10): Validated
     vehicle = 9, Qualified = 7, else = 5. Used inside Supply Chain Resilience Score;

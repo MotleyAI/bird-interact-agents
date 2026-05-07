@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: scanconservation
 sql_table: scanconservation
 query_variables: {}
@@ -6,34 +6,34 @@ data_source: archeology
 columns:
 - name: cureregistry
   sql: cureregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: zoneref
   sql: zoneref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: harmassess
   sql: harmassess
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: curerank
   sql: curerank
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: structstate
   sql: structstate
-  type: string
+  type: TEXT
   primary_key: false
   description: "Structural State (KB #26). 'Stable' = maintains integrity under normal\
     \ conditions; 'Unstable' = signs of deterioration requiring intervention; 'Critical'\
@@ -50,18 +50,18 @@ columns:
     kb_id: 26
 - name: intervhistory
   sql: intervhistory
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: priordocs
   sql: priordocs
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_degradation_risk_zone
   sql: CASE WHEN (sites.presstat LIKE '%Poor%' OR sites.presstat LIKE '%Critical%')
     AND (structstate IS NULL OR structstate NOT LIKE '%Stable%') THEN 1 ELSE 0 END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Degradation Risk Zone (KB #14): site PresStat in {'Poor','Critical'}\
     \ AND StructState != 'Stable' \u2014 active deterioration, immediate conservation\
@@ -78,7 +78,7 @@ columns:
   sql: CASE WHEN (sites.presstat LIKE '%Poor%' OR sites.presstat LIKE '%Critical%')
     AND (structstate IS NULL OR structstate NOT LIKE '%Stable%') THEN 'Degradation
     Risk Zone' ELSE 'Not in Risk Zone' END
-  type: string
+  type: TEXT
   primary_key: false
   description: "Risk Zone Category (KB #52): two-class classification \u2014 'Degradation\
     \ Risk Zone' (KB #14) or 'Not in Risk Zone'.\n\n[kb=52]\nCategorizes archaeological\
@@ -93,7 +93,7 @@ columns:
 - name: ps_score
   sql: CASE sites.presstat WHEN 'Excellent' THEN 10 WHEN 'Good' THEN 30 WHEN 'Fair'
     THEN 50 WHEN 'Poor' THEN 70 WHEN 'Critical' THEN 90 ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "PresStat-to-PS mapping (KB #35 component): Excellent=10, Good=30,\
     \ Fair=50, Poor=70, Critical=90.\n\n[kb=35]\nCPI = \\begin{cases} 100 - PS + AF\
@@ -110,7 +110,7 @@ columns:
     kb_id: 35
 - name: af_millennia
   sql: abs(CAST(sites.guessdate AS REAL)) / 1000.0
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Approximate Age in millennia (KB #35 component) derived from GuessDate.\
     \ Best-effort: leading numeric portion of GuessDate, absolute, divided by 1000.\
@@ -130,7 +130,7 @@ columns:
 - name: ts_rarity
   sql: CASE sites.typesite WHEN 'Religious' THEN 10 WHEN 'Military' THEN 8 WHEN 'Settlement'
     THEN 6 WHEN 'Industrial' THEN 4 WHEN 'Burial' THEN 2 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "TypeSite rarity score (KB #35 component): 0-10 based on type. Religious=10,\
     \ Military=8, Settlement=6, Industrial=4, Burial=2, other=0. KB #35 doesn't specify\
@@ -159,7 +159,7 @@ columns:
     THEN 90 ELSE 0 END) + (abs(CAST(sites.guessdate AS REAL)) / 1000.0) * (1 + (CASE
     sites.typesite WHEN 'Religious' THEN 10 WHEN 'Military' THEN 8 WHEN 'Settlement'
     THEN 6 WHEN 'Industrial' THEN 4 WHEN 'Burial' THEN 2 ELSE 0 END) / 20.0) END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Conservation Priority Index (CPI, KB #35): piecewise formula. If in\
     \ Degradation Risk Zone: 100 - PS + AF*(1+TS/10); else: 50 - PS + AF*(1+TS/20).\
@@ -190,7 +190,7 @@ columns:
     AS REAL)) / 1000.0) * (1 + (CASE sites.typesite WHEN 'Religious' THEN 10 WHEN
     'Military' THEN 8 WHEN 'Settlement' THEN 6 WHEN 'Industrial' THEN 4 WHEN 'Burial'
     THEN 2 ELSE 0 END) / 20.0) END) > 75 THEN 1 ELSE 0 END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Conservation Emergency (KB #42): in a Degradation Risk Zone (KB #14)\
     \ AND CPI > 75 (KB #35) \u2014 immediate protective measures and priority documentation\

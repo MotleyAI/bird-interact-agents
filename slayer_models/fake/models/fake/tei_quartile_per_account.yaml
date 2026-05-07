@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: tei_quartile_per_account
 source_queries:
 - version: 3
@@ -15,7 +15,7 @@ source_queries:
     source_name: tei_per_account
     columns:
     - name: tei_quartile
-      type: number
+      type: DOUBLE
       sql: NTILE(4) OVER (ORDER BY tei_per_account.tei_v ASC)
   dimensions:
   - name: account_id
@@ -46,7 +46,7 @@ data_source: fake
 columns:
 - name: account_id
   sql: account_id
-  type: string
+  type: TEXT
   primary_key: false
   description: "Per-row account identifier resolved through the moderationaction \u2192\
     \ contentbehavior \u2192 sessionbehavior \u2192 profile join chain. Convenience\
@@ -54,7 +54,7 @@ columns:
   hidden: false
 - name: tei_v
   sql: tei_v
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Technical Evasion Index (KB #7): 0.4*vpnratio + 0.3*proxycount/10
     + 0.3*ipcountrynum/20.'
@@ -63,7 +63,7 @@ columns:
     type: float
 - name: tei_quartile
   sql: tei_quartile
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: planets
 sql_table: planets
 query_variables: {}
@@ -6,21 +6,21 @@ data_source: planets_data
 columns:
 - name: planetref
   sql: planetref
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: hostlink
   sql: hostlink
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: completter
   sql: completter
-  type: string
+  type: TEXT
   primary_key: false
   description: Planet designation letter within its system following IAU conventions
     ('b' = first discovered, then 'c', 'd', ...).
@@ -28,7 +28,7 @@ columns:
   meta: {}
 - name: notecount
   sql: notecount
-  type: number
+  type: INT
   primary_key: false
   description: Number of literature references for this planet record.
   hidden: false
@@ -37,7 +37,7 @@ columns:
   meta: {}
 - name: discmethod
   sql: discmethod
-  type: string
+  type: TEXT
   primary_key: false
   description: 'Discovery method as recorded by the source (raw labels). KB #51 lists
     the standardization mapping; see discovery_method_standard for the unified label.'
@@ -51,7 +51,7 @@ columns:
     \ 'Transit Timing Variations', 'Transit Timing', 'TTV Method', 'Timing Var') THEN\
     \ 'TTV' WHEN discmethod IN ('Microlensing', 'ML', '\xB5Lens', 'Lensing', 'Gravitational')\
     \ THEN 'Microlensing' ELSE 'Other' END"
-  type: string
+  type: TEXT
   primary_key: false
   description: "Standardized discovery method (KB #51). Maps the raw discmethod variants\
     \ into 'Radial Velocity', 'Transit', 'Imaging', 'TTV', 'Microlensing', or 'Other'.\n\
@@ -71,7 +71,7 @@ columns:
     kb_id: 51
 - name: is_transit_discovery
   sql: discmethod IN ('Transit', 'TR', 'Transit Method', 'Photometry', 'Photometric')
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Discovery via Transit Method (KB #36): discmethod is one of Transit,\
     \ TR, Transit Method, Photometry, Photometric.\n\n[kb=36]\nA planet whose discovery\
@@ -84,7 +84,7 @@ columns:
     kb_id: 36
 - name: is_radial_velocity_discovery
   sql: discmethod IN ('RadVel', 'RV', 'RV Method', 'Radial Velocity', 'Doppler')
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Discovery via Radial Velocity (KB #37): discmethod is one of RadVel,\
     \ RV, RV Method, Radial Velocity, Doppler.\n\n[kb=37]\nA planet whose discovery\
@@ -97,7 +97,7 @@ columns:
     kb_id: 37
 - name: is_hot_jupiter
   sql: physical_properties.massjup > 0.1 AND orbital_characteristics.period < 10
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Hot Jupiter (KB #23): a Gas Giant Planet (massjup > 0.1) that is also\
     \ a Short-Period Planet (period < 10 days).\n\n[kb=23]\nA planet that is classified\
@@ -115,7 +115,7 @@ columns:
     AS REAL) / 5778.0, 4)) / 1.1) AND sqrt((pow(CAST(json_extract(stars.stellarprops,
     '$.physical.Radius_Value') AS REAL), 2) * pow(CAST(json_extract(stars.stellarprops,
     '$.physical.Temp_Value') AS REAL) / 5778.0, 4)) / 0.53)
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Potentially Habitable Exoplanet (KB #26): a Rocky Planet (KB #21)\
     \ that is also in the Habitable Zone (KB #25).\n\n[kb=26]\nA planet that is classified\

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: encounters
 sql_table: encounters
 query_variables: {}
@@ -6,37 +6,37 @@ data_source: mental
 columns:
 - name: enckey
   sql: enckey
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: timemark
   sql: timemark
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: abref
   sql: abref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: patref
   sql: patref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: clinid
   sql: clinid
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: facid
   sql: facid
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: missappt
   sql: missappt
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Missed appointment count for this encounter (e.g. 0 = perfect attendance,\
     \ 5 = frequent absences).\n\n[kb=29]\nA numeric value indicating the number of\
@@ -51,29 +51,29 @@ columns:
     kb_id: 29
 - name: txbarrier
   sql: txbarrier
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: nxapptdt
   sql: nxapptdt
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: dqscore
   sql: dqscore
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: assesscomplete
   sql: assesscomplete
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_stale_outcome
   sql: julianday('now') - julianday(timemark) > 60
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Stale Treatment Outcome Records (KB #62): TRUE iff the encounter's\
     \ timemark is more than 60 days old. Used to flag outcomes linked to old encounters.\n\
@@ -88,7 +88,7 @@ columns:
     kb_id: 62
 - name: is_high_appt_adherence
   sql: missappt < 1
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "High Appointment Adherence (KB #19): per-encounter missappt < 1.\n\
     \n[kb=19]\nA patient with MAR < 1 \u2014 Identifies patients with low missed appointment\

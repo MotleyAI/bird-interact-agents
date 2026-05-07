@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: fragile_stability_patients
 source_queries:
 - version: 3
@@ -72,31 +72,31 @@ data_source: mental
 columns:
 - name: asdkey
   sql: asdkey
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: assessmentbasics__patownerref
   sql: assessmentbasics__patownerref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_stable_recovery
   sql: is_stable_recovery
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: 'Stable Recovery Patient (KB #13): recstatus=''Stable'' AND any linked
     treatmentoutcome has funcimpv in {Moderate, Significant}.'
   hidden: false
 - name: sse_per_row
   sql: sse_per_row
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Per-row Social Support Effectiveness contribution: socsup_score +
     relqual_score.'
   hidden: false
 - name: missappt_per_patient__avg_missappt
   sql: missappt_per_patient__avg_missappt
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

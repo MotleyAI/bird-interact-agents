@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: advanced_persistent_threat
 source_queries:
 - version: 3
@@ -102,7 +102,7 @@ data_source: fake
 columns:
 - name: cluster_id
   sql: cluster_id
-  type: string
+  type: TEXT
   primary_key: false
   description: "Per-row cluster identifier resolved through the moderationaction \u2192\
     \ contentbehavior \u2192 sessionbehavior \u2192 profile \u2192 account join chain.\
@@ -111,7 +111,7 @@ columns:
   hidden: false
 - name: avg_bbi
   sql: avg_bbi
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Bot Behavior Index (KB #3): 0.4*botlikscore + 0.3*autobehavscore +
     0.3*(1-convnatval). botlikscore observed in 0-100; KB-implied composite assumes
@@ -121,7 +121,7 @@ columns:
     type: float
 - name: avg_cbr
   sql: avg_cbr
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Coordinated Bot Risk (KB #33): BBI * CAS-coord * clustsize/100.'
   hidden: false
@@ -129,7 +129,7 @@ columns:
     type: float
 - name: avg_srs
   sql: avg_srs
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Security Risk Score (KB #4): 0.4*riskval + 0.3*(1-trustval) + 0.3*impactval.'
   hidden: false
@@ -137,7 +137,7 @@ columns:
     type: float
 - name: avg_nmi
   sql: avg_nmi
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Network Manipulation Index (KB #31): 0.6*BBI + 0.4*CAS-coord. BBI
     and CAS-coord inlined.'
@@ -146,7 +146,7 @@ columns:
     type: float
 - name: avg_tei
   sql: avg_tei
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Technical Evasion Index (KB #7): 0.4*vpnratio + 0.3*proxycount/10
     + 0.3*ipcountrynum/20.'
@@ -155,7 +155,7 @@ columns:
     type: float
 - name: max_clustsize
   sql: max_clustsize
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Size of the related account cluster.
   hidden: false
@@ -163,7 +163,7 @@ columns:
     type: integer
 - name: member_count
   sql: member_count
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

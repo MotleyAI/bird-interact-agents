@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: margin_utilization
 source_queries:
 - version: 3
@@ -24,7 +24,7 @@ source_queries:
         - usertag
     columns:
     - name: mu_value
-      type: number
+      type: DOUBLE
       sql: (riskandmargin.risk_margin_profile ->> '$.margin_thresholds.inithold')
         / NULLIF(margsum_per_user.margsum_total, 0) * 100
   dimensions:
@@ -50,17 +50,17 @@ data_source: crypto
 columns:
 - name: recordvault
   sql: recordvault
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: userlink
   sql: userlink
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: mu_value
   sql: mu_value
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

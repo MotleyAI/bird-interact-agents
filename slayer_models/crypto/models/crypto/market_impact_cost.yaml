@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: market_impact_cost
 source_queries:
 - version: 3
@@ -7,7 +7,7 @@ source_queries:
     source_name: systemmonitoring
     columns:
     - name: join_key
-      type: number
+      type: DOUBLE
       sql: '1'
   dimensions:
   - name: mkteffect
@@ -23,7 +23,7 @@ source_queries:
     source_name: orders
     columns:
     - name: join_key
-      type: number
+      type: DOUBLE
       sql: '1'
     joins:
     - target_model: latest_mkteffect
@@ -62,33 +62,33 @@ data_source: crypto
 columns:
 - name: recordvault
   sql: recordvault
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: dealcount_max
   sql: dealcount_max
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: dealquote_max
   sql: dealquote_max
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: mic
   sql: mic
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: latest_mkteffect__mkteffect_max
   sql: latest_mkteffect__mkteffect_max
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

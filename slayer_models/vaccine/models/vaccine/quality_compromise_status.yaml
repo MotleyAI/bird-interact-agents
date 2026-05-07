@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: quality_compromise_status
 source_queries:
 - version: 3
@@ -20,10 +20,10 @@ source_queries:
         - containlink
     columns:
     - name: vvp_value
-      type: number
+      type: DOUBLE
       sql: (julianday(expireday) - julianday('now')) * tss_per_container.tss
     - name: is_quality_compromise
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN ((julianday(expireday) - julianday('now')) * tss_per_container.tss)
         < 30 OR vaccine_shipments.qualcheck = 'Failed' THEN 1 ELSE 0 END
   dimensions:
@@ -61,34 +61,34 @@ data_source: vaccine
 columns:
 - name: vacregistry
   sql: vacregistry
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: shipinject
   sql: shipinject
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: containvac
   sql: containvac
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: vvp_value
   sql: vvp_value
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: vaccine_shipments__qualcheck
   sql: vaccine_shipments__qualcheck
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_quality_compromise
   sql: is_quality_compromise
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

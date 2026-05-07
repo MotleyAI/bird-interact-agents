@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: content_manipulation_ring
 source_queries:
 - version: 3
@@ -77,7 +77,7 @@ data_source: fake
 columns:
 - name: cluster_id
   sql: cluster_id
-  type: string
+  type: TEXT
   primary_key: false
   description: "Per-row cluster identifier resolved through the moderationaction \u2192\
     \ contentbehavior \u2192 sessionbehavior \u2192 profile \u2192 account join chain.\
@@ -86,7 +86,7 @@ columns:
   hidden: false
 - name: min_cms
   sql: min_cms
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Content Manipulation Score (KB #8): 0.4*(1-cntuniqscore) + 0.3*mediareratio
     + 0.3*(1-txtuniq).'
@@ -95,7 +95,7 @@ columns:
     type: float
 - name: avg_cas_coord
   sql: avg_cas_coord
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Coordinated Activity Score (KB #6): 0.5*coordscore + 0.3*netinflscore
     + 0.2*clustsize/100.'
@@ -104,7 +104,7 @@ columns:
     type: float
 - name: max_linkacctnum
   sql: max_linkacctnum
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Linked / sockpuppet account count.
   hidden: false
@@ -112,14 +112,14 @@ columns:
     type: integer
 - name: all_sockpuppet
   sql: all_sockpuppet
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Sockpuppet Network member predicate (KB #14): linkacctnum > 5 AND
     CAS_coord > 0.8.'
   hidden: false
 - name: member_count
   sql: member_count
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

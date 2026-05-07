@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: diversified_marketplace
 source_queries:
 - version: 3
@@ -11,7 +11,7 @@ source_queries:
         - mktregistry
     columns:
     - name: is_diversified_marketplace
-      type: number
+      type: DOUBLE
       sql: CASE WHEN COALESCE(market_diversification_score.mds, 0) > 65 AND COALESCE(market_diversification_score.distinct_prodsubcat_count_col,
         0) >= 15 AND markets.vendcount > 200 AND markets.mktclass = 'Marketplace'
         THEN 1 ELSE 0 END
@@ -59,12 +59,12 @@ data_source: cybermarket
 columns:
 - name: mktregistry
   sql: mktregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_diversified_marketplace
   sql: is_diversified_marketplace
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

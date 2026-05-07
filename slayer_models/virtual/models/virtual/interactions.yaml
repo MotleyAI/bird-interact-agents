@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: interactions
 sql_table: interactions
 query_variables: {}
@@ -6,57 +6,57 @@ data_source: virtual
 columns:
 - name: activityreg
   sql: activityreg
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: timemark
   sql: timemark
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: interactfanpivot
   sql: interactfanpivot
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: interactidolpivot
   sql: interactidolpivot
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: actkind
   sql: actkind
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: actplat
   sql: actplat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: platused
   sql: platused
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: devtype
   sql: devtype
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: appver
   sql: appver
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: giftfreq
   sql: giftfreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: gifttot
   sql: gifttot
-  type: number
+  type: INT
   primary_key: false
   description: "Total number of gifts sent in this interaction (KB #7). Bands: <10\
     \ minimal gifting, 10-50 moderate support, >50 substantial support. Combined with\
@@ -76,7 +76,7 @@ columns:
     kb_id: 7
 - name: giftvalusd
   sql: giftvalusd
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "USD value of gifts sent (KB #7). Bands: $1-5 small support, $5-20\
     \ moderate, $20-100 large, >$100 super support. Combined with gifttot to assess\
@@ -95,68 +95,68 @@ columns:
     kb_id: 7
 - name: favgifttag
   sql: favgifttag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: engagement_metrics
   sql: engagement_metrics
-  type: string
+  type: TEXT
   primary_key: false
   description: 'JSONB: session (sessdurmin, liveatt, watchhrs), chat_activity (chatmsg,
     chatlang, msgtone, emojicount, stkcount). Sub-fields are exposed as helper columns.'
   hidden: false
 - name: sessdurmin
   sql: CAST(json_extract(engagement_metrics, '$.session.sessdurmin') AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Session duration in minutes, extracted from engagement_metrics.session.sessdurmin.
   hidden: false
 - name: liveatt
   sql: CAST(json_extract(engagement_metrics, '$.session.liveatt') AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Live stream attendances in this session, extracted from engagement_metrics.session.liveatt.
   hidden: false
 - name: watchhrs
   sql: CAST(json_extract(engagement_metrics, '$.session.watchhrs') AS REAL)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Watch hours, extracted from engagement_metrics.session.watchhrs.
   hidden: false
 - name: chatmsg
   sql: CAST(json_extract(engagement_metrics, '$.chat_activity.chatmsg') AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Chat messages count, extracted from engagement_metrics.chat_activity.chatmsg.
   hidden: false
 - name: msgtone
   sql: engagement_metrics ->> '$.chat_activity.msgtone'
-  type: string
+  type: TEXT
   primary_key: false
   description: Message sentiment (Negative / Positive / Neutral), extracted from engagement_metrics.chat_activity.msgtone.
   hidden: false
 - name: chatlang
   sql: engagement_metrics ->> '$.chat_activity.chatlang'
-  type: string
+  type: TEXT
   primary_key: false
   description: Chat language usage (Mixed / Translation / English / Native), extracted
     from engagement_metrics.chat_activity.chatlang.
   hidden: false
 - name: stkcount
   sql: CAST(json_extract(engagement_metrics, '$.chat_activity.stkcount') AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Stickers count, extracted from engagement_metrics.chat_activity.stkcount.
   hidden: false
 - name: emojicount
   sql: CAST(json_extract(engagement_metrics, '$.chat_activity.emojicount') AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Emoji count, extracted from engagement_metrics.chat_activity.emojicount.
   hidden: false
 - name: giq
   sql: giftvalusd * gifttot / 100.0
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Gift Impact Quotient (GIQ, KB #34) = giftvalusd * gifttot / 100. Combined\
     \ volume and value of gifting.\n\n[kb=34]\nGIQ = \\frac{giftvalusd \\times gifttot}{100},\

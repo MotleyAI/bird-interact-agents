@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: combined_maintenance_risk
 source_queries:
 - version: 3
@@ -46,7 +46,7 @@ source_queries:
         - containlog
     columns:
     - name: cmr
-      type: number
+      type: DOUBLE
       sql: (1 - mcs_per_shipment.mcs) * (1 + tbs_per_container.tbs / 5.0) * (1 - lhi_per_container.lhi)
   dimensions:
   - name: containregistry
@@ -96,38 +96,38 @@ data_source: vaccine
 columns:
 - name: containregistry
   sql: containregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: shipown
   sql: shipown
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: mcs_per_shipment__mcs
   sql: mcs_per_shipment__mcs
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tbs_per_container__tbs
   sql: tbs_per_container__tbs
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: lhi_per_container__lhi
   sql: lhi_per_container__lhi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: cmr
   sql: cmr
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

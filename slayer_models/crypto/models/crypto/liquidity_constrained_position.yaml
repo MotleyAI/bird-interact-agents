@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: liquidity_constrained_position
 source_queries:
 - version: 3
@@ -6,7 +6,7 @@ source_queries:
     source_name: market_depth_ratio
     columns:
     - name: is_liquidity_constrained
-      type: boolean
+      type: BOOLEAN
       sql: mdr_value < 2.0
   dimensions:
   - name: recordvault
@@ -49,12 +49,12 @@ data_source: crypto
 columns:
 - name: recordvault
   sql: recordvault
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_liquidity_constrained
   sql: is_liquidity_constrained
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: unstable_market
 source_queries:
 - version: 3
@@ -34,7 +34,7 @@ source_queries:
       sql: CASE WHEN COALESCE(market_vulnerability_index.mvi, 0) > 75 AND COALESCE(market_stability_index.msi,
         0) < 40 AND COALESCE(critical_alerts_per_market.critical_alert_count, 0) >=
         1 THEN 1 ELSE 0 END
-      type: number
+      type: DOUBLE
   dimensions:
   - name: mktregistry
   - name: is_unstable_market
@@ -139,12 +139,12 @@ data_source: cybermarket
 columns:
 - name: mktregistry
   sql: mktregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_unstable_market
   sql: is_unstable_market
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

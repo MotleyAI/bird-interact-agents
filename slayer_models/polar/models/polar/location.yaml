@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: location
 sql_table: location
 query_variables: {}
@@ -6,48 +6,48 @@ data_source: polar
 columns:
 - name: locationregistry
   sql: locationregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: loceqref
   sql: loceqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: Timestamp
   sql: Timestamp
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: stationname
   sql: stationname
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: locationtype
   sql: locationtype
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: latitude
   sql: latitude
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: longitude
   sql: longitude
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: altitudem
   sql: altitudem
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

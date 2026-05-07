@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: lap_times
 sql_table: lap_times
 query_variables: {}
@@ -6,7 +6,7 @@ data_source: sports_events
 columns:
 - name: rc_index
   sql: rc_index
-  type: number
+  type: INT
   primary_key: true
   description: Foreign key to races.
   hidden: false
@@ -14,7 +14,7 @@ columns:
     type: integer
 - name: wheel_unit
   sql: wheel_unit
-  type: number
+  type: INT
   primary_key: true
   description: Foreign key to drivers.
   hidden: false
@@ -22,7 +22,7 @@ columns:
     type: integer
 - name: lapval
   sql: lapval
-  type: number
+  type: INT
   primary_key: true
   description: Lap number.
   hidden: false
@@ -30,7 +30,7 @@ columns:
     type: integer
 - name: pp
   sql: pp
-  type: number
+  type: INT
   primary_key: false
   description: Driver's position at this lap.
   hidden: false
@@ -38,14 +38,14 @@ columns:
     type: integer
 - name: tmdesc
   sql: tmdesc
-  type: string
+  type: TEXT
   primary_key: false
   description: Lap time as 'M:SS.fff' string. NULL = lap time was not captured or
     is invalid.
   hidden: false
 - name: msec_val
   sql: msec_val
-  type: number
+  type: INT
   primary_key: false
   description: Lap time in milliseconds.
   hidden: false
@@ -53,7 +53,7 @@ columns:
     type: integer
 - name: lap_seconds
   sql: msec_val / 1000.0
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Lap Time in Seconds (KB #21): T_seconds = T_milliseconds / 1000.\n\
     \n[kb=21]\nT_{seconds} = \\frac{T_{milliseconds}}{1000} \u2014 Converts lap time\
@@ -64,7 +64,7 @@ columns:
     kb_id: 21
 - name: lap_seconds_for_avg
   sql: msec_val / 1000.0
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Helper anchor for KB #23 Driver's Average Lap Time (exposed as the\
     \ average_lap_seconds measure).\n\n[kb=23]\n\\bar{T}_{lap} = \\frac{\\sum_{i=1}^{n}\
@@ -78,7 +78,7 @@ columns:
     kb_id: 23
 - name: lap_seconds_for_consistency
   sql: msec_val / 1000.0
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Helper anchor for KB #32 Lap Time Consistency (exposed as the lap_time_consistency\
     \ measure).\n\n[kb=32]\nLTC = \\sqrt{\\frac{\\sum (T_{lap_i} - \\bar{T}_{lap})^2}{n}},\

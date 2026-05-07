@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: equipment
 sql_table: equipment
 query_variables: {}
@@ -6,32 +6,32 @@ data_source: archeology
 columns:
 - name: equipregistry
   sql: equipregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: equipform
   sql: equipform
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: equipdesign
   sql: equipdesign
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: equiptune
   sql: equiptune
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: equipstatus
   sql: equipstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: powerlevel
   sql: powerlevel
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
@@ -39,7 +39,7 @@ columns:
 - name: equipstatus_value
   sql: CASE equipstatus WHEN 'Excellent' THEN 1.0 WHEN 'Good' THEN 0.7 WHEN 'Fair'
     THEN 0.5 WHEN 'Poor' THEN 0.2 ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "EquipStatus_value (KB #39 component): Excellent=1.0, Good=0.7, Fair=0.5,\
     \ Poor=0.2. KB #39 specifies endpoints (Excellent=1.0, Poor=0.2); intermediate\
@@ -56,7 +56,7 @@ columns:
     kb_id: 39
 - name: equipage_days
   sql: julianday('now') - julianday(equiptune)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "EquipAge_days (KB #39 component): days since EquipTune (last calibration\
     \ date). Uses current date.\n\n[kb=39]\nEER = \\frac{SQS \\times EquipStatus\\\

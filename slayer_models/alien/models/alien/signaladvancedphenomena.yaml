@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: signaladvancedphenomena
 sql_table: signaladvancedphenomena
 query_variables: {}
@@ -6,27 +6,27 @@ data_source: alien
 columns:
 - name: signalref
   sql: signalref
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: intermedeffects
   sql: intermedeffects
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: gravlens
   sql: gravlens
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: quanteffects
   sql: quanteffects
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: encryptevid
   sql: encryptevid
-  type: string
+  type: TEXT
   primary_key: false
   description: "Encryption Evidence. encryptevid='Strong' (a.k.a. 'Strong Pattern')\
     \ indicates detection of non-random, internally consistent patterns that resist\
@@ -43,22 +43,22 @@ columns:
     kb_id: 27
 - name: langstruct
   sql: langstruct
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: msgcontent
   sql: msgcontent
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: cultsig
   sql: cultsig
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sciimpact
   sql: sciimpact
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

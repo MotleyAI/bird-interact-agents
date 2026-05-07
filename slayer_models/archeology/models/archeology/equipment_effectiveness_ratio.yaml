@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: equipment_effectiveness_ratio
 source_queries:
 - version: 3
@@ -43,7 +43,7 @@ source_queries:
     source_name: scan_with_equip
     columns:
     - name: eer
-      type: number
+      type: DOUBLE
       sql: (pc_per_arcref__sqs * scanprocessing__equipment__equipstatus_value) / (scanprocessing__equipment__powerlevel
         * (101 - scanprocessing__equipment__equipage_days) / 365.0) * 25
   measures:
@@ -108,27 +108,27 @@ data_source: archeology
 columns:
 - name: questregistry
   sql: questregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: zoneref
   sql: zoneref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: scanprocessing__equipref
   sql: scanprocessing__equipref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: eer
   sql: eer
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

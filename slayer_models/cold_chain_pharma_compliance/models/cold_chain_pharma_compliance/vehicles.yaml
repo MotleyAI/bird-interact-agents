@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: vehicles
 sql_table: vehicles
 query_variables: {}
@@ -6,22 +6,22 @@ data_source: cold_chain_pharma_compliance
 columns:
 - name: vehref
   sql: vehref
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: carrierbond
   sql: carrierbond
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: vehtype
   sql: vehtype
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: veh_qual
   sql: veh_qual
-  type: string
+  type: TEXT
   primary_key: false
   description: "Cold Chain Vehicle Qualification Status (KB #24): 'Validated' (fully\
     \ validated through performance and temperature mapping), 'Qualified' (basic qualification),\
@@ -37,7 +37,7 @@ columns:
     kb_id: 24
 - name: temp_mon_sys
   sql: temp_mon_sys
-  type: string
+  type: TEXT
   primary_key: false
   description: "Vehicle Temperature Monitoring Type (KB #58): 'Continuous' (uninterrupted),\
     \ 'Interval' (periodic), 'None' (no active monitoring). NULL means monitoring\
@@ -53,7 +53,7 @@ columns:
 - name: sbp_score
   sql: CASE WHEN LOWER(TRIM(veh_qual)) = 'validated' THEN 9 WHEN LOWER(TRIM(veh_qual))
     = 'qualified' THEN 7 ELSE 5 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Supplier Backup Presence proxy (KB #30, SCRS sub-score, 0-10): Validated\
     \ vehicle = 9, Qualified = 7, else = 5. Used inside Supply Chain Resilience Score;\

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: panel
 sql_table: panel
 query_variables: {}
@@ -6,32 +6,32 @@ data_source: solar
 columns:
 - name: panemark
   sql: panemark
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: hubregistry
   sql: hubregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: panemfr
   sql: panemfr
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: paneline
   sql: paneline
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: panetype
   sql: panetype
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: powratew
   sql: powratew
-  type: number
+  type: INT
   primary_key: false
   description: "PowerRatedW (KB#20): rated power in W under Standard Test Conditions.\
     \ Modern panels: 250W (older) to 650W (high-efficiency).\n\n[kb=20]\nMeasured\
@@ -47,7 +47,7 @@ columns:
     kb_id: 20
 - name: paneeffpct
   sql: paneeffpct
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "PaneEffPct (KB#21): nominal panel efficiency percentage at STC. Also\
     \ serves as `InitialEfficiencyPercent` for the Panel Efficiency Loss Rate (KB#1).\n\
@@ -63,14 +63,14 @@ columns:
     kb_id: 21
 - name: nomtempc
   sql: nomtempc
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tempcoef
   sql: tempcoef
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "TempCoef (KB#22): temperature coefficient (% per C, usually negative).\
     \ Each C above 25C reduces output by |tempcoef|%. Typical: -0.25% to -0.50% per\

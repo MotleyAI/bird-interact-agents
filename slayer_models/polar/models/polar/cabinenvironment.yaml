@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: cabinenvironment
 sql_table: cabinenvironment
 query_variables: {}
@@ -6,82 +6,82 @@ data_source: polar
 columns:
 - name: cabinregistry
   sql: cabinregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: cabineqref
   sql: cabineqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: cabinlocref
   sql: cabinlocref
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: emergencybeaconstatus
   sql: emergencybeaconstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: ventilationstatus
   sql: ventilationstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: ventilationspeedpercent
   sql: ventilationspeedpercent
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: heaterstatus
   sql: heaterstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: heatertemperaturec
   sql: heatertemperaturec
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: defrosterstatus
   sql: defrosterstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: windowstatus
   sql: windowstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: doorstatus
   sql: doorstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: hatchstatus
   sql: hatchstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: cabincommref
   sql: cabincommref
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: cabinclimate
   sql: cabinclimate
-  type: string
+  type: TEXT
   primary_key: false
   description: "JSONB with co2_ppm (KB #26: <600 excellent ventilation, 600\u2013\
     1000 good, 1000\u20132500 elevated), o2_percent, pressure_kpa, temperature_c,\
@@ -98,26 +98,26 @@ columns:
     kb_id: 26
 - name: cabin_temperature_c
   sql: json_extract(cabinclimate, '$.temperature_c')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Cabin temperature \xB0C (extracted from cabinclimate JSON)."
   hidden: false
 - name: cabin_o2_percent
   sql: json_extract(cabinclimate, '$.o2_percent')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Cabin O\u2082 percent (extracted from cabinclimate JSON)."
   hidden: false
 - name: cabin_co2_ppm
   sql: json_extract(cabinclimate, '$.co2_ppm')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Cabin CO\u2082 ppm (extracted from cabinclimate JSON)."
   hidden: false
 - name: is_habitable
   sql: json_extract(cabinclimate, '$.temperature_c') BETWEEN 18 AND 24 AND json_extract(cabinclimate,
     '$.o2_percent') > 19.5 AND json_extract(cabinclimate, '$.co2_ppm') < 1000
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Cabin Habitability Standard (KB #17): 18\u201324\xB0C cabin temp AND\
     \ O\u2082 > 19.5% AND CO\u2082 < 1000 ppm. (KB also mentions other thresholds\

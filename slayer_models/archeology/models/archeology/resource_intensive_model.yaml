@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: resource_intensive_model
 source_queries:
 - version: 3
@@ -54,11 +54,11 @@ source_queries:
     source_name: scans_keyed
     columns:
     - name: mpr
-      type: number
+      type: DOUBLE
       sql: (mesh_per_zone__facetverts * 1.0 / pc_per_arcref__totalpts) * 100 * power(mesh_per_zone__mcr
         / 10.0, 0.3)
     - name: is_resource_intensive_model
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN mesh_per_zone__facetfaces > 2000000 AND ((mesh_per_zone__facetverts
         * 1.0 / pc_per_arcref__totalpts) * 100 * power(mesh_per_zone__mcr / 10.0,
         0.3)) < 15 THEN 1 ELSE 0 END
@@ -117,27 +117,27 @@ data_source: archeology
 columns:
 - name: questregistry
   sql: questregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: zoneref
   sql: zoneref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_resource_intensive_model
   sql: is_resource_intensive_model
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 - name: mpr
   sql: mpr
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

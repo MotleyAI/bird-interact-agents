@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: holdings
 sql_table: holdings
 query_variables: {}
@@ -6,33 +6,33 @@ data_source: exchange_traded_funds
 columns:
 - name: holdref
   sql: holdref
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: instrumentref
   sql: instrumentref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: securitykey
   sql: securitykey
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: holdingpct
   sql: holdingpct
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: positionrank
   sql: positionrank
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: riskanalysis
 sql_table: riskanalysis
 query_variables: {}
@@ -6,19 +6,19 @@ data_source: cybermarket
 columns:
 - name: riskregistry
   sql: riskregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: fraudprob
   sql: fraudprob
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: moneyrisk
   sql: moneyrisk
-  type: string
+  type: TEXT
   primary_key: false
   description: "Money-laundering risk: 'Low' = transparent flows, consistent monetary\
     \ behaviour; 'Medium' = unusual patterns warranting monitoring; 'High' = significant\
@@ -38,93 +38,93 @@ columns:
     kb_id: 8
 - name: linkedtxcount
   sql: linkedtxcount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: txchainlen
   sql: txchainlen
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: wallrisksc
   sql: wallrisksc
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: wallage
   sql: wallage
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: wallbalusd
   sql: wallbalusd
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: wallturnrt
   sql: wallturnrt
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: txvel
   sql: txvel
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: profilecomplete
   sql: profilecomplete
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: idverifyscore
   sql: idverifyscore
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: feedbackauthscore
   sql: feedbackauthscore
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: commref
   sql: commref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: txref
   sql: txref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: network_behavior_analytics
   sql: network_behavior_analytics
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: wri
   sql: (fraudprob * 100) + (wallrisksc * 0.5) - (wallage * 1.0 / 30) + (wallturnrt
     * 10) + (txvel * 1.0 / 10)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Wallet Risk Index (WRI): 100*fraudprob + 0.5*wallrisksc - wallage/30\
     \ + 10*wallturnrt + txvel/10. Higher = more suspicious wallet activity.\n\n[kb=14]\n\
@@ -139,7 +139,7 @@ columns:
 - name: tcr
   sql: (txchainlen * 10) + (linkedtxcount * 5) + (fraudprob * 100) - (profilecomplete
     * 0.5) - (idverifyscore * 0.5)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Transaction Chain Risk (TCR): 10*txchainlen + 5*linkedtxcount + 100*fraudprob\
     \ - 0.5*profilecomplete - 0.5*idverifyscore. Higher = higher-risk transaction\
@@ -154,7 +154,7 @@ columns:
 - name: moneyrisk_numeric
   sql: CASE moneyrisk WHEN 'Low' THEN 1 WHEN 'Medium' THEN 2 WHEN 'High' THEN 3 WHEN
     'Unknown' THEN 2 ELSE 2 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Numeric mapping of moneyrisk used by MFC: Low=1, Medium=2, High=3,\
     \ Unknown=2.\n\n[kb=8]\n'Low' indicates minimal risk patterns with transparent\
@@ -174,7 +174,7 @@ columns:
     WHEN 'Medium' THEN 2 WHEN 'High' THEN 3 WHEN 'Unknown' THEN 2 ELSE 2 END) * 15)
     + (((txchainlen * 10) + (linkedtxcount * 5) + (fraudprob * 100) - (profilecomplete
     * 0.5) - (idverifyscore * 0.5)) * 0.2) - (profilecomplete * 10)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Money Flow Complexity (MFC): 5*txchainlen + 3*linkedtxcount + 15*moneyrisk_numeric\
     \ + 0.2*TCR - 10*profilecomplete. Higher = more complex money flows.\n\n[kb=39]\n\
@@ -192,7 +192,7 @@ columns:
   sql: ((txchainlen * 10) + (linkedtxcount * 5) + (fraudprob * 100) - (profilecomplete
     * 0.5) - (idverifyscore * 0.5)) > 150 AND wallage < 30 AND wallturnrt > 5 AND
     linkedtxcount >= 3
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Money Laundering Indicator (KB #23): TCR > 150, wallage < 30, wallturnrt\
     \ > 5, linkedtxcount >= 3.\n\n[kb=23]\nA transaction chain with TCR > 150, involving\
@@ -213,7 +213,7 @@ columns:
     * 0.5)) > 180 AND moneyrisk = 'High' AND ((txchainlen * 10) + (linkedtxcount *
     5) + (fraudprob * 100) - (profilecomplete * 0.5) - (idverifyscore * 0.5)) > 150
     AND wallage < 30 AND wallturnrt > 5 AND linkedtxcount >= 3
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Complex Money Laundering Operation (KB #49): MFC > 90, displays Money\
     \ Laundering Indicator (KB #23), TCR > 180, moneyrisk = 'High'.\n\n[kb=49]\nA\
@@ -234,7 +234,7 @@ columns:
     'Custom' THEN 3 ELSE 0 END) * 15) + (communication.connpatscore * 0.2) + (communication.brwsrunique
     * 1.0 / 20)) > 120) AND communication.langpattern = 'Variable' AND communication.msgtally
     < 10 AND txchainlen > 5
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Sophisticated Operational Security (KB #28): APL > 120, langpattern='Variable',\
     \ msgtally < 10, txchainlen > 5. APL is inlined since cross-model refs must be\

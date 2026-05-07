@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: registration_confidence_level
 source_queries:
 - version: 3
@@ -46,11 +46,11 @@ source_queries:
     source_name: merged
     columns:
     - name: rar
-      type: number
+      type: DOUBLE
       sql: scanresolmm / (reg_per_arcref__logaccumm * sqrt(1 + reg_per_arcref__errvalmm
         / reg_per_arcref__logaccumm))
     - name: registration_confidence_level
-      type: string
+      type: TEXT
       sql: CASE WHEN (scanresolmm / (reg_per_arcref__logaccumm * sqrt(1 + reg_per_arcref__errvalmm
         / reg_per_arcref__logaccumm))) > 1.5 AND reg_per_arcref__logmethod LIKE '%Target%'
         THEN 'High Confidence' WHEN (scanresolmm / (reg_per_arcref__logaccumm * sqrt(1
@@ -113,22 +113,22 @@ data_source: archeology
 columns:
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: reg_per_arcref__logmethod
   sql: reg_per_arcref__logmethod
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: registration_confidence_level
   sql: registration_confidence_level
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: rar
   sql: rar
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

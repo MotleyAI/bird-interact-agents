@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: life_support_reliability_classification
 source_queries:
 - version: 3
@@ -6,7 +6,7 @@ source_queries:
     source_name: life_support_system_reliability
     columns:
     - name: lsrc_class
-      type: string
+      type: TEXT
       sql: CASE WHEN lssr >= 0.8 THEN 'High Reliability' WHEN lssr >= 0.6 THEN 'Moderate
         Reliability' ELSE 'Low Reliability' END
   dimensions:
@@ -59,12 +59,12 @@ data_source: polar
 columns:
 - name: opmainteqref
   sql: opmainteqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: lsrc_class
   sql: lsrc_class
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

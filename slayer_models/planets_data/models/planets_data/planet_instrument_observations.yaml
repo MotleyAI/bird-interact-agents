@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: planet_instrument_observations
 sql_table: planet_instrument_observations
 query_variables: {}
@@ -6,21 +6,21 @@ data_source: planets_data
 columns:
 - name: obsref
   sql: obsref
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: subjectlink
   sql: subjectlink
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: facilitylink
   sql: facilitylink
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:

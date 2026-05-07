@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: systemmonitoring
 sql_table: systemmonitoring
 query_variables: {}
@@ -6,92 +6,92 @@ data_source: crypto
 columns:
 - name: systemmonitoringpivot
   sql: systemmonitoringpivot
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: apireqtotal
   sql: apireqtotal
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: apierrtotal
   sql: apierrtotal
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: apilatmark
   sql: apilatmark
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: wsstate
   sql: wsstate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: rateremain
   sql: rateremain
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: lastupdnote
   sql: lastupdnote
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: seqcode
   sql: seqcode
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: slipratio
   sql: slipratio
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: exectimespan
   sql: exectimespan
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: queueline
   sql: queueline
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: mkteffect
   sql: mkteffect
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: priceeffect
   sql: priceeffect
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: aitrack
   sql: aitrack
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: whale_driven_market
 source_queries:
 - version: 3
@@ -7,11 +7,11 @@ source_queries:
     source_name: analyticsindicators
     columns:
     - name: is_high_whalemotion
-      type: number
+      type: DOUBLE
       sql: CASE WHEN analyticsindicators.market_sentiment_indicators ->> '$.big_players.whalemotion'
         = 'High' THEN 1 ELSE 0 END
     - name: is_sm_dominant_bull
-      type: number
+      type: DOUBLE
       sql: CASE WHEN (analyticsindicators.market_sentiment_indicators ->> '$.flow.smartforce')
         > 0 AND (analyticsindicators.market_sentiment_indicators ->> '$.flow.smartforce')
         > 1.2 * (analyticsindicators.market_sentiment_indicators ->> '$.flow.retailflow')
@@ -19,7 +19,7 @@ source_queries:
         > 1.2 * (analyticsindicators.market_sentiment_indicators ->> '$.flow.instflow')
         THEN 1 ELSE 0 END
     - name: is_sm_dominant_bear
-      type: number
+      type: DOUBLE
       sql: CASE WHEN (analyticsindicators.market_sentiment_indicators ->> '$.flow.smartforce')
         < 0 AND (analyticsindicators.market_sentiment_indicators ->> '$.flow.retailflow')
         > 1.2 * (analyticsindicators.market_sentiment_indicators ->> '$.flow.smartforce')
@@ -48,11 +48,11 @@ source_queries:
         - recordvault
     columns:
     - name: is_whale_buy
-      type: number
+      type: DOUBLE
       sql: CASE WHEN whale_order.is_whale_order = 1 AND orders.dealedge = 'Buy' THEN
         1 ELSE 0 END
     - name: is_whale_sell
-      type: number
+      type: DOUBLE
       sql: CASE WHEN whale_order.is_whale_order = 1 AND orders.dealedge = 'Sell' THEN
         1 ELSE 0 END
   measures:
@@ -74,7 +74,7 @@ source_queries:
         - orders__mktnote
     columns:
     - name: is_whale_driven
-      type: number
+      type: DOUBLE
       sql: CASE WHEN ai_per_pair.any_high_whalemotion = 1 AND ((ai_per_pair.any_sm_bull
         = 1 AND whale_per_pair.any_whale_buy = 1) OR (ai_per_pair.any_sm_bear = 1
         AND whale_per_pair.any_whale_sell = 1)) THEN 1 ELSE 0 END
@@ -154,27 +154,27 @@ data_source: crypto
 columns:
 - name: marketdata__mktcombo
   sql: marketdata__mktcombo
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: any_high_whalemotion
   sql: any_high_whalemotion
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: any_sm_bull
   sql: any_sm_bull
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: any_sm_bear
   sql: any_sm_bear
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_whale_driven
   sql: is_whale_driven
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

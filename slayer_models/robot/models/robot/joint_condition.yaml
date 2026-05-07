@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: joint_condition
 sql_table: joint_condition
 query_variables: {}
@@ -6,22 +6,22 @@ data_source: robot
 columns:
 - name: jcondoperref
   sql: jcondoperref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: jcrecref
   sql: jcrecref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: jcdetref
   sql: jcdetref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: j1tempval
   sql: j1tempval
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Joint 1 temperature (\xB0C). Typical operating range 20-60\xB0C; >60\xB0\
     C indicates potential issues (KB #20).\n\n[kb=20]\nJoint temperatures are measured\
@@ -36,7 +36,7 @@ columns:
     kb_id: 20
 - name: j2tempval
   sql: j2tempval
-  type: number
+  type: INT
   primary_key: false
   description: "Joint 2 temperature (\xB0C). Typical operating range 20-60\xB0C; >60\xB0\
     C indicates potential issues (KB #20).\n\n[kb=20]\nJoint temperatures are measured\
@@ -51,7 +51,7 @@ columns:
     kb_id: 20
 - name: j3tempval
   sql: j3tempval
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Joint 3 temperature (\xB0C). Typical operating range 20-60\xB0C; >60\xB0\
     C indicates potential issues (KB #20).\n\n[kb=20]\nJoint temperatures are measured\
@@ -66,7 +66,7 @@ columns:
     kb_id: 20
 - name: j4tempval
   sql: j4tempval
-  type: number
+  type: INT
   primary_key: false
   description: "Joint 4 temperature (\xB0C). Typical operating range 20-60\xB0C; >60\xB0\
     C indicates potential issues (KB #20).\n\n[kb=20]\nJoint temperatures are measured\
@@ -81,7 +81,7 @@ columns:
     kb_id: 20
 - name: j5tempval
   sql: j5tempval
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Joint 5 temperature (\xB0C). Typical operating range 20-60\xB0C; >60\xB0\
     C indicates potential issues (KB #20).\n\n[kb=20]\nJoint temperatures are measured\
@@ -96,7 +96,7 @@ columns:
     kb_id: 20
 - name: j6tempval
   sql: j6tempval
-  type: number
+  type: INT
   primary_key: false
   description: "Joint 6 temperature (\xB0C). Typical operating range 20-60\xB0C; >60\xB0\
     C indicates potential issues (KB #20).\n\n[kb=20]\nJoint temperatures are measured\
@@ -111,7 +111,7 @@ columns:
     kb_id: 20
 - name: j1vibval
   sql: j1vibval
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Joint 1 vibration amplitude (mm/s). Higher values may indicate wear\
     \ or misalignment (KB #21).\n\n[kb=21]\nVibration levels are measured in units\
@@ -125,7 +125,7 @@ columns:
     kb_id: 21
 - name: j2vibval
   sql: j2vibval
-  type: number
+  type: INT
   primary_key: false
   description: "Joint 2 vibration (mm/s). Higher values may indicate wear or misalignment\
     \ (KB #21).\n\n[kb=21]\nVibration levels are measured in units such as mm/s. Higher\
@@ -139,7 +139,7 @@ columns:
     kb_id: 21
 - name: j3vibval
   sql: j3vibval
-  type: number
+  type: INT
   primary_key: false
   description: "Joint 3 vibration (mm/s). Higher values may indicate wear or misalignment\
     \ (KB #21).\n\n[kb=21]\nVibration levels are measured in units such as mm/s. Higher\
@@ -153,7 +153,7 @@ columns:
     kb_id: 21
 - name: j4vibval
   sql: j4vibval
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Joint 4 vibration (mm/s). Higher values may indicate wear or misalignment\
     \ (KB #21).\n\n[kb=21]\nVibration levels are measured in units such as mm/s. Higher\
@@ -167,7 +167,7 @@ columns:
     kb_id: 21
 - name: j5vibval
   sql: j5vibval
-  type: number
+  type: INT
   primary_key: false
   description: "Joint 5 vibration (mm/s). Higher values may indicate wear or misalignment\
     \ (KB #21).\n\n[kb=21]\nVibration levels are measured in units such as mm/s. Higher\
@@ -181,7 +181,7 @@ columns:
     kb_id: 21
 - name: j6vibval
   sql: j6vibval
-  type: number
+  type: INT
   primary_key: false
   description: "Joint 6 vibration (mm/s). Higher values may indicate wear or misalignment\
     \ (KB #21).\n\n[kb=21]\nVibration levels are measured in units such as mm/s. Higher\
@@ -195,49 +195,49 @@ columns:
     kb_id: 21
 - name: j1backval
   sql: j1backval
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: j2backval
   sql: j2backval
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: j3backval
   sql: j3backval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: j4backval
   sql: j4backval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: j5backval
   sql: j5backval
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: j6backval
   sql: j6backval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: row_max_joint_temp
   sql: MAX(j1tempval, j2tempval, j3tempval, j4tempval, j5tempval, j6tempval)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Row-level max across the 6 joint temperatures \u2014 helper for MJT\
     \ (KB #2).\n\n[kb=2]\nFor a given robot R, MJT = \\max_{jc \\in \\text{joint_condition}\

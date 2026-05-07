@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: usagerecords
 sql_table: usagerecords
 query_variables: {}
@@ -6,140 +6,140 @@ data_source: museum
 columns:
 - name: usagerecordregistry
   sql: usagerecordregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: artrefused
   sql: artrefused
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: showcaserefused
   sql: showcaserefused
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sensdatalink
   sql: sensdatalink
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: displayrotatesched
   sql: displayrotatesched
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: displaydurmonths
   sql: displaydurmonths
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: restperiodmonths
   sql: restperiodmonths
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: displayreqs
   sql: displayreqs
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: storagereqs
   sql: storagereqs
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: handlingreqs
   sql: handlingreqs
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: transportreqs
   sql: transportreqs
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: packingreqs
   sql: packingreqs
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: resaccessfreq
   sql: resaccessfreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: publicdispfreq
   sql: publicdispfreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: loanfreq
   sql: loanfreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: handlefreq
   sql: handlefreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: docufreq
   sql: docufreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: monitorfreq
   sql: monitorfreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: assessfreq
   sql: assessfreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: maintfreq
   sql: maintfreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: inspectfreq
   sql: inspectfreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: calibfreq
   sql: calibfreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: certstatus
   sql: certstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: compliancestatus
   sql: compliancestatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: auditstatus
   sql: auditstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: qualityctrlstatus
   sql: qualityctrlstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: avs
@@ -152,7 +152,7 @@ columns:
     LOWER(TRIM(sensitivitydata.tempsensitivity)) WHEN 'low' THEN 1 WHEN 'medium' THEN
     5 WHEN 'high' THEN 10 ELSE NULL END + CASE LOWER(TRIM(sensitivitydata.humiditysensitivity))
     WHEN 'low' THEN 1 WHEN 'medium' THEN 5 WHEN 'high' THEN 10 ELSE NULL END) / 4.0))
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Artifact Vulnerability Score (KB #3): CPI * ERF. Higher = more urgent\
     \ attention required.\n\n[kb=3]\nAVS = CPI \\times ERF, \\text{where higher scores\
@@ -172,7 +172,7 @@ columns:
     LOWER(TRIM(sensitivitydata.humiditysensitivity)) WHEN 'low' THEN 1 WHEN 'medium'
     THEN 5 WHEN 'high' THEN 10 ELSE NULL END) / 4.0) * pow(showcases__environmentalreadingscore.relhumidity
     - 50, 2) * showcases__environmentalreadingscore.tempc) / 100000.0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Material Deterioration Rate (KB #7): ArtAgeYears * ERF * (RelHumidity-50)^2\
     \ * TempC / 100000. Pulls env reading via showcases.environmentalreadingscore.\n\
@@ -189,7 +189,7 @@ columns:
     * CASE LOWER(TRIM(sensitivitydata.lightsensitivity)) WHEN 'low' THEN 1 WHEN 'medium'
     THEN 5 WHEN 'high' THEN 10 ELSE NULL END * showcases__environmentalreadingscore__lightandradiationreadings.visibleexplxh)
     / 1000.0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Light Exposure Risk (KB #8): LightLux * LightSensWeight * VisibleExpLxh\
     \ / 1000.\n\n[kb=8]\nLER = \\frac{LightLux \\times LightSensWeight \\times VisibleExpLxh}{1000},\
@@ -209,7 +209,7 @@ columns:
     WHEN 'low' THEN 1 WHEN 'medium' THEN 5 WHEN 'high' THEN 10 ELSE NULL END) / 4.0)
     - (10 - (showcases__environmentalreadingscore.tempvar24h + (showcases__environmentalreadingscore.humvar24h
     / 5.0) + showcases.leakrate) / 3.0)))
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Artifact Exhibition Compatibility (KB #6): 10 - |ERF - SESR|. Closer\
     \ to 10 = better compatibility.\n\n[kb=6]\nAEC = 10 - |ERF - SESR|, \\text{where\
@@ -237,7 +237,7 @@ columns:
     LOWER(TRIM(sensitivitydata.humiditysensitivity)) WHEN 'low' THEN 1 WHEN 'medium'
     THEN 5 WHEN 'high' THEN 10 ELSE NULL END) / 4.0) * pow(showcases__environmentalreadingscore.relhumidity
     - 50, 2) * showcases__environmentalreadingscore.tempc) / 100000.0))
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Total Environmental Threat Level (KB #31): ERF + LER + (MDR * 2).\
     \ Composite environmental threat score.\n\n[kb=31]\nTETL = ERF + LER + (MDR \xD7\
@@ -258,7 +258,7 @@ columns:
     WHEN 'low' THEN 1 WHEN 'medium' THEN 5 WHEN 'high' THEN 10 ELSE NULL END + CASE
     LOWER(TRIM(sensitivitydata.humiditysensitivity)) WHEN 'low' THEN 1 WHEN 'medium'
     THEN 5 WHEN 'high' THEN 10 ELSE NULL END) / 4.0) * 0.5)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Showcase Protection Adequacy (KB #32): SESR - ERF*0.5. Positive =\
     \ adequate protection.\n\n[kb=32]\nSPA = SESR - (ERF \xD7 0.5), where SESR is\
@@ -276,7 +276,7 @@ columns:
     THEN 3 WHEN 'Fair' THEN 5 WHEN 'Poor' THEN 7 WHEN 'Critical' THEN 10 ELSE NULL
     END)) / 30.0) * (julianday(date('now')) - julianday(conservationandmaintenance.lastcleaningdate)
     - conservationandmaintenance.cleanintervaldays) / 100.0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Conservation Backlog Risk (KB #33): CPI * (days since LastCleaningDate\
     \ - CleanIntervalDays) / 100. Anchored at 'now'.\n\n[kb=33]\nCBR = (CPI \xD7 (Days\
@@ -301,7 +301,7 @@ columns:
     WHEN 'low' THEN 1 WHEN 'medium' THEN 5 WHEN 'high' THEN 10 ELSE NULL END + CASE
     LOWER(TRIM(sensitivitydata.humiditysensitivity)) WHEN 'low' THEN 1 WHEN 'medium'
     THEN 5 WHEN 'high' THEN 10 ELSE NULL END) / 4.0)) * 0.1, 0))
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Visitor Capacity Safety Factor (KB #34): VIR / (AVS * 0.1). Lower\
     \ = safer.\n\n[kb=34]\nVCSF = VIR \xF7 (AVS \xD7 0.1), where VIR is the Visitor\
@@ -333,7 +333,7 @@ columns:
     / 3.0))) + (10 - ((showcases__exhibitionhalls.visitorcountdaily * (CASE LOWER(TRIM(showcases__exhibitionhalls.visitorflowrate))
     WHEN 'low' THEN 1 WHEN 'medium' THEN 3 WHEN 'high' THEN 5 ELSE NULL END) * showcases__exhibitionhalls.visitordwellmin)
     / 1000.0))) / 3.0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Exhibition Safety Quotient (KB #35): ((10 - AVS) + AEC + (10 - VIR))\
     \ / 3. Higher = safer exhibition.\n\n[kb=35]\nESQ = ((10 - AVS) + AEC + (10 -\
@@ -371,7 +371,7 @@ columns:
     LOWER(TRIM(sensitivitydata.humiditysensitivity)) WHEN 'low' THEN 1 WHEN 'medium'
     THEN 5 WHEN 'high' THEN 10 ELSE NULL END) / 4.0) * pow(showcases__environmentalreadingscore.relhumidity
     - 50, 2) * showcases__environmentalreadingscore.tempc) / 100000.0)) / 20.0))
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Material Aging Projection (KB #37): MDR * (1 + TETL/20). Higher =\
     \ faster projected aging.\n\n[kb=37]\nMAP = MDR \xD7 (1 + (TETL \xF7 20)), where\
@@ -395,7 +395,7 @@ columns:
     + artifactratings.cultscore) * (10 - CASE artifactscore.conservestatus WHEN 'Excellent'
     THEN 1 WHEN 'Good' THEN 3 WHEN 'Fair' THEN 5 WHEN 'Poor' THEN 7 WHEN 'Critical'
     THEN 10 ELSE NULL END)) / 30.0) + 1) / 100.0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Exhibition Rotation Priority Score (KB #38): (DSD - DisplayDurMonths)\
     \ * (LER + 1) * (CPI + 1) / 100. Lower = higher rotation priority.\n\n[kb=38]\n\
@@ -422,7 +422,7 @@ columns:
     THEN 1 WHEN 'Good' THEN 3 WHEN 'Fair' THEN 5 WHEN 'Poor' THEN 7 WHEN 'Critical'
     THEN 10 ELSE NULL END)) / 30.0) + 1) / 100.0)) < 0 THEN 'Immediate Rotation' ELSE
     'Monitor' END
-  type: string
+  type: TEXT
   primary_key: false
   description: "ERPS Decision Threshold (KB #52): 'Immediate Rotation' when ERPS <\
     \ 0; otherwise 'Monitor'.\n\n[kb=52]\nWhen ERPS < 0, trigger 'Immediate Rotation';\
@@ -437,7 +437,7 @@ columns:
     * (CASE LOWER(TRIM(showcases__exhibitionhalls.visitorflowrate)) WHEN 'low' THEN
     1 WHEN 'medium' THEN 3 WHEN 'high' THEN 5 ELSE NULL END) * showcases__exhibitionhalls.visitordwellmin)
     / 1000.0)) / 10.0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Security Risk Exposure (KB #40): (InsValueUSD / 100000) * (10 - VIR)\
     \ / 10.\n\n[kb=40]\nSRE = (InsValueUSD \xF7 100000) \xD7 (10 - VIR) \xF7 10, where\
@@ -458,7 +458,7 @@ columns:
     * CASE LOWER(TRIM(sensitivitydata.lightsensitivity)) WHEN 'low' THEN 1 WHEN 'medium'
     THEN 5 WHEN 'high' THEN 10 ELSE NULL END * showcases__environmentalreadingscore__lightandradiationreadings.visibleexplxh)
     / 1000.0)) > 7)
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Exhibition Rotation Candidate (KB #15): DisplayDurMonths > 0.75 *\
     \ DSD OR LER > 7.\n\n[kb=15]\nAn artifact is a rotation candidate when its current\
@@ -471,7 +471,7 @@ columns:
 - name: is_conservation_emergency
   sql: (artifactscore.conservestatus = 'Critical' AND conservationandmaintenance.treatpriority
     = 'Urgent')
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Conservation Emergency (KB #12): ConserveStatus='Critical' AND TreatPriority='Urgent'.\n\
     \n[kb=12]\nA situation where an artifact has ConserveStatus='Critical' AND a TreatPriority='Urgent'.\
@@ -502,7 +502,7 @@ columns:
     THEN 1 ELSE 0 END + CASE WHEN LOWER(TRIM(sensitivitydata.displaysensitivity))='high'
     THEN 1 ELSE 0 END + CASE WHEN LOWER(TRIM(sensitivitydata.storagesensitivity))='high'
     THEN 1 ELSE 0 END) >= 2)
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Accelerated Deterioration Scenario (KB #14): MDR > 5 AND >=2 sensitivity\
     \ values are 'High' (across all 11 sensitivity columns).\n\n[kb=14]\nOccurs when\
@@ -516,7 +516,7 @@ columns:
   sql: ((((showcases__exhibitionhalls.visitorcountdaily * (CASE LOWER(TRIM(showcases__exhibitionhalls.visitorflowrate))
     WHEN 'low' THEN 1 WHEN 'medium' THEN 3 WHEN 'high' THEN 5 ELSE NULL END) * showcases__exhibitionhalls.visitordwellmin)
     / 1000.0)) > 5 AND artifactsecurityaccess.seclevel = 'Level 1')
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Visitor Crowd Risk (KB #19): VIR > 5 AND SecLevel='Level 1'.\n\n[kb=19]\n\
     Occurs when VIR > 5 AND SecLevel='Level 1' for any artifact in the hall. \u2014\
@@ -538,7 +538,7 @@ columns:
     WHEN 'low' THEN 1 WHEN 'medium' THEN 5 WHEN 'high' THEN 10 ELSE NULL END + CASE
     LOWER(TRIM(sensitivitydata.humiditysensitivity)) WHEN 'low' THEN 1 WHEN 'medium'
     THEN 5 WHEN 'high' THEN 10 ELSE NULL END) / 4.0))) > 8)
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Critical Conservation Alert (KB #41): Conservation Emergency criteria\
     \ AND AVS > 8.\n\n[kb=41]\nAn artifact that meets both the Conservation Emergency\
@@ -586,7 +586,7 @@ columns:
     THEN 1 ELSE 0 END + CASE WHEN LOWER(TRIM(sensitivitydata.displaysensitivity))='high'
     THEN 1 ELSE 0 END + CASE WHEN LOWER(TRIM(sensitivitydata.storagesensitivity))='high'
     THEN 1 ELSE 0 END) >= 2))
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "High Deterioration Risk Artifact (KB #42): TETL > 15 AND Accelerated\
     \ Deterioration Scenario.\n\n[kb=42]\nAn artifact that has TETL > 15 AND falls\
@@ -617,7 +617,7 @@ columns:
     + artifactratings.cultscore) * (10 - CASE artifactscore.conservestatus WHEN 'Excellent'
     THEN 1 WHEN 'Good' THEN 3 WHEN 'Fair' THEN 5 WHEN 'Poor' THEN 7 WHEN 'Critical'
     THEN 10 ELSE NULL END)) / 30.0) + 1) / 100.0)) < 0)
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Exhibition Rotation Urgency (KB #43): Exhibition Rotation Candidate\
     \ AND ERPS < 0.\n\n[kb=43]\nOccurs when an artifact is an Exhibition Rotation\
@@ -637,7 +637,7 @@ columns:
     LOWER(TRIM(sensitivitydata.humiditysensitivity)) WHEN 'low' THEN 1 WHEN 'medium'
     THEN 5 WHEN 'high' THEN 10 ELSE NULL END) / 4.0) * 0.5)) < 0 AND artifactsecurityaccess.insvalueusd
     > 1000000)
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Showcase Compatibility Issue (KB #44): SPA < 0 AND artifact is High-Value\
     \ (monetary leg, InsValueUSD > $1M; full High-Value with percentile branch is\
@@ -667,7 +667,7 @@ columns:
     LOWER(TRIM(sensitivitydata.humiditysensitivity)) WHEN 'low' THEN 1 WHEN 'medium'
     THEN 5 WHEN 'high' THEN 10 ELSE NULL END) / 4.0) * pow(showcases__environmentalreadingscore.relhumidity
     - 50, 2) * showcases__environmentalreadingscore.tempc) / 100000.0))) > 12)
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Organic Material Emergency (KB #50): Organic Material Vulnerability\
     \ AND TETL > 12.\n\n[kb=50]\nOccurs when an artifact falls under the Organic Material\
@@ -682,7 +682,7 @@ columns:
     / 100000.0) * (10 - ((showcases__exhibitionhalls.visitorcountdaily * (CASE LOWER(TRIM(showcases__exhibitionhalls.visitorflowrate))
     WHEN 'low' THEN 1 WHEN 'medium' THEN 3 WHEN 'high' THEN 5 ELSE NULL END) * showcases__exhibitionhalls.visitordwellmin)
     / 1000.0)) / 10.0)) > 5)
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "High Security Priority Artifact (KB #48): High-Value (monetary leg)\
     \ AND SRE > 5.\n\n[kb=48]\nAn artifact that is classified as High-Value AND has\
@@ -708,7 +708,7 @@ columns:
     * (CASE LOWER(TRIM(showcases__exhibitionhalls.visitorflowrate)) WHEN 'low' THEN
     1 WHEN 'medium' THEN 3 WHEN 'high' THEN 5 ELSE NULL END) * showcases__exhibitionhalls.visitordwellmin)
     / 1000.0)) > 5 AND artifactsecurityaccess.seclevel = 'Level 1')))
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Visitor Traffic Safety Concern (KB #49): VCSF > 2 AND Visitor Crowd\
     \ Risk.\n\n[kb=49]\nOccurs when VCSF > 2 AND there is a Visitor Crowd Risk situation.\
@@ -746,7 +746,7 @@ columns:
     THEN 5 WHEN 'high' THEN 10 ELSE NULL END) / 4.0) * pow(showcases__environmentalreadingscore.relhumidity
     - 50, 2) * showcases__environmentalreadingscore.tempc) / 100000.0)) / 20.0)))
     > 3)
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Dynasty Artifact at Risk (KB #46): Dynasty Value Artifact (Ming/Han/Tang\
     \ AND ResearchValRating>8) AND MAP > 3.\n\n[kb=46]\nAn artifact that qualifies\
@@ -772,7 +772,7 @@ columns:
     THEN 5 WHEN 'Poor' THEN 7 WHEN 'Critical' THEN 10 ELSE NULL END)) / 30.0) * (julianday(date('now'))
     - julianday(conservationandmaintenance.lastcleaningdate) - conservationandmaintenance.cleanintervaldays)
     / 100.0) / 10.0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Conservation Resource Allocation Efficiency (KB #36): CBE * (1 - CBR/10).\
     \ CBE is the population-level Conservation Budget Efficiency (KB #9, computed\
@@ -815,7 +815,7 @@ columns:
     AND (SELECT COUNT(*) FROM conservationandmaintenance c6 JOIN artifactscore a6
     ON c6.artrefmaintained = a6.artregistry WHERE a6.conservestatus = 'Critical' AND
     LOWER(TRIM(c6.budgetallocstatus)) = 'insufficient') >= 1)
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Conservation Resource Crisis (KB #45): CRAE < 0.3 AND Conservation\
     \ Budget Crisis (CBE < 0.5 AND >=1 artifact with ConserveStatus='Critical' AND\

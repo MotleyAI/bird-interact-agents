@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: shipment_quality_index
 source_queries:
 - version: 3
@@ -24,7 +24,7 @@ source_queries:
         - containlink
     columns:
     - name: sqi
-      type: number
+      type: DOUBLE
       sql: ((julianday(expireday) - julianday('now')) * tss_per_container_sqi.tss)
         / 365.0 * tss_per_container_sqi.hqi * (1 - tss_per_container_sqi.cri)
   dimensions:
@@ -72,40 +72,40 @@ data_source: vaccine
 columns:
 - name: vacregistry
   sql: vacregistry
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: containvac
   sql: containvac
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: tss_per_container_sqi__tss
   sql: tss_per_container_sqi__tss
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tss_per_container_sqi__hqi
   sql: tss_per_container_sqi__hqi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tss_per_container_sqi__cri
   sql: tss_per_container_sqi__cri
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: sqi
   sql: sqi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

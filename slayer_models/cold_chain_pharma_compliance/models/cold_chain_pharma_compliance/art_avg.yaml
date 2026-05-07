@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: art_avg
 source_queries:
 - version: 3
@@ -7,7 +7,7 @@ source_queries:
     columns:
     - name: k
       sql: '1'
-      type: number
+      type: DOUBLE
   measures:
   - formula: art_score:avg
   dimensions:
@@ -24,12 +24,12 @@ data_source: cold_chain_pharma_compliance
 columns:
 - name: k
   sql: k
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: art_score_avg
   sql: art_score_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Alternative Route Availability proxy (KB #30, SCRS sub-score, 0-10):
     low risk lane = 8, medium = 5, high = 2, unknown = 4. Used inside Supply Chain

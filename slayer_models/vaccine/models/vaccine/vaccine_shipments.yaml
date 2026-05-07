@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: vaccine_shipments
 sql_table: shipments
 query_variables: {}
@@ -6,63 +6,63 @@ data_source: vaccine
 columns:
 - name: shipmentregistry
   sql: shipmentregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: timemark
   sql: timemark
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: routealign
   sql: routealign
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: customsflag
   sql: customsflag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: qualcheck
   sql: qualcheck
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: integritymark
   sql: integritymark
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: contamlevel
   sql: contamlevel
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sterilemark
   sql: sterilemark
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: packagestate
   sql: packagestate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sealflag
   sql: sealflag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: tampersign
   sql: tampersign
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_compromised
   sql: CASE WHEN integritymark = 'Compromised' OR sealflag = 'Broken' OR tampersign
     = 'Confirmed' THEN 1 ELSE 0 END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Compromised Shipment flag. True when IntegrityMark='Compromised' OR\
     \ SealFlag='Broken' OR TamperSign='Confirmed' (KB #11).\n\n[kb=11]\nA shipment\

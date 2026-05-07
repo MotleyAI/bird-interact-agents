@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: efficient_container_status
 source_queries:
 - version: 3
@@ -33,7 +33,7 @@ source_queries:
         - containlink
     columns:
     - name: is_efficient_container
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN ser_per_container.ser > 0.8 AND tss_per_container.tss > 0.9 THEN
         1 ELSE 0 END
   dimensions:
@@ -72,26 +72,26 @@ data_source: vaccine
 columns:
 - name: containregistry
   sql: containregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: ser_per_container__ser
   sql: ser_per_container__ser
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tss_per_container__tss
   sql: tss_per_container__tss
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: is_efficient_container
   sql: is_efficient_container
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

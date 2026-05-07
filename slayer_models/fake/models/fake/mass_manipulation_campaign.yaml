@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: mass_manipulation_campaign
 source_queries:
 - version: 3
@@ -74,7 +74,7 @@ data_source: fake
 columns:
 - name: cluster_id
   sql: cluster_id
-  type: string
+  type: TEXT
   primary_key: false
   description: "Per-row cluster identifier resolved through the moderationaction \u2192\
     \ contentbehavior \u2192 sessionbehavior \u2192 profile \u2192 account join chain.\
@@ -83,7 +83,7 @@ columns:
   hidden: false
 - name: min_cms
   sql: min_cms
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Content Manipulation Score (KB #8): 0.4*(1-cntuniqscore) + 0.3*mediareratio
     + 0.3*(1-txtuniq).'
@@ -92,7 +92,7 @@ columns:
     type: float
 - name: min_cis
   sql: min_cis
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Content Impact Score (KB #37): CMS * MPS * netinflscore/100.'
   hidden: false
@@ -100,14 +100,14 @@ columns:
     type: float
 - name: all_sockpuppet
   sql: all_sockpuppet
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Sockpuppet Network member predicate (KB #14): linkacctnum > 5 AND
     CAS_coord > 0.8.'
   hidden: false
 - name: member_count
   sql: member_count
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: real_time_session_efficiency
 source_queries:
 - version: 3
@@ -49,13 +49,13 @@ data_source: news
 columns:
 - name: seshkey
   sql: seshkey
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Primary key.
   hidden: false
 - name: session_bounce_rate_adjustment_avg
   sql: session_bounce_rate_adjustment_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Session Bounce Rate Adjustment (SBRA, KB #3) = bncrate \xD7 (1 - ctrval/100)."
   hidden: false
@@ -63,14 +63,14 @@ columns:
     type: float
 - name: rtse
   sql: rtse
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: cie_per_session__cie_avg
   sql: cie_per_session__cie_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

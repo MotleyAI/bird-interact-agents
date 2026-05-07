@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: waterandwaste
 sql_table: waterandwaste
 query_variables: {}
@@ -6,54 +6,54 @@ data_source: polar
 columns:
 - name: waterregistry
   sql: waterregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: watereqref
   sql: watereqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: waterlevelpercent
   sql: waterlevelpercent
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: waterpressurekpa
   sql: waterpressurekpa
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: watertemperaturec
   sql: watertemperaturec
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: waterflowlpm
   sql: waterflowlpm
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: waterqualityindex
   sql: waterqualityindex
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: wastetanklevelpercent
   sql: wastetanklevelpercent
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
@@ -61,7 +61,7 @@ columns:
 - name: wrmi
   sql: waterlevelpercent * (waterqualityindex / 100.0) * (1 - wastetanklevelpercent
     / 100.0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Water Resource Management Index (KB #7).\n\n[kb=7]\nWRMI = waterlevelpercent\
     \ \\times \\frac{waterqualityindex}{100} \\times (1 - \\frac{wastetanklevelpercent}{100}),\
@@ -76,7 +76,7 @@ columns:
   sql: CASE WHEN waterqualityindex >= 91 THEN 'High-Quality' WHEN waterqualityindex
     >= 71 THEN 'Good' WHEN waterqualityindex >= 51 THEN 'Moderate' WHEN waterqualityindex
     >= 26 THEN 'Poor' ELSE 'Unsafe' END
-  type: string
+  type: TEXT
   primary_key: false
   description: "Water Quality Classification System (KB #25): High-Quality (>=91),\
     \ Good (71-90), Moderate (51-70), Poor (26-50), Unsafe (<26).\n\n[kb=25]\nWater\
@@ -96,7 +96,7 @@ columns:
 - name: needs_water_conservation
   sql: (waterlevelpercent * (waterqualityindex / 100.0) * (1 - wastetanklevelpercent
     / 100.0)) < 0.5
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Water Conservation Requirement (KB #18): TRUE iff WRMI < 0.5.\n\n\
     [kb=18]\nWater conservation measures must be implemented when the WRMI falls below\
@@ -113,7 +113,7 @@ columns:
     / 100.0)) < 0.5 THEN 'Conservation Needed' WHEN (waterlevelpercent * (waterqualityindex
     / 100.0) * (1 - wastetanklevelpercent / 100.0)) < 0.7 THEN 'Monitoring Advised'
     ELSE 'Sustainable Management' END
-  type: string
+  type: TEXT
   primary_key: false
   description: "Water Resource Management Status Classification (KB #53): Conservation\
     \ Needed (WRMI < 0.5), Monitoring Advised (0.5 <= WRMI < 0.7), Sustainable Management\

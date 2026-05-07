@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: additionalnotes
 sql_table: additionalnotes
 query_variables: {}
@@ -6,17 +6,17 @@ data_source: virtual
 columns:
 - name: notesreg
   sql: notesreg
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: notesretainpivot
   sql: notesretainpivot
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: noteinfo
   sql: noteinfo
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

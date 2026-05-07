@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: races
 sql_table: races
 query_variables: {}
@@ -6,7 +6,7 @@ data_source: sports_events
 columns:
 - name: rak_id
   sql: rak_id
-  type: number
+  type: INT
   primary_key: true
   description: Unique race identifier.
   hidden: false
@@ -14,7 +14,7 @@ columns:
     type: integer
 - name: yr
   sql: yr
-  type: number
+  type: INT
   primary_key: false
   description: Year of the race.
   hidden: false
@@ -22,7 +22,7 @@ columns:
     type: integer
 - name: rnum
   sql: rnum
-  type: number
+  type: INT
   primary_key: false
   description: Round number within the season.
   hidden: false
@@ -30,7 +30,7 @@ columns:
     type: integer
 - name: trkbind
   sql: trkbind
-  type: number
+  type: INT
   primary_key: false
   description: Foreign key to circuits.
   hidden: false
@@ -38,7 +38,7 @@ columns:
     type: integer
 - name: event_schedule
   sql: event_schedule
-  type: string
+  type: TEXT
   primary_key: false
   description: JSONB column. Groups all date and time-related fields for a race weekend
     schedule including practice, qualifying, and sprint sessions.
@@ -46,19 +46,19 @@ columns:
   meta: {}
 - name: event_name
   sql: json_extract(event_schedule, '$.event_name')
-  type: string
+  type: TEXT
   primary_key: false
   description: Official event name (extracted).
   hidden: false
 - name: date_set
   sql: REPLACE(json_extract(event_schedule, '$.date_set'), '/', '-')
-  type: date
+  type: DATE
   primary_key: false
   description: Main race date (extracted; '/' replaced with '-' for ISO format).
   hidden: false
 - name: start_time
   sql: json_extract(event_schedule, '$.start_time')
-  type: string
+  type: TEXT
   primary_key: false
   description: "Race start time (extracted). KB #7 (Indeterminate Event Timings):\
     \ NULL means the time is To Be Determined (TBD), not applicable, or not yet published.\n\
@@ -73,13 +73,13 @@ columns:
     kb_id: 7
 - name: details_url
   sql: json_extract(event_schedule, '$.details_url')
-  type: string
+  type: TEXT
   primary_key: false
   description: URL to additional race details (extracted).
   hidden: false
 - name: fp1_date
   sql: REPLACE(json_extract(event_schedule, '$.sessions.fp1.date'), '/', '-')
-  type: date
+  type: DATE
   primary_key: false
   description: "Free Practice 1 date (extracted). KB #0 (Race Weekend Structure):\
     \ a typical weekend has up to three Free Practice sessions, plus Qualifying and\
@@ -96,19 +96,19 @@ columns:
     kb_id: 0
 - name: fp2_date
   sql: REPLACE(json_extract(event_schedule, '$.sessions.fp2.date'), '/', '-')
-  type: date
+  type: DATE
   primary_key: false
   description: 'Free Practice 2 date (extracted). NULL = not scheduled / TBD (KB #7).'
   hidden: false
 - name: fp3_date
   sql: REPLACE(json_extract(event_schedule, '$.sessions.fp3.date'), '/', '-')
-  type: date
+  type: DATE
   primary_key: false
   description: 'Free Practice 3 date (extracted). NULL = not scheduled / TBD (KB #7).'
   hidden: false
 - name: qualifying_date
   sql: REPLACE(json_extract(event_schedule, '$.sessions.qualifying.date'), '/', '-')
-  type: date
+  type: DATE
   primary_key: false
   description: "Qualifying session date (extracted). KB #1 (Qualifying Format Explained):\
     \ the qualifying session is split into Q1/Q2/Q3 knockout segments to determine\
@@ -124,14 +124,14 @@ columns:
     kb_id: 1
 - name: sprint_date
   sql: REPLACE(json_extract(event_schedule, '$.sessions.sprint.date'), '/', '-')
-  type: date
+  type: DATE
   primary_key: false
   description: 'Sprint session date (extracted). NULL = no sprint for this event or
     date not released (KB #2, KB #7).'
   hidden: false
 - name: has_sprint
   sql: json_extract(event_schedule, '$.sessions.sprint.date') IS NOT NULL
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "TRUE iff the weekend includes a Sprint session (KB #2 Sprint Session\
     \ Explained: a shorter race with its own abbreviated qualifying, awarding fewer\

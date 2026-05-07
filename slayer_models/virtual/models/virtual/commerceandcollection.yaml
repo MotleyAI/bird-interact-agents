@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: commerceandcollection
 sql_table: commerceandcollection
 query_variables: {}
@@ -6,57 +6,57 @@ data_source: virtual
 columns:
 - name: commercereg
   sql: commercereg
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: commerceengagepivot
   sql: commerceengagepivot
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: commercememberpivot
   sql: commercememberpivot
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: merchbuy
   sql: merchbuy
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: merchspendusd
   sql: merchspendusd
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: digown
   sql: digown
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: physown
   sql: physown
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: collcomprate
   sql: collcomprate
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tradelevel
   sql: tradelevel
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

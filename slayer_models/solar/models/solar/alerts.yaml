@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: alerts
 sql_table: alerts
 query_variables: {}
@@ -6,54 +6,54 @@ data_source: solar
 columns:
 - name: alertreg
   sql: alertreg
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: compreg
   sql: compreg
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: deviceref
   sql: deviceref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: incidentref
   sql: incidentref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: alertmoment
   sql: alertmoment
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: alertstat
   sql: alertstat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: alertcnt
   sql: alertcnt
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: maintprior
   sql: maintprior
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: replaceprior
   sql: replaceprior
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: optpotential
   sql: optpotential
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

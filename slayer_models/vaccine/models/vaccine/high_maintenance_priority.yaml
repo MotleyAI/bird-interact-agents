@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: high_maintenance_priority
 source_queries:
 - version: 3
@@ -52,16 +52,16 @@ source_queries:
         - shipgov
     columns:
     - name: cmr
-      type: number
+      type: DOUBLE
       sql: (1 - mcs_per_shipment_hmp.mcs) * (1 + agg_per_container_hmp.tbs / 5.0)
         * (1 - lhi_per_container_hmp.lhi)
     - name: qmi
-      type: number
+      type: DOUBLE
       sql: mcs_per_shipment_hmp.mcs * (((JULIANDAY(expireday) - JULIANDAY('now'))
         * agg_per_container_hmp.tss) / 365.0 * agg_per_container_hmp.hqi * (1 - agg_per_container_hmp.cri))
         * (1 - agg_per_container_hmp.tbs / 10.0)
     - name: is_high_maintenance_priority
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN ((1 - mcs_per_shipment_hmp.mcs) * (1 + agg_per_container_hmp.tbs
         / 5.0) * (1 - lhi_per_container_hmp.lhi)) > 0.7 AND (mcs_per_shipment_hmp.mcs
         * (((JULIANDAY(expireday) - JULIANDAY('now')) * agg_per_container_hmp.tss)
@@ -136,34 +136,34 @@ data_source: vaccine
 columns:
 - name: vacregistry
   sql: vacregistry
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: containvac
   sql: containvac
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: shipinject
   sql: shipinject
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: cmr
   sql: cmr
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: qmi
   sql: qmi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_high_maintenance_priority
   sql: is_high_maintenance_priority
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

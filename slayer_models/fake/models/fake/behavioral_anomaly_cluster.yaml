@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: behavioral_anomaly_cluster
 source_queries:
 - version: 3
@@ -82,7 +82,7 @@ data_source: fake
 columns:
 - name: cluster_id
   sql: cluster_id
-  type: string
+  type: TEXT
   primary_key: false
   description: "Per-row cluster identifier resolved through the moderationaction \u2192\
     \ contentbehavior \u2192 sessionbehavior \u2192 profile \u2192 account join chain.\
@@ -91,7 +91,7 @@ columns:
   hidden: false
 - name: avg_bas
   sql: avg_bas
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Behavioral Anomaly Score (KB #39): 0.4*BBI + 0.4*AAF + 0.2*NGV.'
   hidden: false
@@ -99,7 +99,7 @@ columns:
     type: float
 - name: avg_bbi
   sql: avg_bbi
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Bot Behavior Index (KB #3): 0.4*botlikscore + 0.3*autobehavscore +
     0.3*(1-convnatval). botlikscore observed in 0-100; KB-implied composite assumes
@@ -109,7 +109,7 @@ columns:
     type: float
 - name: max_clustsize
   sql: max_clustsize
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Size of the related account cluster.
   hidden: false
@@ -117,7 +117,7 @@ columns:
     type: integer
 - name: member_count
   sql: member_count
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

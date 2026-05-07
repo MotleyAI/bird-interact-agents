@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: artifactscore
 sql_table: artifactscore
 query_variables: {}
@@ -6,34 +6,34 @@ data_source: museum
 columns:
 - name: artregistry
   sql: artregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: artname
   sql: artname
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: artdynasty
   sql: artdynasty
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: artageyears
   sql: artageyears
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: mattype
   sql: mattype
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: conservestatus
   sql: conservestatus
-  type: string
+  type: TEXT
   primary_key: false
   description: "Artifact conservation status (KB #21): 'Excellent' (recently conserved,\
     \ no issues), 'Good' (stable, minor issues), 'Fair' (stable, noticeable issues),\

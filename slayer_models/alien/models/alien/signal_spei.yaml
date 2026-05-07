@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: signal_spei
 source_queries:
 - version: 3
@@ -15,7 +15,7 @@ source_queries:
         - signalref
     columns:
     - name: spei
-      type: number
+      type: DOUBLE
       sql: (signaldecoding.decodeiters * signaldecoding.proctimehrs) / (((signaldecoding.compressratio
         * signalclassification.complexidx * signalclassification.entropyval) / 10.0)
         * signalclassification.complexidx)
@@ -37,12 +37,12 @@ data_source: alien
 columns:
 - name: signalregistry
   sql: signalregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: spei
   sql: spei
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

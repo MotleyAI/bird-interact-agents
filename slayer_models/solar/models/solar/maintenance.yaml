@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: maintenance
 sql_table: maintenance
 query_variables: {}
@@ -6,80 +6,80 @@ data_source: solar
 columns:
 - name: maintregistry
   sql: maintregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: powerref
   sql: powerref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: compref
   sql: compref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: obsref
   sql: obsref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: inspectmeth
   sql: inspectmeth
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: inspectres
   sql: inspectres
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: inspectdate
   sql: inspectdate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: maintsched
   sql: maintsched
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: wtystatus
   sql: wtystatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: wtyclaimcnt
   sql: wtyclaimcnt
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: maintcostusd
   sql: maintcostusd
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: cleancostusd
   sql: cleancostusd
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: replacecostusd
   sql: replacecostusd
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: revlossusd
   sql: revlossusd
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
@@ -87,7 +87,7 @@ columns:
 - name: mce
   sql: CASE WHEN plant.gencapmw > 0 THEN (COALESCE(maintcostusd, 0) + COALESCE(cleancostusd,
     0) + COALESCE(replacecostusd, 0)) / plant.gencapmw ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Maintenance Cost Efficiency (MCE, KB#7): (MaintenanceCostUSD + CleaningCostUSD\
     \ + ReplacementCostUSD) / GenCapMW. Lower = more cost-effective maintenance.\n\
@@ -102,7 +102,7 @@ columns:
 - name: rlr
   sql: CASE WHEN plant.gencapmw > 0 THEN COALESCE(revlossusd, 0) / plant.gencapmw
     ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Revenue Loss Rate (RLR, KB#8): RevenueLossUSD / GenCapMW. Higher =\
     \ greater financial impact from downtime.\n\n[kb=8]\nRLR = \\frac{RevenueLossUSD}{GenCapMW},\
@@ -118,7 +118,7 @@ columns:
     0)) > 0 AND plant.gencapmw > 0 THEN (COALESCE(revlossusd, 0) / plant.gencapmw)
     / ((COALESCE(maintcostusd, 0) + COALESCE(cleancostusd, 0) + COALESCE(replacecostusd,
     0)) / plant.gencapmw) ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Maintenance Return on Investment (MROI, KB#32): RLR / MCE. Higher\
     \ values indicate better return on maintenance investments.\n\n[kb=32]\nMROI =\
@@ -137,7 +137,7 @@ columns:
     * 1.0 / panel_performance__panel.powratew * 100) * (1 - panel_performance__panel__environment.soillosspct
     / 100.0) * (1 - CAST(json_extract(panel_performance.efficiency_profile, '$.degradation.cumdegpct')
     AS REAL) / 100.0)) BETWEEN 75 AND 90 THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Premium Maintenance Candidate (KB#41): 1 when MROI > 2.0 AND 75% <\
     \ EPE < 90%; else 0. EPE = PPR \xD7 (1 - SoilingLossPct/100) \xD7 (1 - CumDegPct/100),\
@@ -154,7 +154,7 @@ columns:
 - name: has_critical_alert
   sql: CASE WHEN EXISTS (SELECT 1 FROM alerts a WHERE a.deviceref = maintenance.compref
     AND a.alertstat = 'Critical') THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Helper for Maintenance Urgency Classification (KB#50): 1 iff there
     exists at least one alert with status ''Critical'' for the same panel as this
@@ -172,7 +172,7 @@ columns:
     0) / plant.gencapmw) / ((COALESCE(maintcostusd, 0) + COALESCE(cleancostusd, 0)
     + COALESCE(replacecostusd, 0)) / plant.gencapmw)) > 2.0 THEN 'MEDIUM' ELSE 'LOW'
     END
-  type: string
+  type: TEXT
   primary_key: false
   description: "Maintenance Urgency Classification (KB#50): URGENT (critical alert\
     \ AND MROI>2), HIGH (critical alert), MEDIUM (MROI>2), LOW (else). 'Critical alert'\

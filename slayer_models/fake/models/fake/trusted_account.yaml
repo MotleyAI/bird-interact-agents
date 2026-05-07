@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: trusted_account
 source_queries:
 - version: 3
@@ -74,7 +74,7 @@ data_source: fake
 columns:
 - name: account_id
   sql: account_id
-  type: string
+  type: TEXT
   primary_key: false
   description: "Per-row account identifier resolved through the moderationaction \u2192\
     \ contentbehavior \u2192 sessionbehavior \u2192 profile join chain. Convenience\
@@ -82,7 +82,7 @@ columns:
   hidden: false
 - name: pci_v
   sql: pci_v
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Profile Credibility Index (KB #5): 0.3*credscore + 0.3*reputscore
     + 0.4*completeness.'
@@ -91,7 +91,7 @@ columns:
     type: float
 - name: recent_detections_per_account__n_recent_max
   sql: recent_detections_per_account__n_recent_max
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

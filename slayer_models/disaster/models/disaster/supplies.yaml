@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: supplies
 sql_table: supplies
 query_variables: {}
@@ -6,71 +6,71 @@ data_source: disaster
 columns:
 - name: supplyregistry
   sql: supplyregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: supplydistref
   sql: supplydistref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: supplyhubref
   sql: supplyhubref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: resourceinventory
   sql: resourceinventory
-  type: string
+  type: TEXT
   primary_key: false
   description: JSON with essentials.{food_tons, water_liters}, medical (units), shelter.{units,
     blankets}, hygiene_kits, power.{generators, fuel_liters}.
   hidden: false
 - name: food_tons
   sql: CAST(resourceinventory ->> '$.essentials.food_tons' AS REAL)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Food supply in tons.
   hidden: false
 - name: water_liters
   sql: CAST(resourceinventory ->> '$.essentials.water_liters' AS REAL)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Water supply in liters.
   hidden: false
 - name: medical_units
   sql: CAST(resourceinventory ->> '$.medical' AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Medical supply units.
   hidden: false
 - name: shelter_units
   sql: CAST(resourceinventory ->> '$.shelter.units' AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Shelter kits/tents.
   hidden: false
 - name: blankets
   sql: CAST(resourceinventory ->> '$.shelter.blankets' AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Blankets count.
   hidden: false
 - name: hygiene_kits
   sql: CAST(resourceinventory ->> '$.hygiene_kits' AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Hygiene kits.
   hidden: false
 - name: generators
   sql: CAST(resourceinventory ->> '$.power.generators' AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Power generators.
   hidden: false
 - name: fuel_liters
   sql: CAST(resourceinventory ->> '$.power.fuel_liters' AS REAL)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Fuel reserve in liters.
   hidden: false

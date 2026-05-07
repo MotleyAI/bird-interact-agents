@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: comprehensive_operational_reliability_indicator
 source_queries:
 - version: 3
@@ -94,12 +94,12 @@ data_source: polar
 columns:
 - name: equipmentcode
   sql: equipmentcode
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: eer_avg
   sql: eer_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Equipment Efficiency Rating (KB #0): mean of perf/reliability x (1
     - env-impact/10).'
@@ -108,21 +108,21 @@ columns:
     type: float
 - name: cori
   sql: cori
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: cri_per_eq_cori__cri_avg
   sql: cri_per_eq_cori__cri_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: ors_per_eq_cori__ors_avg
   sql: ors_per_eq_cori__ors_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

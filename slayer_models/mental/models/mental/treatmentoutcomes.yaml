@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: treatmentoutcomes
 sql_table: treatmentoutcomes
 query_variables: {}
@@ -6,26 +6,26 @@ data_source: mental
 columns:
 - name: txoutkey
   sql: txoutkey
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: txref
   sql: txref
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: thprog
   sql: thprog
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: txadh
   sql: txadh
-  type: string
+  type: TEXT
   primary_key: false
   description: "Treatment adherence enum (Non-compliant, Low, Medium, High). Non-compliant\
     \ = no adherence, Low = occasional, Medium = regular, High = consistent.\n\n[kb=26]\n\
@@ -39,64 +39,64 @@ columns:
     kb_id: 26
 - name: txresp
   sql: txresp
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sideburd
   sql: sideburd
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: txgoalstat
   sql: txgoalstat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: recgoalstat
   sql: recgoalstat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sympimp
   sql: sympimp
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: funcimpv
   sql: funcimpv
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: workstatchg
   sql: workstatchg
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: satscr
   sql: satscr
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: theralliance
   sql: theralliance
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: txeng
   sql: txeng
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: txsat
   sql: txsat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: high_med_adh_helper
   sql: txoutkey
-  type: number
+  type: INT
   primary_key: false
   description: "Filtered count helper: rows where txadh in {High, Medium}. Used in\
     \ TAR numerator.\n\n[kb=2]\nTAR = \\frac{|treatmentoutcomes \\text{ with } txadh\
@@ -110,7 +110,7 @@ columns:
 - name: theralliance_score
   sql: CASE theralliance WHEN 'Strong' THEN 3 WHEN 'Moderate' THEN 2 WHEN 'Weak' THEN
     1 WHEN 'Poor' THEN 0 ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Numeric therapeutic alliance score: Strong=3, Moderate=2, Weak=1,
     Poor=0.'
@@ -118,14 +118,14 @@ columns:
 - name: funcimpv_score
   sql: CASE funcimpv WHEN 'Significant' THEN 3 WHEN 'Moderate' THEN 2 WHEN 'Minimal'
     THEN 1 ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Numeric functional improvement score: Significant=3, Moderate=2, Minimal=1.
     Used in RTI.'
   hidden: false
 - name: is_treatment_resistant
   sql: txresp = 'Poor' AND txadh IN ('Medium', 'High')
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Treatment-Resistant Patient (KB #11): txresp = 'Poor' AND txadh in\
     \ {Medium, High}.\n\n[kb=11]\nA patient with txresp = Poor and txadh \\in \\{Medium,\
@@ -138,7 +138,7 @@ columns:
 - name: is_non_compliant
   sql: txadh = 'Non-compliant' AND EXISTS (SELECT 1 FROM treatmentbasics tb WHERE
     tb.txkey = treatmentoutcomes.txref AND tb.medadh = 'Non-compliant')
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Non-Compliant Patient (KB #18): txadh = 'Non-compliant' AND linked\
     \ treatmentbasics.medadh = 'Non-compliant'.\n\n[kb=18]\nA patient with txadh =\

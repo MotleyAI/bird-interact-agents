@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: scan_time_efficiency
 source_queries:
 - version: 3
@@ -46,7 +46,7 @@ source_queries:
     source_name: merged
     columns:
     - name: ste
-      type: number
+      type: DOUBLE
       sql: sqs * sqrt(coverpct) / (scans_per_arcref__spanmin * sqrt(scans_per_arcref__scancount))
   measures:
   - formula: ste:avg
@@ -95,12 +95,12 @@ data_source: archeology
 columns:
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: ste
   sql: ste
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

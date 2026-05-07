@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: pit_stops
 sql_table: pit_stops
 query_variables: {}
@@ -6,7 +6,7 @@ data_source: sports_events
 columns:
 - name: matchidx
   sql: matchidx
-  type: number
+  type: INT
   primary_key: true
   description: Foreign key to races.
   hidden: false
@@ -14,7 +14,7 @@ columns:
     type: integer
 - name: wunit
   sql: wunit
-  type: number
+  type: INT
   primary_key: true
   description: Foreign key to drivers.
   hidden: false
@@ -22,7 +22,7 @@ columns:
     type: integer
 - name: pause_no
   sql: pause_no
-  type: number
+  type: INT
   primary_key: true
   description: Sequence number of this pit stop for the driver in the race.
   hidden: false
@@ -30,7 +30,7 @@ columns:
     type: integer
 - name: moment
   sql: moment
-  type: number
+  type: INT
   primary_key: false
   description: Lap/moment within the race when the pit stop occurred.
   hidden: false
@@ -38,19 +38,19 @@ columns:
     type: integer
 - name: attime
   sql: attime
-  type: string
+  type: TEXT
   primary_key: false
   description: Wall-clock timestamp of the pit stop.
   hidden: false
 - name: durtxt
   sql: durtxt
-  type: string
+  type: TEXT
   primary_key: false
   description: Pit stop duration as a free-form text label.
   hidden: false
 - name: ms_count
   sql: ms_count
-  type: number
+  type: INT
   primary_key: false
   description: Pit stop duration in milliseconds (the car-stationary time).
   hidden: false
@@ -58,7 +58,7 @@ columns:
     type: integer
 - name: pit_stop_seconds
   sql: ms_count / 1000.0
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Pit Stop Duration in Seconds (KB #22): D_seconds = D_milliseconds\
     \ / 1000.\n\n[kb=22]\nD_{seconds} = \\frac{D_{milliseconds}}{1000} \u2014 Converts\
@@ -70,7 +70,7 @@ columns:
     kb_id: 22
 - name: is_efficient_pit_stop
   sql: ms_count < 2500
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Efficient Pit Stop (KB #17): TRUE iff total stationary time < 2.5\
     \ s.\n\n[kb=17]\nAn Efficient Pit Stop is a pit stop where the total time the\

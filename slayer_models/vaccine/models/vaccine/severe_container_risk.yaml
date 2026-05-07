@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: severe_container_risk
 source_queries:
 - version: 3
@@ -22,10 +22,10 @@ source_queries:
         - containlink
     columns:
     - name: ces
-      type: number
+      type: DOUBLE
       sql: ser * cei_cri_per_container_scr.cei * (1 - cei_cri_per_container_scr.cri)
     - name: is_severe_container_risk
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN (ser * cei_cri_per_container_scr.cei * (1 - cei_cri_per_container_scr.cri))
         < 0.3 AND cei_cri_per_container_scr.cei < 0.5 THEN 1 ELSE 0 END
   dimensions:
@@ -67,24 +67,24 @@ data_source: vaccine
 columns:
 - name: vacregistry
   sql: vacregistry
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: containvac
   sql: containvac
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: ces
   sql: ces
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_severe_container_risk
   sql: is_severe_container_risk
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

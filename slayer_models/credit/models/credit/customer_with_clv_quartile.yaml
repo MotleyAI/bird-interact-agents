@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: customer_with_clv_quartile
 source_queries:
 - version: 3
@@ -6,10 +6,10 @@ source_queries:
     source_name: credit_accounts_and_history
     columns:
     - name: clv_quartile
-      type: number
+      type: DOUBLE
       sql: NTILE(4) OVER (ORDER BY credit_accounts_and_history.custlifeval DESC)
     - name: is_high_value_customer
-      type: number
+      type: DOUBLE
       sql: CASE WHEN NTILE(4) OVER (ORDER BY credit_accounts_and_history.custlifeval
         DESC) = 1 AND credit_and_compliance__bank_and_transactions__expenses_and_assets__employment_and_income__core_record.tenureyrs
         > 5 AND credit_and_compliance__bank_and_transactions__expenses_and_assets__employment_and_income__core_record.crossratio
@@ -59,36 +59,36 @@ data_source: credit
 columns:
 - name: histcompref
   sql: histcompref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: clv_quartile
   sql: clv_quartile
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_high_value_customer
   sql: is_high_value_customer
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: credit_and_compliance__bank_and_transactions__expenses_and_assets__employment_and_income__core_record__tenureyrs
   sql: credit_and_compliance__bank_and_transactions__expenses_and_assets__employment_and_income__core_record__tenureyrs
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: credit_and_compliance__bank_and_transactions__expenses_and_assets__employment_and_income__core_record__crossratio
   sql: credit_and_compliance__bank_and_transactions__expenses_and_assets__employment_and_income__core_record__crossratio
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: custlifeval
   sql: custlifeval
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Customer Lifetime Value (CLV). Total worth of customer over the relationship;
     factors product usage, tenure, profitability, expected future transactions.

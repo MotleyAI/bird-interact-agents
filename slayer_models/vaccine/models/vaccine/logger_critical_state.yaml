@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: logger_critical_state
 source_queries:
 - version: 3
@@ -48,16 +48,16 @@ source_queries:
         - containlink
     columns:
     - name: cmr
-      type: number
+      type: DOUBLE
       sql: (1 - mcs_per_shipment_lcs.mcs) * (1 + tss_tbs_per_container_lcs.tbs / 5.0)
         * (1 - lhi_per_container_lcs.lhi)
     - name: lrs
-      type: number
+      type: DOUBLE
       sql: lhi_per_container_lcs.lhi * (1 - ((1 - mcs_per_shipment_lcs.mcs) * (1 +
         tss_tbs_per_container_lcs.tbs / 5.0) * (1 - lhi_per_container_lcs.lhi))) *
         tss_tbs_per_container_lcs.tss
     - name: is_logger_critical_state
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN (lhi_per_container_lcs.lhi * (1 - ((1 - mcs_per_shipment_lcs.mcs)
         * (1 + tss_tbs_per_container_lcs.tbs / 5.0) * (1 - lhi_per_container_lcs.lhi)))
         * tss_tbs_per_container_lcs.tss) < 0.3 AND ((1 - mcs_per_shipment_lcs.mcs)
@@ -117,22 +117,22 @@ data_source: vaccine
 columns:
 - name: containregistry
   sql: containregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: cmr
   sql: cmr
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: lrs
   sql: lrs
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_logger_critical_state
   sql: is_logger_critical_state
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

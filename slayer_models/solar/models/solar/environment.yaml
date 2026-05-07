@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: environment
 sql_table: environment
 query_variables: {}
@@ -6,22 +6,22 @@ data_source: solar
 columns:
 - name: envregistry
   sql: envregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: arearegistry
   sql: arearegistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: envmoment
   sql: envmoment
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: celltempc
   sql: celltempc
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "CellTempC (KB#23): operating temperature of the solar cells in C.\
     \ Typically 40-70C; >80C accelerates degradation.\n\n[kb=23]\nMeasured in degrees\
@@ -38,14 +38,14 @@ columns:
     kb_id: 23
 - name: ambtempc
   sql: ambtempc
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: soillosspct
   sql: soillosspct
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "SoilingLossPct (KB#25): power-output loss % due to dust/dirt accumulation.\
     \ Clean ~0%, heavily soiled >15%; well-maintained 2-5%.\n\n[kb=25]\nExpressed\
@@ -61,82 +61,82 @@ columns:
     kb_id: 25
 - name: dustdengm2
   sql: dustdengm2
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: cleancycledays
   sql: cleancycledays
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: lastcleandt
   sql: lastcleandt
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: relhumpct
   sql: relhumpct
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: windspdms
   sql: windspdms
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: winddirdeg
   sql: winddirdeg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: preciptmm
   sql: preciptmm
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: airpresshpa
   sql: airpresshpa
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: uv_idx
   sql: uv_idx
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: cloudcovpct
   sql: cloudcovpct
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: snowcovpct
   sql: snowcovpct
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: irradiance_conditions
   sql: irradiance_conditions
-  type: string
+  type: TEXT
   primary_key: false
   description: "JSON: {specmisfac, irradiance_types: [global, direct, diffuse, POA]\
     \ in W/m^2}.\n\n[kb=28]\nMeasured in watts per square meter (W/m\xB2), representing\
@@ -150,7 +150,7 @@ columns:
     kb_id: 28
 - name: poa_irradiance_wm2
   sql: CAST(json_extract(irradiance_conditions, '$.irradiance_types[3]') AS REAL)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "POAIrradianceWM2 (KB#28): Plane-of-Array irradiance reaching the panel\
     \ surface, in W/m^2. Extracted from irradiance_conditions.irradiance_types[3].\
@@ -165,31 +165,31 @@ columns:
     kb_id: 28
 - name: global_irradiance_wm2
   sql: CAST(json_extract(irradiance_conditions, '$.irradiance_types[0]') AS REAL)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Global solar irradiance in W/m^2 (irradiance_types[0]).
   hidden: false
 - name: direct_irradiance_wm2
   sql: CAST(json_extract(irradiance_conditions, '$.irradiance_types[1]') AS REAL)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Direct normal irradiance in W/m^2 (irradiance_types[1]).
   hidden: false
 - name: diffuse_irradiance_wm2
   sql: CAST(json_extract(irradiance_conditions, '$.irradiance_types[2]') AS REAL)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Diffuse irradiance in W/m^2 (irradiance_types[2]).
   hidden: false
 - name: specmisfac
   sql: CAST(json_extract(irradiance_conditions, '$.specmisfac') AS REAL)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Spectral mismatch factor.
   hidden: false
 - name: sif
   sql: CASE WHEN dustdengm2 > 0 THEN soillosspct / dustdengm2 ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Soiling Impact Factor (SIF, KB#6): SoilingLossPct / DustDensityGM2.\
     \ Higher = greater sensitivity of power loss to dust accumulation.\n\n[kb=6]\n\
@@ -203,14 +203,14 @@ columns:
 - name: days_since_last_clean
   sql: CASE WHEN lastcleandt IS NOT NULL THEN julianday(envmoment) - julianday(lastcleandt)
     ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Days elapsed between the environmental reading and the last cleaning.
     Used by the Cleaning Triggers rule (KB#51).
   hidden: false
 - name: soiling_cleaning_threshold_met
   sql: CASE WHEN soillosspct > 5 OR dustdengm2 > 0.15 THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Soiling Cleaning Threshold (KB#13): 1 when SoilingLossPct > 5% OR\
     \ DustDensityGM2 > 0.15 g/m^2 (whichever occurs first), else 0.\n\n[kb=13]\nCleaning\
@@ -224,7 +224,7 @@ columns:
 - name: cleaning_trigger
   sql: CASE WHEN soillosspct > 5 OR dustdengm2 > 0.15 OR (lastcleandt IS NOT NULL
     AND julianday(envmoment) - julianday(lastcleandt) > 30) THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Cleaning Triggers (KB#51): 1 when (Soiling Cleaning Threshold met)\
     \ OR (>30 days since last cleaning) - whichever occurs first.\n\n[kb=51]\nA panel\
@@ -239,7 +239,7 @@ columns:
 - name: in_optimal_window
   sql: CASE WHEN celltempc BETWEEN 25 AND 45 AND CAST(json_extract(irradiance_conditions,
     '$.irradiance_types[3]') AS REAL) > 800 AND soillosspct < 2 THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Optimal Performance Window (KB#15): 1 when CellTempC in [25, 45] C\
     \ AND POAIrradianceWM2 > 800 W/m^2 AND SoilingLossPct < 2%, else 0.\n\n[kb=15]\n\
@@ -253,7 +253,7 @@ columns:
 - name: weather_severity_inputs
   sql: json_object('celltempc', celltempc, 'ambtempc', ambtempc, 'relhumpct', relhumpct,
     'windspdms', windspdms, 'preciptmm', preciptmm)
-  type: string
+  type: TEXT
   primary_key: false
   description: "Weather Severity Index (KB#18): a composite index calculated from\
     \ extreme values of temperature (celltempc, ambtempc), humidity (relhumpct), wind\

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: high_risk_route
 source_queries:
 - version: 3
@@ -20,7 +20,7 @@ source_queries:
         - vehsenseref
     columns:
     - name: is_high_risk_route
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN (CAST(distdonekm AS REAL) / NULLIF(distdonekm + distleftkm, 0)
         * 100) < 50 AND cri_per_vehicle.cri > 0.4 THEN 1 ELSE 0 END
   dimensions:
@@ -56,24 +56,24 @@ data_source: vaccine
 columns:
 - name: vehiclereg
   sql: vehiclereg
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: rcp
   sql: rcp
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Route Completion Percentage (RCP). Percentage of route completed:
     DistDoneKm / (DistDoneKm + DistLeftKm) * 100 (KB #4).'
   hidden: false
 - name: cri_per_vehicle__cri
   sql: cri_per_vehicle__cri
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_high_risk_route
   sql: is_high_risk_route
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

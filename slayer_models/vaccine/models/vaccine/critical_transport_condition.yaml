@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: critical_transport_condition
 source_queries:
 - version: 3
@@ -22,10 +22,10 @@ source_queries:
         - vehsenseref
     columns:
     - name: tsr
-      type: number
+      type: DOUBLE
       sql: rcp / 100.0 * (1 - trs_hqi_per_vehicle_ctc.trs) * trs_hqi_per_vehicle_ctc.hqi
     - name: is_critical_transport_condition
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN (rcp / 100.0 * (1 - trs_hqi_per_vehicle_ctc.trs) * trs_hqi_per_vehicle_ctc.hqi)
         < 0.4 AND trs_hqi_per_vehicle_ctc.trs > 0.6 THEN 1 ELSE 0 END
   dimensions:
@@ -67,17 +67,17 @@ data_source: vaccine
 columns:
 - name: vehiclereg
   sql: vehiclereg
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: tsr
   sql: tsr
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_critical_transport_condition
   sql: is_critical_transport_condition
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

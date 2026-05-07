@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: powerbattery
 sql_table: powerbattery
 query_variables: {}
@@ -6,34 +6,34 @@ data_source: polar
 columns:
 - name: powerbattregistry
   sql: powerbattregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: pwrbatteqref
   sql: pwrbatteqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: powerstatus
   sql: powerstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: powersource
   sql: powersource
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: chargingstatus
   sql: chargingstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: powerconsumptionw
   sql: powerconsumptionw
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Power consumption (W). 5\u201350 small instruments, 20\u2013200 comms,\
     \ 500\u20135000 heating, 1000+ vehicles (KB #24).\n\n[kb=24]\nPower consumption\
@@ -51,7 +51,7 @@ columns:
     kb_id: 24
 - name: energyefficiencypercent
   sql: energyefficiencypercent
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Energy efficiency %. <30 inefficient, 30\u201360 standard, 60\u2013\
     80 efficient, >80 highly efficient (KB #27).\n\n[kb=27]\nEnergy efficiency percentage\
@@ -69,14 +69,14 @@ columns:
     kb_id: 27
 - name: batterystatus
   sql: batterystatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: esi
   sql: energyefficiencypercent * CASE powersource WHEN 'Solar' THEN 1.5 WHEN 'Wind'
     THEN 1.5 WHEN 'Hybrid' THEN 1.2 WHEN 'Battery' THEN 1.0 WHEN 'Diesel' THEN 0.7
     ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Energy Sustainability Index (KB #2): efficiency% x powersource multiplier\
     \ (Solar/Wind=1.5, Hybrid=1.2, Battery=1.0, Diesel=0.7, otherwise 0).\n\n[kb=2]\n\
@@ -98,7 +98,7 @@ columns:
     WHEN 'Solar' THEN 1.5 WHEN 'Wind' THEN 1.5 WHEN 'Hybrid' THEN 1.2 WHEN 'Battery'
     THEN 1.0 WHEN 'Diesel' THEN 0.7 ELSE 0 END) >= 0.4 THEN 'Intermediate' ELSE 'High
     Impact' END
-  type: string
+  type: TEXT
   primary_key: false
   description: "Energy Sustainability Classification (KB #13): Green (ESI > 0.8),\
     \ Intermediate (0.4 <= ESI <= 0.8), High Impact (ESI < 0.4).\n\n[kb=13]\nEquipment\
@@ -112,7 +112,7 @@ columns:
     kb_id: 13
 - name: battery_level_percent
   sql: json_extract(batterystatus, '$.level_percent')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Battery level percent (extracted from batterystatus JSON).
   hidden: false

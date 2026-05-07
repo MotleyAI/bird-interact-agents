@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: feature_extraction_efficiency
 source_queries:
 - version: 3
@@ -65,7 +65,7 @@ source_queries:
     source_name: scans_keyed
     columns:
     - name: fee
-      type: number
+      type: DOUBLE
       sql: (feat_per_zone__traitcount + feat_per_zone__articount) / (pcdr_per_arcref__pcdr
         * sqrt(pc_per_arcref__clouddense)) * 1000.0
   measures:
@@ -159,22 +159,22 @@ data_source: archeology
 columns:
 - name: questregistry
   sql: questregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: zoneref
   sql: zoneref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: fee
   sql: fee
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

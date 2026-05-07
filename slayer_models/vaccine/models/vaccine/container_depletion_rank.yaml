@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: container_depletion_rank
 source_queries:
 - version: 3
@@ -6,7 +6,7 @@ source_queries:
     source_name: container
     columns:
     - name: depletion_rank
-      type: number
+      type: DOUBLE
       sql: RANK() OVER (ORDER BY (100 - coolremainpct) / NULLIF(julianday('now') -
         julianday(refilllatest), 0) DESC)
   dimensions:
@@ -26,12 +26,12 @@ data_source: vaccine
 columns:
 - name: containregistry
   sql: containregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: cdr
   sql: cdr
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Coolant Depletion Rate (CDR). How quickly coolant is being depleted,
     in percentage points per day: (100 - CoolRemainPct) / (Current_Date - RefillLatest)
@@ -39,7 +39,7 @@ columns:
   hidden: false
 - name: depletion_rank
   sql: depletion_rank
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

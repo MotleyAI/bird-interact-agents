@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: airqualityreadings
 sql_table: airqualityreadings
 query_variables: {}
@@ -6,56 +6,56 @@ data_source: museum
 columns:
 - name: aqrecordregistry
   sql: aqrecordregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: envreadref
   sql: envreadref
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: co2ppm
   sql: co2ppm
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: tvocppb
   sql: tvocppb
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: ozoneppb
   sql: ozoneppb
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: so2ppb
   sql: so2ppb
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: no2ppb
   sql: no2ppb
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: pm25conc
   sql: pm25conc
-  type: number
+  type: INT
   primary_key: false
   description: "PM2.5 concentration (KB #30, ug/m^3): clean museum air <5; 5-15 acceptable;\
     \ 15-30 risk to sensitive materials; >30 hazardous, requires immediate filtration\
@@ -73,28 +73,28 @@ columns:
     kb_id: 30
 - name: pm10conc
   sql: pm10conc
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: hchoconc
   sql: hchoconc
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: airexrate
   sql: airexrate
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: airvelms
   sql: airvelms
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

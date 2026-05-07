@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: chassisandvehicle
 sql_table: chassisandvehicle
 query_variables: {}
@@ -6,115 +6,115 @@ data_source: polar
 columns:
 - name: chassisregistry
   sql: chassisregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: chassiseqref
   sql: chassiseqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: chassistransref
   sql: chassistransref
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: brakepadwearpercent
   sql: brakepadwearpercent
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: brakefluidlevelpercent
   sql: brakefluidlevelpercent
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: brakepressurekpa
   sql: brakepressurekpa
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: tracktensionkn
   sql: tracktensionkn
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: trackwearpercent
   sql: trackwearpercent
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: suspensionheightmm
   sql: suspensionheightmm
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: vehiclespeedkmh
   sql: vehiclespeedkmh
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: vehicleloadkg
   sql: vehicleloadkg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: vehicleangledegrees
   sql: vehicleangledegrees
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: vehicleheadingdegrees
   sql: vehicleheadingdegrees
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: chassisengref
   sql: chassisengref
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: tiremetrics
   sql: tiremetrics
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: tire_pressure_kpa
   sql: json_extract(tiremetrics, '$.pressure_kpa')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Tire pressure (kPa, extracted from tiremetrics JSON).
   hidden: false
 - name: vpc
   sql: (1 - (brakepadwearpercent + trackwearpercent) / 200.0) * (vehiclespeedkmh /
     50.0) * (engineandfluids.engineloadpercent / 100.0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Vehicle Performance Coefficient (KB #5): wear / speed / engine-load\
     \ product. Cross-table to engineandfluids for engineloadpercent.\n\n[kb=5]\nVPC\
@@ -132,7 +132,7 @@ columns:
     / 50.0) * (engineandfluids.engineloadpercent / 100.0)) > 0.6 AND brakefluidlevelpercent
     > 50 AND brakepadwearpercent < 70 AND json_extract(tiremetrics, '$.pressure_kpa')
     > 200
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Vehicle Operational Safety Threshold (KB #15): VPC > 0.6 AND brakefluidlevel\
     \ > 50 AND brakepadwear < 70 AND tire_pressure > 200.\n\n[kb=15]\nA vehicle is\

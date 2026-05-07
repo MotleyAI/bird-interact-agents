@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: wage_competitiveness_index
 source_queries:
 - version: 3
@@ -17,7 +17,7 @@ source_queries:
     source_name: case_wage
     columns:
     - name: industry_avg
-      type: number
+      type: DOUBLE
       sql: AVG(offered_wage_annual_avg) OVER (PARTITION BY naics_code)
   dimensions:
   - name: homefirm
@@ -75,13 +75,13 @@ data_source: labor_certification_applications
 columns:
 - name: homefirm
   sql: homefirm
-  type: string
+  type: TEXT
   primary_key: false
   description: Employer (homefirm) for the case, denormalized via cases join.
   hidden: false
 - name: offered_wage_annual_avg_avg
   sql: offered_wage_annual_avg_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Offered wage annualized for this case_worksite, denormalized via prevailing_wage
     join. Used for KB #28 / KB #31 industry-wage analyses.'
@@ -90,14 +90,14 @@ columns:
     type: float
 - name: industry_avg_avg
   sql: industry_avg_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: wci
   sql: wci
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

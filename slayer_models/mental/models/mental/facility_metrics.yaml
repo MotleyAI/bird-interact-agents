@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: facility_metrics
 source_queries:
 - version: 3
@@ -271,12 +271,12 @@ data_source: mental
 columns:
 - name: fackey
   sql: fackey
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: frai
   sql: frai
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Numeric community-resource score: Comprehensive=3, Adequate=2, Limited=1.'
   hidden: false
@@ -284,77 +284,77 @@ columns:
     type: float
 - name: asr_per_fac__apsf
   sql: asr_per_fac__apsf
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: asr_per_fac__agsf
   sql: asr_per_fac__agsf
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: asr_per_fac__srp
   sql: asr_per_fac__srp
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: asd_per_fac__pfis
   sql: asd_per_fac__pfis
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: asd_per_fac__sse_avg
   sql: asd_per_fac__sse_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tb_per_fac__tes
   sql: tb_per_fac__tes
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tb_per_fac__cif
   sql: tb_per_fac__cif
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tox_per_fac__tar
   sql: tox_per_fac__tar
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tox_per_fac__theralliance_avg
   sql: tox_per_fac__theralliance_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tox_per_fac__funcimpv_avg
   sql: tox_per_fac__funcimpv_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: enc_per_fac__mar
   sql: enc_per_fac__mar
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

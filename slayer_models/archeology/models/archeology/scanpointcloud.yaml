@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: scanpointcloud
 sql_table: scanpointcloud
 query_variables: {}
@@ -6,24 +6,24 @@ data_source: archeology
 columns:
 - name: cloudregistry
   sql: cloudregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: crewref
   sql: crewref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: scanresolmm
   sql: scanresolmm
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Scan Resolution (mm) \u2014 smallest feature distinguishable in the\
     \ scan. ~0.5mm captures fine tool marks; ~2.0mm captures only macroscopic features.\n\
@@ -40,7 +40,7 @@ columns:
     kb_id: 20
 - name: pointdense
   sql: pointdense
-  type: number
+  type: INT
   primary_key: false
   description: "Point Density (points/m^2). ~100 captures basic topography; ~1,000\
     \ captures structural details; >=10,000 enables surface-texture / fine-engraving\
@@ -57,7 +57,7 @@ columns:
     kb_id: 21
 - name: coverpct
   sql: coverpct
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Coverage Percentage of target area. >=95% = near-complete documentation;\
     \ ~80% has significant gaps requiring additional scanning or interpolation.\n\n\
@@ -74,28 +74,28 @@ columns:
     kb_id: 23
 - name: totalpts
   sql: totalpts
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: clouddense
   sql: clouddense
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: lappct
   sql: lappct
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: noisedb
   sql: noisedb
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Noise Level (dB). <1.0 = clean data, suitable for detailed analysis;\
     \ >3.0 = significant noise that may obscure small features.\n\n[kb=22]\nMeasured\
@@ -112,14 +112,14 @@ columns:
     kb_id: 22
 - name: refpct
   sql: refpct
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: sri
   sql: (log10(scanresolmm * 1000.0) / log10(pointdense)) * 5.0
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Scan Resolution Index (SRI, KB #0): log10(ScanResolMm * 10^3) / log10(PointDense)\
     \ * 5. Lower values indicate higher quality / more balanced scanning parameters.\n\
@@ -134,7 +134,7 @@ columns:
     kb_id: 0
 - name: sce
   sql: coverpct * (1 + (lappct / 100.0) * (1 - coverpct / 100.0))
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Scan Coverage Effectiveness (SCE, KB #1): CoverPct * (1 + LapPct/100\
     \ * (1 - CoverPct/100)). Higher values indicate more effective coverage with appropriate\
@@ -152,7 +152,7 @@ columns:
     power(10.0 / ((log10(scanresolmm * 1000.0) / log10(pointdense)) * 5.0), 1.5) ELSE
     NULL END) * ((coverpct * (1 + (lappct / 100.0) * (1 - coverpct / 100.0))) / 100.0)
     * power(1 - noisedb / 30.0, 2)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Scan Quality Score (SQS, KB #3): (10/SRI)^1.5 * (SCE/100) * (1 - NoiseDb/30)^2.\
     \ Higher = exponentially better overall scan quality with emphasis on resolution.\n\
@@ -167,7 +167,7 @@ columns:
     kb_id: 3
 - name: is_high_resolution_scan
   sql: CASE WHEN scanresolmm <= 1.0 AND pointdense >= 1000 THEN 1 ELSE 0 END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "High Resolution Scan (KB #10): ScanResolMm <= 1.0 AND PointDense >=\
     \ 1000 \u2014 sub-millimeter precision suitable for fine archaeological feature\
@@ -181,7 +181,7 @@ columns:
     kb_id: 10
 - name: is_comprehensive_coverage
   sql: CASE WHEN coverpct >= 95 AND lappct >= 30 THEN 1 ELSE 0 END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Comprehensive Coverage (KB #11): CoverPct >= 95 AND LapPct >= 30 \u2014\
     \ minimal data gaps and sufficient overlap for accurate registration.\n\n[kb=11]\n\
@@ -200,7 +200,7 @@ columns:
     * 5.0) > 0 THEN power(10.0 / ((log10(scanresolmm * 1000.0) / log10(pointdense))
     * 5.0), 1.5) ELSE NULL END) * ((coverpct * (1 + (lappct / 100.0) * (1 - coverpct
     / 100.0))) / 100.0) * power(1 - noisedb / 30.0, 2)) > 7.5 THEN 1 ELSE 0 END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Premium Quality Scan (KB #12): High Resolution Scan AND Comprehensive\
     \ Coverage AND SQS > 7.5 \u2014 suitable for conservation planning and scholarly\

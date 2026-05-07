@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: clinicians
 sql_table: clinicians
 query_variables: {}
@@ -6,57 +6,57 @@ data_source: mental
 columns:
 - name: clinkey
   sql: clinkey
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: clinconf
   sql: clinconf
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: assesslim
   sql: assesslim
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: docustat
   sql: docustat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: billcode
   sql: billcode
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: nxtrevdt
   sql: nxtrevdt
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: carecoord
   sql: carecoord
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: refneed
   sql: refneed
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: fuptype
   sql: fuptype
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: fupfreq
   sql: fupfreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: facconnect
   sql: facconnect
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

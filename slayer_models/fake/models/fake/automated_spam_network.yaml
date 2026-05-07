@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: automated_spam_network
 source_queries:
 - version: 3
@@ -85,7 +85,7 @@ data_source: fake
 columns:
 - name: cluster_id
   sql: cluster_id
-  type: string
+  type: TEXT
   primary_key: false
   description: "Per-row cluster identifier resolved through the moderationaction \u2192\
     \ contentbehavior \u2192 sessionbehavior \u2192 profile \u2192 account join chain.\
@@ -94,7 +94,7 @@ columns:
   hidden: false
 - name: avg_bbi
   sql: avg_bbi
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Bot Behavior Index (KB #3): 0.4*botlikscore + 0.3*autobehavscore +
     0.3*(1-convnatval). botlikscore observed in 0-100; KB-implied composite assumes
@@ -104,7 +104,7 @@ columns:
     type: float
 - name: avg_abs
   sql: avg_abs
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Automated Behavior Score (KB #35): 0.4*BBI + 0.3*TEI + 0.3*(1-CAS-authenticity).'
   hidden: false
@@ -112,13 +112,13 @@ columns:
     type: float
 - name: all_content_farm
   sql: all_content_farm
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Content Farm predicate (KB #13): CMS > 0.7 AND postfreq > 50.'
   hidden: false
 - name: max_clustsize
   sql: max_clustsize
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Size of the related account cluster.
   hidden: false
@@ -126,7 +126,7 @@ columns:
     type: integer
 - name: member_count
   sql: member_count
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

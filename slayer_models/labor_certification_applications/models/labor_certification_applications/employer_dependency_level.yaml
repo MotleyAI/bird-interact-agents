@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: employer_dependency_level
 source_queries:
 - version: 3
@@ -19,7 +19,7 @@ source_queries:
     - name: dependency_level
       sql: CASE WHEN h1b_app_pct > 15 THEN 'High Dependency' WHEN h1b_app_pct >= 5
         THEN 'Moderate Dependency' ELSE 'Low Dependency' END
-      type: string
+      type: TEXT
   dimensions:
   - name: homefirm
   - name: h1b_app_pct
@@ -52,25 +52,25 @@ data_source: labor_certification_applications
 columns:
 - name: homefirm
   sql: homefirm
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: h1b_app_pct
   sql: h1b_app_pct
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: any_h1b_dependent
   sql: any_h1b_dependent
-  type: number
+  type: DOUBLE
   primary_key: false
   description: '1 if h1bdep=''Yes''. KB #2 / KB #37 component.'
   hidden: false
 - name: dependency_level
   sql: dependency_level
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

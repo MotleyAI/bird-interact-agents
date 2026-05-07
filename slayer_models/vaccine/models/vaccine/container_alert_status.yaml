@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: container_alert_status
 source_queries:
 - version: 3
@@ -24,10 +24,10 @@ source_queries:
         - containlink
     columns:
     - name: ces
-      type: number
+      type: DOUBLE
       sql: ser * agg_per_container_cas.cei * (1 - agg_per_container_cas.cri)
     - name: is_container_alert
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN (ser * agg_per_container_cas.cei * (1 - agg_per_container_cas.cri))
         < 0.4 AND agg_per_container_cas.trs > 0.7 THEN 1 ELSE 0 END
   dimensions:
@@ -80,24 +80,24 @@ data_source: vaccine
 columns:
 - name: vacregistry
   sql: vacregistry
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: containvac
   sql: containvac
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: ces
   sql: ces
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_container_alert
   sql: is_container_alert
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: slippage_impact
 source_queries:
 - version: 3
@@ -24,7 +24,7 @@ source_queries:
         - mktcombo
     columns:
     - name: slippage_impact
-      type: number
+      type: DOUBLE
       sql: dealcount / NULLIF(CASE WHEN dealedge = 'Buy' THEN depth_per_pair.askunits_avg
         ELSE depth_per_pair.bidunits_avg END, 0) * depth_per_pair.spreadband_avg
   dimensions:
@@ -52,12 +52,12 @@ data_source: crypto
 columns:
 - name: recordvault
   sql: recordvault
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: slippage_impact
   sql: slippage_impact
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

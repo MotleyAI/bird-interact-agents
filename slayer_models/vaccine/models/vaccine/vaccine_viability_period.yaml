@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: vaccine_viability_period
 source_queries:
 - version: 3
@@ -20,7 +20,7 @@ source_queries:
         - containlink
     columns:
     - name: days_to_expire
-      type: number
+      type: DOUBLE
       sql: julianday(expireday) - julianday('now')
   measures:
   - formula: days_to_expire:max * tss_per_container.tss:max
@@ -63,36 +63,36 @@ data_source: vaccine
 columns:
 - name: vacregistry
   sql: vacregistry
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: containvac
   sql: containvac
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: expireday
   sql: expireday
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: days_to_expire_max
   sql: days_to_expire_max
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: vvp
   sql: vvp
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tss_per_container__tss_max
   sql: tss_per_container__tss_max
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

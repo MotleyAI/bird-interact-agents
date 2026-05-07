@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: processing_efficiency_ratio
 source_queries:
 - version: 3
@@ -55,7 +55,7 @@ source_queries:
     source_name: scans_keyed
     columns:
     - name: per
-      type: number
+      type: DOUBLE
       sql: (gbsize * log10(pc_per_arcref__totalpts)) / (proc_per_zone__flowhrs * (proc_per_zone__proccpu
         + proc_per_zone__procgpu) / 200.0)
   measures:
@@ -105,22 +105,22 @@ data_source: archeology
 columns:
 - name: questregistry
   sql: questregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: zoneref
   sql: zoneref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: per
   sql: per
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

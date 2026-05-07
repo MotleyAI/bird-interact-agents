@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: advancedbehavior
 sql_table: advancedbehavior
 query_variables: {}
@@ -6,17 +6,17 @@ data_source: insider
 columns:
 - name: abhvreg
   sql: abhvreg
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: translink
   sql: translink
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: patsim
   sql: patsim
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Pattern Similarity Score (KB #28): typically 0..1. Values close to\
     \ 1 indicate high similarity to known illicit trading patterns (layering, spoofing,\
@@ -34,7 +34,7 @@ columns:
     kb_id: 28
 - name: peercorr
   sql: peercorr
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Correlation of the trader's pattern with peers.
   hidden: false
@@ -42,7 +42,7 @@ columns:
     type: float
 - name: mktcorr
   sql: mktcorr
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Correlation of trading activity with overall market moves.
   hidden: false
@@ -50,7 +50,7 @@ columns:
     type: float
 - name: secrotimp
   sql: secrotimp
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Impact of sector rotation strategies used by the trader.
   hidden: false
@@ -58,7 +58,7 @@ columns:
     type: float
 - name: pas
   sql: ABS(patsim - peercorr)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Pattern Anomaly Score (PAS = |patsim - peercorr|) \u2014 KB #4.\n\n\
     [kb=4]\nPAS = |\\text{patsim} - \\text{peercorr}| \u2014 Measures the deviation\
@@ -77,7 +77,7 @@ columns:
     0 END)) + (0.2 * (CASE json_extract(transactionrecord.risk_indicators, '$.layerind')
     WHEN 'None' THEN 0.0 WHEN 'Suspected' THEN 0.5 WHEN 'Confirmed' THEN 1.0 ELSE
     0 END))) + ABS(patsim - peercorr)) / 2.0
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Combined Manipulation Indicator (CMI = (SAI + PAS) / 2) \u2014 KB\
     \ #31. SAI joined from transactionrecord.\n\n[kb=31]\nCMI = (\\text{SAI} + \\\
@@ -90,7 +90,7 @@ columns:
     kb_id: 31
 - name: mapa
   sql: ABS(patsim - peercorr) * (1.0 - mktcorr)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Market-Adjusted Pattern Anomaly (MAPA = PAS * (1 - mktcorr)) \u2014\
     \ KB #39.\n\n[kb=39]\nMAPA = \\text{PAS} \\times (1 - \\text{mktcorr}) \\\\ \\\
@@ -110,7 +110,7 @@ columns:
     0 END)) + (0.2 * (CASE json_extract(transactionrecord.risk_indicators, '$.layerind')
     WHEN 'None' THEN 0.0 WHEN 'Suspected' THEN 0.5 WHEN 'Confirmed' THEN 1.0 ELSE
     0 END))) + ABS(patsim - peercorr) * (1.0 - mktcorr)) / 2.0
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Market-Agnostic Suspicion Index (MASI = (SAI + MAPA) / 2) \u2014 KB\
     \ #56. SAI joined from transactionrecord.\n\n[kb=56]\nMASI = (\\text{SAI} + \\\
@@ -124,7 +124,7 @@ columns:
     kb_id: 56
 - name: updr
   sql: ABS(patsim - peercorr) * 1.0 / MAX(0.01, patsim)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Unique Pattern Deviation Ratio (UPDR = PAS / Max(0.01, patsim)) \u2014\
     \ KB #52.\n\n[kb=52]\nUPDR = \\frac{\\text{PAS}}{\\text{Max}(0.01, \\text{patsim})}\
@@ -137,7 +137,7 @@ columns:
     kb_id: 52
 - name: is_peer_mimicry_suspicion
   sql: ABS(patsim - peercorr) < 0.1 AND peercorr > 0.7
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Peer Mimicry Suspicion (KB #49): low PAS (<0.1) AND high peercorr\
     \ (>0.7).\n\n[kb=49]\nA trader with a low Pattern Anomaly Score (PAS)  (e.g.,\

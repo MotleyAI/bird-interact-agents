@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: analyticsindicators
 sql_table: analyticsindicators
 query_variables: {}
@@ -6,93 +6,93 @@ data_source: crypto
 columns:
 - name: analyticsindicatorsnode
   sql: analyticsindicatorsnode
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: mdataref
   sql: mdataref
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: mstatsref
   sql: mstatsref
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: market_sentiment_indicators
   sql: market_sentiment_indicators
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: instflow
   sql: market_sentiment_indicators ->> '$.flow.instflow'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Institutional flow.
   hidden: false
 - name: retailflow
   sql: market_sentiment_indicators ->> '$.flow.retailflow'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Retail flow.
   hidden: false
 - name: smartforce
   sql: market_sentiment_indicators ->> '$.flow.smartforce'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: '''Smart money'' flow magnitude/direction.'
   hidden: false
 - name: flowimbal
   sql: market_sentiment_indicators ->> '$.flow.flowimbal'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Order-flow imbalance.
   hidden: false
 - name: tradeimbal
   sql: market_sentiment_indicators ->> '$.flow.tradeimbal'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Trade-flow imbalance.
   hidden: false
 - name: largeflowrate
   sql: market_sentiment_indicators ->> '$.flow.largeflowrate'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Fraction of large orders.
   hidden: false
 - name: buywallband
   sql: market_sentiment_indicators ->> '$.walls.buywallband'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Buy-wall distance.
   hidden: false
 - name: sellwallband
   sql: market_sentiment_indicators ->> '$.walls.sellwallband'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Sell-wall distance.
   hidden: false
 - name: buyforce
   sql: market_sentiment_indicators ->> '$.momentum.buyforce'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Buy momentum.
   hidden: false
 - name: sellforce
   sql: market_sentiment_indicators ->> '$.momentum.sellforce'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Sell momentum.
   hidden: false
 - name: mktfeel
   sql: market_sentiment_indicators ->> '$.momentum.mktfeel'
-  type: string
+  type: TEXT
   primary_key: false
   description: "Overall market sentiment enum (KB #25): 'Bearish' = expects price\
     \ decreases, 'Bullish' = expects price increases, 'Neutral' = balanced.\n\n[kb=25]\n\
@@ -107,7 +107,7 @@ columns:
     kb_id: 25
 - name: techmeter
   sql: market_sentiment_indicators ->> '$.momentum.techmeter'
-  type: string
+  type: TEXT
   primary_key: false
   description: "Technical-signal direction enum (KB #26): 'Buy' = signals favor purchase,\
     \ 'Sell' = signals favor exit, 'Hold' = maintain.\n\n[kb=26]\nAn enum with values\
@@ -122,25 +122,25 @@ columns:
     kb_id: 26
 - name: rsi14spot
   sql: market_sentiment_indicators ->> '$.oscillators.rsi14spot'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: RSI(14) spot.
   hidden: false
 - name: macdtrail
   sql: market_sentiment_indicators ->> '$.oscillators.macdtrail'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: MACD line.
   hidden: false
 - name: bbandspan
   sql: market_sentiment_indicators ->> '$.oscillators.bbandspan'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Bollinger Band width.
   hidden: false
 - name: whalemotion
   sql: market_sentiment_indicators ->> '$.big_players.whalemotion'
-  type: string
+  type: TEXT
   primary_key: false
   description: "Large-trader activity enum (KB #27): 'Low' = minimal whale activity,\
     \ 'Medium' = moderate, 'High' = significant whale activity.\n\n[kb=27]\nAn enum\
@@ -155,7 +155,7 @@ columns:
     kb_id: 27
 - name: makermotion
   sql: market_sentiment_indicators ->> '$.big_players.makermotion'
-  type: string
+  type: TEXT
   primary_key: false
   description: "Market-maker activity enum (KB #28): 'Low' = minimal MM activity (wider\
     \ spreads), 'Medium' = normal, 'High' = substantial MM activity (tight spreads,\
@@ -171,25 +171,25 @@ columns:
     kb_id: 28
 - name: arbpotential
   sql: market_sentiment_indicators ->> '$.arbitrage.arbpotential'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Arbitrage potential.
   hidden: false
 - name: xexchband
   sql: market_sentiment_indicators ->> '$.arbitrage.xexchband'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Cross-exchange spread.
   hidden: false
 - name: fundgap
   sql: market_sentiment_indicators ->> '$.arbitrage.fundgap'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Funding-rate arbitrage gap.
   hidden: false
 - name: basisgap
   sql: market_sentiment_indicators ->> '$.arbitrage.basisgap'
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Basis spread (futures vs spot).
   hidden: false
@@ -198,7 +198,7 @@ columns:
     CAST(market_sentiment_indicators ->> '$.arbitrage.xexchband' AS REAL) + (CAST(market_sentiment_indicators
     ->> '$.arbitrage.fundgap' AS REAL) * 2) + CAST(market_sentiment_indicators ->>
     '$.arbitrage.basisgap' AS REAL)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Arbitrage Opportunity Score (KB #3): arbpotential + xexchband + (fundgap\
     \ \xD7 2) + basisgap.\n\n[kb=3]\nAOS = arbpotential + xexchband + (fundgap \\\
@@ -214,7 +214,7 @@ columns:
     CAST(market_sentiment_indicators ->> '$.arbitrage.xexchband' AS REAL) + (CAST(market_sentiment_indicators
     ->> '$.arbitrage.fundgap' AS REAL) * 2) + CAST(market_sentiment_indicators ->>
     '$.arbitrage.basisgap' AS REAL)) > 0.05
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Arbitrage Window (KB #12): a market condition where the AOS exceeds\
     \ 0.05.\n\n[kb=12]\nA market condition where the Arbitrage Opportunity Score exceeds\
@@ -230,7 +230,7 @@ columns:
     ->> '$.flow.retailflow' AS REAL) * 1.2 AND CAST(market_sentiment_indicators ->>
     '$.flow.smartforce' AS REAL) > CAST(market_sentiment_indicators ->> '$.flow.instflow'
     AS REAL) * 1.2
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Smart Money Flow (KB #15): smartforce exceeds both retailflow and\
     \ instflow by at least 20% (\xD71.2).\n\n[kb=15]\nMarket conditions where smartforce\
@@ -247,7 +247,7 @@ columns:
     REAL)) + (CAST(market_sentiment_indicators ->> '$.oscillators.bbandspan' AS REAL)
     * 0.01)) / 3.0 * (CASE market_sentiment_indicators ->> '$.momentum.techmeter'
     WHEN 'Buy' THEN 1 WHEN 'Sell' THEN -1 ELSE 0 END)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Technical Signal Strength (KB #39): mean of |rsi14spot \u2212 50|,\
     \ |macdtrail|, bbandspan\xD70.01, signed by techmeter (Buy=+1, Sell=\u22121, Hold=0).\n\
@@ -274,7 +274,7 @@ columns:
     1.2 AND CAST(market_sentiment_indicators ->> '$.flow.instflow' AS REAL) > CAST(market_sentiment_indicators
     ->> '$.flow.retailflow' AS REAL) * 1.2 THEN 'Institutional Dominant' ELSE 'Mixed'
     END
-  type: string
+  type: TEXT
   primary_key: false
   description: "Flow Dominance (KB #50): categorizes which group (smart/retail/institutional)\
     \ leads, using the 1.2\xD7 dominance threshold over both other groups; otherwise\

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: resource_intensive_high_risk_patients
 source_queries:
 - version: 3
@@ -290,19 +290,19 @@ data_source: mental
 columns:
 - name: txkey
   sql: txkey
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: encounters__abref
   sql: encounters__abref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_frequent_crisis
   sql: is_frequent_crisis
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: 'Frequent Crisis Patient (KB #17): individual crisisint > 2 (per-row
     interpretation, matching KB #47).'

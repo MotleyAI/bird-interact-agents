@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: archaeological_documentation_completeness
 source_queries:
 - version: 3
@@ -54,7 +54,7 @@ source_queries:
     source_name: scans_keyed
     columns:
     - name: adc
-      type: number
+      type: DOUBLE
       sql: pc_per_arcref__sqs * 0.4 + mesh_per_zone__mfs * 0.4 + pc_per_arcref__sce
         * 0.2 - 5 * sqrt(pc_per_arcref__noisedb / 10.0)
   measures:
@@ -124,22 +124,22 @@ data_source: archeology
 columns:
 - name: questregistry
   sql: questregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: zoneref
   sql: zoneref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: adc
   sql: adc
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

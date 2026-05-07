@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: system_controller
 sql_table: system_controller
 query_variables: {}
@@ -6,27 +6,27 @@ data_source: robot
 columns:
 - name: systemoverseeractuation
   sql: systemoverseeractuation
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: systemoverseeroperation
   sql: systemoverseeroperation
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: systemoverseerrobot
   sql: systemoverseerrobot
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: controller_metrics
   sql: controller_metrics
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: load_value
   sql: json_extract(controller_metrics, '$.load_value')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "System / CPU load value of the supervisory controller (0-100%) (KB\
     \ #29).\n\n[kb=29]\nController load is a measure of CPU or system load, typically\
@@ -40,7 +40,7 @@ columns:
   sql: COALESCE(CAST(json_extract(controller_metrics, '$.load_value') AS REAL), 0)
     + COALESCE(CAST(json_extract(controller_metrics, '$.thermal_level') AS REAL),
     0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Row-level helper for CSI (KB #36): per-row sum of load_value + thermal_level\
     \ from controller_metrics JSON.\n\n[kb=36]\nFor a given robot R, CSI = \\frac{\\\

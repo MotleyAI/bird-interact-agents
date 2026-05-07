@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: family_categories
 sql_table: family_categories
 query_variables: {}
@@ -6,19 +6,19 @@ data_source: exchange_traded_funds
 columns:
 - name: linkid
   sql: linkid
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: familylink
   sql: familylink
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: categorylink
   sql: categorylink
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

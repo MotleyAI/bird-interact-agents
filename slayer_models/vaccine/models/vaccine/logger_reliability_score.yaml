@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: logger_reliability_score
 source_queries:
 - version: 3
@@ -48,11 +48,11 @@ source_queries:
         - containlink
     columns:
     - name: cmr
-      type: number
+      type: DOUBLE
       sql: (1 - mcs_per_shipment_lrs.mcs) * (1 + tss_tbs_per_container_lrs.tbs / 5.0)
         * (1 - lhi_per_container_lrs.lhi)
     - name: lrs
-      type: number
+      type: DOUBLE
       sql: lhi_per_container_lrs.lhi * (1 - ((1 - mcs_per_shipment_lrs.mcs) * (1 +
         tss_tbs_per_container_lrs.tbs / 5.0) * (1 - lhi_per_container_lrs.lhi))) *
         tss_tbs_per_container_lrs.tss
@@ -118,50 +118,50 @@ data_source: vaccine
 columns:
 - name: containregistry
   sql: containregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: shipown
   sql: shipown
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: lhi_per_container_lrs__lhi
   sql: lhi_per_container_lrs__lhi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tss_tbs_per_container_lrs__tss
   sql: tss_tbs_per_container_lrs__tss
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tss_tbs_per_container_lrs__tbs
   sql: tss_tbs_per_container_lrs__tbs
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: mcs_per_shipment_lrs__mcs
   sql: mcs_per_shipment_lrs__mcs
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: cmr
   sql: cmr
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: lrs
   sql: lrs
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

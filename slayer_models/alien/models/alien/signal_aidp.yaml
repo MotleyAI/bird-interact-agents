@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: signal_aidp
 source_queries:
 - version: 3
@@ -19,7 +19,7 @@ source_queries:
         - signalref
     columns:
     - name: aidp
-      type: number
+      type: DOUBLE
       sql: (((signaldecoding.compressratio * signalclassification.complexidx * signalclassification.entropyval)
         / 10.0) * (signalprobabilities.techsigprob * (1 - signalprobabilities.natsrcprob)
         * signalprobabilities.sigunique * (0.5 + signalprobabilities.anomscore / 10.0)))
@@ -45,12 +45,12 @@ data_source: alien
 columns:
 - name: signalregistry
   sql: signalregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: aidp
   sql: aidp
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

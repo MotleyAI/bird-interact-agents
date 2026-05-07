@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: critical_scientific_equipment_status
 source_queries:
 - version: 3
@@ -29,10 +29,10 @@ source_queries:
         - scieqref
     columns:
     - name: cses_full_op_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN ser > 0.9 AND smsp_p_eq__smsp > 0.85 THEN 1 ELSE 0 END
     - name: cses_degraded_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN NOT (ser > 0.9 AND smsp_p_eq__smsp > 0.85) AND ser > 0.7 AND
         smsp_p_eq__smsp > 0.6 THEN 1 ELSE 0 END
   measures:
@@ -117,12 +117,12 @@ data_source: polar
 columns:
 - name: scieqref
   sql: scieqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: ser
   sql: ser
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Scientific Equipment Reliability (KB #8): accuracy% \xD7 calibration\
     \ multiplier."
@@ -131,17 +131,17 @@ columns:
     type: float
 - name: is_fully_operational
   sql: is_fully_operational
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_degraded_operation
   sql: is_degraded_operation
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: smsp_p_eq__smsp_avg
   sql: smsp_p_eq__smsp_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

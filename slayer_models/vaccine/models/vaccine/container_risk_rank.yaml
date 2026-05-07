@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: container_risk_rank
 source_queries:
 - version: 3
@@ -14,7 +14,7 @@ source_queries:
     source_name: cri_per_container
     columns:
     - name: risk_rank
-      type: number
+      type: DOUBLE
       sql: RANK() OVER (ORDER BY cri_max DESC)
   dimensions:
   - name: containlink
@@ -40,12 +40,12 @@ data_source: vaccine
 columns:
 - name: containlink
   sql: containlink
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: cri_max
   sql: cri_max
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Container Risk Index (CRI). Overall risk level for a container based
     on temperature stability and coolant status: (1 - TSS) * (1 - CoolRemainPct/100)
@@ -53,7 +53,7 @@ columns:
   hidden: false
 - name: risk_rank
   sql: risk_rank
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: scanenvironment
 sql_table: scanenvironment
 query_variables: {}
@@ -6,65 +6,65 @@ data_source: archeology
 columns:
 - name: airregistry
   sql: airregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: zoneref
   sql: zoneref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: equipref
   sql: equipref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: ambictemp
   sql: ambictemp
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: humepct
   sql: humepct
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: illumelux
   sql: illumelux
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: geosignal
   sql: geosignal
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: trackstatus
   sql: trackstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: linkstatus
   sql: linkstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: photomap
   sql: photomap
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: imgcount
   sql: imgcount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
@@ -72,7 +72,7 @@ columns:
 - name: esi
   sql: 100 - 2.5 * abs(ambictemp - 20) - power(abs((humepct - 50) / 2.0), 1.5) - 600.0
     / (illumelux + 100)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Environmental Suitability Index (ESI, KB #7): 100 - 2.5*|AmbicTemp-20|\
     \ - |(HumePct-50)/2|^1.5 - 600/(IllumeLux+100). Higher = more ideal scanning conditions.\n\
@@ -88,7 +88,7 @@ columns:
 - name: is_optimal_scanning_conditions
   sql: CASE WHEN (100 - 2.5 * abs(ambictemp - 20) - power(abs((humepct - 50) / 2.0),
     1.5) - 600.0 / (illumelux + 100)) > 85 THEN 1 ELSE 0 END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Optimal Scanning Conditions (KB #15): ESI > 85 \u2014 moderate temperature,\
     \ humidity ~50%, good illumination minimize environmental interference.\n\n[kb=15]\n\
@@ -109,7 +109,7 @@ columns:
     - 20) - power(abs((humepct - 50) / 2.0), 1.5) - 600.0 / (illumelux + 100)) >=
     50 THEN 'Acceptable Scanning Conditions' ELSE 'Challenging Scanning Conditions'
     END
-  type: string
+  type: TEXT
   primary_key: false
   description: "Environmental Condition Classification System (ECCS, KB #50): four-tier\
     \ ESI classification \u2014 Optimal (>85), Good (70-85), Acceptable (50-70), Challenging\

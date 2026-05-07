@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: signal_ier
 source_queries:
 - version: 3
@@ -15,7 +15,7 @@ source_queries:
         - signalref
     columns:
     - name: ier
-      type: number
+      type: DOUBLE
       sql: signalclassification.entropyval / (signalprobabilities.natsrcprob * 0.9
         + 0.1)
   dimensions:
@@ -34,12 +34,12 @@ data_source: alien
 columns:
 - name: signalregistry
   sql: signalregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: ier
   sql: ier
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

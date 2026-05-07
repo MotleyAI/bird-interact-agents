@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: testsessions
 sql_table: testsessions
 query_variables: {}
@@ -6,48 +6,48 @@ data_source: gaming
 columns:
 - name: sessionregistry
   sql: sessionregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: stampmoment
   sql: stampmoment
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: devscope
   sql: devscope
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: cpuusepct
   sql: cpuusepct
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: memusemb
   sql: memusemb
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: driverstatus
   sql: driverstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: fwupdur
   sql: fwupdur
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: wlsignal
   sql: wlsignal
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Wireless signal strength in dBm (KB #25: -30 excellent, -90 poor;\
     \ > -50 optimal, -50 to -70 good, < -70 occasional disconnects).\n\n[kb=25]\n\
@@ -65,47 +65,47 @@ columns:
     kb_id: 25
 - name: battlevel
   sql: battlevel
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: battcapmah
   sql: battcapmah
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: battlifeh
   sql: battlifeh
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: chgtimemin
   sql: chgtimemin
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: qchgflag
   sql: qchgflag
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: usbpwrline
   sql: usbpwrline
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: latms
   sql: latms
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Overall latency in ms (KB #20: < 1.0ms enables split-second reactions;\
     \ > 5.0ms is noticeable input delay).\n\n[kb=20]\nMeasured in milliseconds, representing\
@@ -122,14 +122,14 @@ columns:
     kb_id: 20
 - name: inplagms
   sql: inplagms
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: pollratehz
   sql: pollratehz
-  type: number
+  type: INT
   primary_key: false
   description: "Polling rate in Hz (KB #21: 125Hz office, 500Hz casual, 1000Hz competitive,\
     \ 4000Hz+ pro esports).\n\n[kb=21]\nMeasured in Hertz (times per second), representing\
@@ -146,28 +146,28 @@ columns:
     kb_id: 21
 - name: dbtimems
   sql: dbtimems
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: resptimems
   sql: resptimems
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: clkregms
   sql: clkregms
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: irs
   sql: (pollratehz * 1.0 / 100) * (1 - (inplagms + resptimems) * 1.0 / 30) * 10
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Input Responsiveness Score (IRS) \u2014 polling rate, input lag, response\
     \ time. Higher = more responsive input.\n\n[kb=2]\nIRS = \\frac{PollRateHz}{100}\
@@ -181,7 +181,7 @@ columns:
     kb_id: 2
 - name: is_minimal_input_latency
   sql: inplagms < 1.0 AND pollratehz >= 1000 AND latms < 2.0
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Minimal Input Latency (KB #17), session-level subset: InpLagMs < 1.0\
     \ AND PollRateHz >= 1000 AND LatMs < 2.0. Full KB also requires ClkLat < 0.8 (on\

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: transport_safety_rating
 source_queries:
 - version: 3
@@ -22,7 +22,7 @@ source_queries:
         - vehsenseref
     columns:
     - name: tsr
-      type: number
+      type: DOUBLE
       sql: rcp / 100.0 * (1 - trs_hqi_per_vehicle.trs) * trs_hqi_per_vehicle.hqi
   dimensions:
   - name: vehiclereg
@@ -68,33 +68,33 @@ data_source: vaccine
 columns:
 - name: vehiclereg
   sql: vehiclereg
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: rcp
   sql: rcp
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Route Completion Percentage (RCP). Percentage of route completed:
     DistDoneKm / (DistDoneKm + DistLeftKm) * 100 (KB #4).'
   hidden: false
 - name: trs_hqi_per_vehicle__trs
   sql: trs_hqi_per_vehicle__trs
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: trs_hqi_per_vehicle__hqi
   sql: trs_hqi_per_vehicle__hqi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tsr
   sql: tsr
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

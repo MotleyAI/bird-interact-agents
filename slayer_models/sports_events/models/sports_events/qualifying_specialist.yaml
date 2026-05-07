@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: qualifying_specialist
 source_queries:
 - version: 3
@@ -17,14 +17,14 @@ source_queries:
     source_name: best_qual_per_driver
     columns:
     - name: pole_seconds
-      type: number
+      type: DOUBLE
       sql: MIN(best_qualifying_seconds) OVER (PARTITION BY rbind)
     - name: qualifying_time_deficit_to_pole
-      type: number
+      type: DOUBLE
       sql: best_qualifying_seconds - MIN(best_qualifying_seconds) OVER (PARTITION
         BY rbind)
     - name: is_qualifying_specialist
-      type: boolean
+      type: BOOLEAN
       sql: (best_qualifying_seconds - MIN(best_qualifying_seconds) OVER (PARTITION
         BY rbind)) < 0.2
   dimensions:
@@ -81,7 +81,7 @@ data_source: sports_events
 columns:
 - name: qualkey
   sql: qualkey
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Unique qualifying record identifier.
   hidden: false
@@ -89,7 +89,7 @@ columns:
     type: integer
 - name: rbind
   sql: rbind
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Foreign key to races.
   hidden: false
@@ -97,7 +97,7 @@ columns:
     type: integer
 - name: pilotrec
   sql: pilotrec
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Foreign key to drivers.
   hidden: false
@@ -105,7 +105,7 @@ columns:
     type: integer
 - name: corptag
   sql: corptag
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Foreign key to constructors.
   hidden: false
@@ -113,7 +113,7 @@ columns:
     type: integer
 - name: px_pos
   sql: px_pos
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Final qualifying position (1 = Pole Position, KB #10).'
   hidden: false
@@ -121,24 +121,24 @@ columns:
     type: integer
 - name: best_qualifying_seconds
   sql: best_qualifying_seconds
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Driver''s best qualifying time (across Q1/Q2/Q3) in seconds. Used
     as T_driver in KB #28 Qualifying Time Deficit to Pole.'
   hidden: false
 - name: pole_seconds
   sql: pole_seconds
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: qualifying_time_deficit_to_pole
   sql: qualifying_time_deficit_to_pole
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_qualifying_specialist
   sql: is_qualifying_specialist
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

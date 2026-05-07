@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: priority_investigation_target
 source_queries:
 - version: 3
@@ -23,7 +23,7 @@ source_queries:
         - mktregistry
     columns:
     - name: is_priority_investigation_target
-      type: number
+      type: DOUBLE
       sql: CASE WHEN investigation_with_tx.ips > 200 AND investigation_with_tx.lawinterest
         = 'High' AND COALESCE(investigation_with_tx.riskanalysis__transactions__is_suspicious_transaction_pattern,
         0) = 1 AND COALESCE(high_risk_market.is_high_risk_market, 0) = 1 THEN 1 ELSE
@@ -100,12 +100,12 @@ data_source: cybermarket
 columns:
 - name: investregistry
   sql: investregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_priority_investigation_target
   sql: is_priority_investigation_target
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

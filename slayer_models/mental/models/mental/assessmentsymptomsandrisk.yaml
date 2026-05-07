@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: assessmentsymptomsandrisk
 sql_table: assessmentsymptomsandrisk
 query_variables: {}
@@ -6,17 +6,17 @@ data_source: mental
 columns:
 - name: asrkey
   sql: asrkey
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: suicideation
   sql: suicideation
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: suicrisk
   sql: suicrisk
-  type: string
+  type: TEXT
   primary_key: false
   description: "Suicide risk level enum (Low, Medium, High, Severe). Low = minimal\
     \ risk, Medium = some concern, High = immediate concern, Severe = urgent intervention\
@@ -30,37 +30,37 @@ columns:
     kb_id: 22
 - name: selfharm
   sql: selfharm
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: violrisk
   sql: violrisk
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: subuse
   sql: subuse
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: subusefreq
   sql: subusefreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: subusesev
   sql: subusesev
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: mental_health_scores
   sql: mental_health_scores
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: phq9_score
   sql: CAST(mental_health_scores ->> '$.depression.phq9_score' AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "PHQ-9 depression score (0-27). 0-4 minimal, 5-9 mild, 10-14 moderate,\
     \ 15-19 moderately severe, 20-27 severe. Source: mental_health_scores JSON.\n\n\
@@ -74,13 +74,13 @@ columns:
     kb_id: 20
 - name: phq9_severity
   sql: mental_health_scores ->> '$.depression.phq9_severity'
-  type: string
+  type: TEXT
   primary_key: false
   description: PHQ-9 severity bucket (Mild, Moderate, Moderately Severe, Severe).
   hidden: false
 - name: gad7_score
   sql: CAST(mental_health_scores ->> '$.anxiety.gad7_score' AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "GAD-7 anxiety score (0-21). 0-4 minimal, 5-9 mild, 10-14 moderate,\
     \ 15-21 severe. Source: mental_health_scores JSON.\n\n[kb=21]\nRanges from 0 to\
@@ -93,20 +93,20 @@ columns:
     kb_id: 21
 - name: gad7_severity
   sql: mental_health_scores ->> '$.anxiety.gad7_severity'
-  type: string
+  type: TEXT
   primary_key: false
   description: GAD-7 severity bucket (Mild, Moderate, Severe).
   hidden: false
 - name: is_high_severe_suicrisk
   sql: CASE WHEN suicrisk IN ('High', 'Severe') THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Indicator (0/1) for suicide risk in {High, Severe}. Used as numerator
     for SRP.
   hidden: false
 - name: high_severe_suicrisk_helper
   sql: asrkey
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Filtered count helper: rows with suicrisk in {High, Severe}.\n\n[kb=3]\n\
     SRP = \\frac{|assessmentsymptomsandrisk \\text{ with } suicrisk \\in \\{High,\
@@ -122,7 +122,7 @@ columns:
   sql: suicrisk IN ('High', 'Severe') OR CAST(mental_health_scores ->> '$.depression.phq9_score'
     AS INTEGER) > 15 OR CAST(mental_health_scores ->> '$.anxiety.gad7_score' AS INTEGER)
     > 15
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "High-Risk Patient (KB #10): suicrisk in {High,Severe} OR PHQ-9 > 15\
     \ OR GAD-7 > 15.\n\n[kb=10]\nA patient with suicrisk \\in \\{High, Severe\\} or\
@@ -138,7 +138,7 @@ columns:
     CAST(mental_health_scores ->> '$.anxiety.gad7_score' AS INTEGER) >= 15 AND EXISTS
     (SELECT 1 FROM assessmentsocialanddiagnosis asd WHERE asd.asdkey = assessmentsymptomsandrisk.asrkey
     AND asd.funcimp = 'Severe')
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Severe Comorbid Distress Profile (KB #45): PHQ-9 >= 15 AND GAD-7 >=\
     \ 15 AND linked assessmentsocialanddiagnosis.funcimp = 'Severe'.\n\n[kb=45]\n\
@@ -155,7 +155,7 @@ columns:
   sql: (CAST(mental_health_scores ->> '$.depression.phq9_score' AS INTEGER) > 19 OR
     CAST(mental_health_scores ->> '$.anxiety.gad7_score' AS INTEGER) > 14) AND suicrisk
     IN ('High', 'Severe')
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "High Severity, High Risk Patient Group (KB #49): (PHQ-9 > 19 OR GAD-7\
     \ > 14) AND suicrisk in {High, Severe}.\n\n[kb=49]\nA patient where (mental_health_scores['depression']['phq9_score']\

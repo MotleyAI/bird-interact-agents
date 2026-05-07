@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: retentionandinfluence
 sql_table: retentionandinfluence
 query_variables: {}
@@ -6,22 +6,22 @@ data_source: virtual
 columns:
 - name: retreg
   sql: retreg
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: retainengagepivot
   sql: retainengagepivot
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: retainloyaltypivot
   sql: retainloyaltypivot
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: churnflag
   sql: churnflag
-  type: string
+  type: TEXT
   primary_key: false
   description: "Churn risk rating (KB #8). 'None' = extremely low risk (high-frequency\
     \ interaction + recent consumption); 'Low' = slight risk (slightly decreased login\
@@ -41,42 +41,42 @@ columns:
     kb_id: 8
 - name: reactcount
   sql: reactcount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: refcount
   sql: refcount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: contreach
   sql: contreach
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: viralcont
   sql: viralcont
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: trendpart
   sql: trendpart
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: hashuse
   sql: hashuse
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
@@ -84,7 +84,7 @@ columns:
 - name: churnflag_numeric
   sql: CASE churnflag WHEN 'None' THEN 0 WHEN 'Low' THEN 1 WHEN 'Medium' THEN 2 WHEN
     'High' THEN 3 ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Numeric mapping of churnflag (KB #52) used by RRF and other retention\
     \ calcs: None=0, Low=1, Medium=2, High=3.\n\n[kb=52]\nTransforms the churnflag\

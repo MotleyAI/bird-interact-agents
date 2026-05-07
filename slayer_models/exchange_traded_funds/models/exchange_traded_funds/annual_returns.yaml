@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: annual_returns
 sql_table: annual_returns
 query_variables: {}
@@ -6,26 +6,26 @@ data_source: exchange_traded_funds
 columns:
 - name: yearlyid
   sql: yearlyid
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: portfolioref
   sql: portfolioref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: calendaryear
   sql: calendaryear
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: fundperf
   sql: fundperf
-  type: number
+  type: INT
   primary_key: false
   description: "Fund's return performance for that calendar year as decimal. Source\
     \ for KB 85 Median 1-Year Return (median of fundperf within the grouping).\n\n\
@@ -40,7 +40,7 @@ columns:
     kb_id: 85
 - name: categoryperf
   sql: categoryperf
-  type: number
+  type: INT
   primary_key: false
   description: Category average return for the same calendar year.
   hidden: false
@@ -48,7 +48,7 @@ columns:
     type: integer
 - name: annual_fund_outperformance
   sql: fundperf - categoryperf
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Annual Fund Outperformance (KB 0) = fund's annual return - category's\
     \ average annual return.\n\n[kb=0]\next{Annual Fund Outperformance} = \text{Fund's\
@@ -61,7 +61,7 @@ columns:
     kb_id: 0
 - name: is_up_market_year
   sql: categoryperf > 0
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Marker: 1 = category had positive return that year, 0 = non-positive\
     \ (KB 73 / 74). Up/down split is the building block for KB 75 Capture Differential.\n\
@@ -75,7 +75,7 @@ columns:
     kb_id: 75
 - name: upside_outperformance
   sql: CASE WHEN categoryperf > 0 THEN fundperf - categoryperf ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Annual Fund Outperformance restricted to category-up years (KB 73).\
     \ NULL otherwise so AVG ignores down years.\n\n[kb=73]\n\bar{O}{\text{up}} = \t\
@@ -88,7 +88,7 @@ columns:
     kb_id: 73
 - name: downside_outperformance
   sql: CASE WHEN categoryperf <= 0 THEN fundperf - categoryperf ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Annual Fund Outperformance restricted to category-non-positive years\
     \ (KB 74).\n\n[kb=74]\n\bar{O}{\text{down}} = \text{Average 'Annual Fund Outperformance'\
@@ -102,7 +102,7 @@ columns:
 - name: year_over_year_performance_trend
   sql: (fundperf - categoryperf) - LAG(fundperf - categoryperf) OVER (PARTITION BY
     portfolioref ORDER BY calendaryear)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Year-over-Year Performance Trend (KB 70) = current year's Annual Fund\
     \ Outperformance minus previous year's. Computed per fund across years.\n\n[kb=70]\n\

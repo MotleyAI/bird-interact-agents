@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: rollups
 sql_table: rollups
 query_variables: {}
@@ -6,7 +6,7 @@ data_source: hulushows
 columns:
 - name: tierkey
   sql: tierkey
-  type: number
+  type: INT
   primary_key: true
   description: PK for the tier.
   hidden: false
@@ -14,7 +14,7 @@ columns:
     type: integer
 - name: tiertype
   sql: tiertype
-  type: string
+  type: TEXT
   primary_key: false
   description: "Tier label (KB 3): 'free', 'subscriber', 'current', 'free_on_web',\
     \ 'subscriber_on_device', 'auth_on_web', 'showtime'.\n\n[kb=3]\nCommon values\
@@ -27,7 +27,7 @@ columns:
     kb_id: 3
 - name: is_showtime_tier
   sql: LOWER(tiertype) = 'showtime'
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: TRUE iff tiertype='showtime' (used by KB 18 / KB 42 with the show-rollup
     join).

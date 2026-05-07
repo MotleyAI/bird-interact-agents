@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: extreme_operating_conditions
 source_queries:
 - version: 3
@@ -6,7 +6,7 @@ source_queries:
     source_name: extreme_climate_adaptation_coefficient
     columns:
     - name: is_eoc_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN ssf_avg > 0.65 AND ecac > 0.8 THEN 1 ELSE 0 END
   dimensions:
   - name: operationmaintenance__opmainteqref
@@ -73,12 +73,12 @@ data_source: polar
 columns:
 - name: operationmaintenance__opmainteqref
   sql: operationmaintenance__opmainteqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_eoc_flag
   sql: is_eoc_flag
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

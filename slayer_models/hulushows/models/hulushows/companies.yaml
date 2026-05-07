@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: companies
 sql_table: companies
 query_variables: {}
@@ -6,7 +6,7 @@ data_source: hulushows
 columns:
 - name: entity_key
   sql: entity_key
-  type: number
+  type: INT
   primary_key: true
   description: "Primary key \u2014 unique studio id."
   hidden: false
@@ -14,7 +14,7 @@ columns:
     type: integer
 - name: chanref
   sql: chanref
-  type: number
+  type: INT
   primary_key: false
   description: Legacy channel reference id (gaps + non-sequential).
   hidden: false
@@ -22,25 +22,25 @@ columns:
     type: integer
 - name: company_name
   sql: company_name
-  type: string
+  type: TEXT
   primary_key: false
   description: Official full legal name of the studio.
   hidden: false
 - name: short_name
   sql: short_name
-  type: string
+  type: TEXT
   primary_key: false
   description: Common short name (e.g. 'Disney').
   hidden: false
 - name: canonical_name
   sql: canonical_name
-  type: string
+  type: TEXT
   primary_key: false
   description: Standardized canonical (slug) name for matching across the platform.
   hidden: false
 - name: brandingassets
   sql: brandingassets
-  type: string
+  type: TEXT
   primary_key: false
   description: "JSONB column with KeyArt_URL, NetworkLogo_URL, and HasLogo_Flag (high-res\
     \ logo flag \u2014 KB 4: stored as 'TRUE'/'FALSE'/'Yes'/'No'/'1'/'0').\n\n[kb=4]\n\
@@ -53,7 +53,7 @@ columns:
     kb_id: 4
 - name: haslogo_raw
   sql: brandingassets ->> '$.HasLogo_Flag'
-  type: string
+  type: TEXT
   primary_key: false
   description: "Raw HasLogo_Flag string from brandingassets JSON (KB 4).\n\n[kb=4]\n\
     Typical values include 'TRUE', 'FALSE', 'Yes', 'No', '1', '0' and all indicate\
@@ -66,7 +66,7 @@ columns:
 - name: has_high_res_logo
   sql: LOWER(TRIM(CAST(brandingassets ->> '$.HasLogo_Flag' AS TEXT))) IN ('true',
     'yes', 'y', '1')
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: 'High-Resolution Logo Flag (KB 4): TRUE when HasLogo_Flag indicates
     presence (TRUE/Yes/Y/1).'
@@ -74,7 +74,7 @@ columns:
 - name: high_res_logo_int
   sql: CASE WHEN LOWER(TRIM(CAST(brandingassets ->> '$.HasLogo_Flag' AS TEXT))) IN
     ('true', 'yes', 'y', '1') THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Integer flag for has_high_res_logo \u2014 used by KB 33 (HBR) and\
     \ KB 52 (HRUR).\n\n[kb=33]\nHBR = The share of studios using high-quality brand\
@@ -87,26 +87,26 @@ columns:
     kb_id: 33
 - name: company_name_length
   sql: LENGTH(company_name)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Character length of the company_name.
   hidden: false
 - name: key_art_url
   sql: brandingassets ->> '$.KeyArt_URL'
-  type: string
+  type: TEXT
   primary_key: false
   description: URL of the company's key-art image.
   hidden: false
 - name: network_logo_url
   sql: brandingassets ->> '$.NetworkLogo_URL'
-  type: string
+  type: TEXT
   primary_key: false
   description: URL of the company's network logo image.
   hidden: false
 - name: is_brand_consistent
   sql: LOWER(TRIM(CAST(brandingassets ->> '$.HasLogo_Flag' AS TEXT))) IN ('true',
     'yes', 'y', '1')
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Studio Brand Consistency (KB 45): TRUE when the studio's HBR (KB 33)\
     \ = 1. Since each studio has one row, this reduces to has_high_res_logo (HasLogo_Flag\

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: promo_info
 sql_table: promo_info
 query_variables: {}
@@ -6,7 +6,7 @@ data_source: hulushows
 columns:
 - name: content_key
   sql: content_key
-  type: number
+  type: INT
   primary_key: true
   description: "PK \u2014 1:1 with core.content_key."
   hidden: false
@@ -14,7 +14,7 @@ columns:
     type: integer
 - name: tiernotices
   sql: tiernotices
-  type: string
+  type: TEXT
   primary_key: false
   description: "JSONB column with free_tier and member_tier objects, each holding\
     \ 4 promo-message fields (Alert_Note, Avail_Note, Promo_Note, Expire_Note) \u2014\
@@ -22,42 +22,42 @@ columns:
   hidden: false
 - name: free_alert_note
   sql: tiernotices ->> '$.free_tier.Alert_Note'
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: free_avail_note
   sql: tiernotices ->> '$.free_tier.Avail_Note'
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: free_promo_note
   sql: tiernotices ->> '$.free_tier.Promo_Note'
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: free_expire_note
   sql: tiernotices ->> '$.free_tier.Expire_Note'
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: member_alert_note
   sql: tiernotices ->> '$.member_tier.Alert_Note'
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: member_avail_note
   sql: tiernotices ->> '$.member_tier.Avail_Note'
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: member_promo_note
   sql: tiernotices ->> '$.member_tier.Promo_Note'
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: member_expire_note
   sql: tiernotices ->> '$.member_tier.Expire_Note'
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: promotional_message_count
@@ -76,7 +76,7 @@ columns:
     ELSE 0 END) + (CASE WHEN (tiernotices ->> '$.member_tier.Expire_Note') IS NOT
     NULL AND TRIM(tiernotices ->> '$.member_tier.Expire_Note') <> '' THEN 1 ELSE 0
     END)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Promotional Message Count (PMC, KB 25): the count of promotional messages\
     \ found by adding up all the filled-in promotional and availability notes for\
@@ -105,7 +105,7 @@ columns:
     ELSE 0 END) + (CASE WHEN (tiernotices ->> '$.member_tier.Expire_Note') IS NOT
     NULL AND TRIM(tiernotices ->> '$.member_tier.Expire_Note') <> '' THEN 1 ELSE 0
     END)) / 8.0
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Promo Saturation Ratio (PSR, KB 82): non-null promo fields / 8.\n\n\
     [kb=82]\nThis measures how packed a show is with promotional content. It looks\

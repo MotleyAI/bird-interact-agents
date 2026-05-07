@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: households
 sql_table: households
 query_variables: {}
@@ -6,14 +6,14 @@ data_source: households
 columns:
 - name: housenum
   sql: housenum
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: residentcount
   sql: residentcount
-  type: number
+  type: INT
   primary_key: false
   description: Number of people currently residing in the household.
   hidden: false
@@ -21,26 +21,26 @@ columns:
     type: integer
 - name: locregion
   sql: locregion
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: loczone
   sql: loczone
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: serviceplan
   sql: serviceplan
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: socioeconomic
   sql: socioeconomic
-  type: string
+  type: TEXT
   primary_key: false
   description: "JSONB with three keys: Tenure_Type ('OWNED'|'RENTED'|'OCCUPIED'),\
     \ Income_Bracket (Low Income \u2192 Very High Income; null = undisclosed/irregular),\
@@ -50,13 +50,13 @@ columns:
   meta: {}
 - name: expend_coeff
   sql: json_extract(socioeconomic, '$.Expend_Coeff')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Expenditure coefficient (extracted from socioeconomic JSON).
   hidden: false
 - name: tenure_type
   sql: LOWER(TRIM(json_extract(socioeconomic, '$.Tenure_Type')))
-  type: string
+  type: TEXT
   primary_key: false
   description: "Household Tenure Status (KB #1): tenure type, lowercased + trimmed\
     \ (extracted from socioeconomic JSON; raw data has whitespace/case variations).\
@@ -71,7 +71,7 @@ columns:
 - name: income_bracket_text
   sql: REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
     CHAR(9), ' '), '  ', ' ')
-  type: string
+  type: TEXT
   primary_key: false
   description: "Income Classification (KB #2): Income bracket text, normalized for\
     \ whitespace + case (raw data has mixed-case + tabs). Ranges from 'Low Income'\
@@ -99,7 +99,7 @@ columns:
     CHAR(9), ' '), '  ', ' ') LIKE '%r$ 880 and less than r$ 1,760%' THEN 2 WHEN REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic,
     '$.Income_Bracket'))), CHAR(9), ' '), '  ', ' ') LIKE '%r$ 440 and less than r$
     880%' THEN 1 ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Numeric ladder 1\u20137 over Income_Bracket text. KB #2 / KB #12 don't\
     \ specify the exact mapping; this uses observed bracket lower bounds (R$440\u2192\
@@ -121,7 +121,7 @@ columns:
     CHAR(9), ' '), '  ', ' ') LIKE '%r$ 880 and less than r$ 1,760%' THEN 2 WHEN REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic,
     '$.Income_Bracket'))), CHAR(9), ' '), '  ', ' ') LIKE '%r$ 440 and less than r$
     880%' THEN 1 ELSE NULL END, 0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Expenditure Ratio (KB #12): Expend_Coeff / income_bracket_score. Income\
     \ mapping is best-effort (KB doesn't specify the numeric scale).\n\n[kb=12]\n\
@@ -134,7 +134,7 @@ columns:
     kb_id: 12
 - name: is_urban_zone
   sql: loczone = 1
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Urban Zone (KB #45): TRUE iff loczone = 1.\n\n[kb=45]\nA zone is considered\
     \ urban if its `loczone` is 1. \u2014 Defines which zones are considered urban.\n\
@@ -151,7 +151,7 @@ columns:
     r$ 8,800%' OR REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic, '$.Income_Bracket'))),
     CHAR(9), ' '), '  ', ' ') LIKE '%r$ 8,800 and less than r$ 13,200%' THEN 1 ELSE
     0 END = 1
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Affluent Household (KB #21): tenure='OWNED' AND income bracket is\
     \ 'High' or 'Very High' (R$ 4,400+).\n\n[kb=21]\nA household with a 'Tenure_Type'\
@@ -183,7 +183,7 @@ columns:
     '$.Income_Bracket'))), CHAR(9), ' '), '  ', ' ') LIKE '%r$ 26,400%' THEN 6 ELSE
     NULL END) >= 4 AND LOWER(TRIM(service_types.socsupport)) = 'no' THEN 1 ELSE 0
     END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Economically Independent Household (KB #42): high Income Classification\
     \ (income score >= 4, i.e. top-3 brackets: 'More than R$ 1,760 and less than R$\
@@ -215,7 +215,7 @@ columns:
     '$.Income_Bracket'))), CHAR(9), ' '), '  ', ' ') LIKE '%r$ 22,000%' OR REPLACE(REPLACE(LOWER(TRIM(json_extract(socioeconomic,
     '$.Income_Bracket'))), CHAR(9), ' '), '  ', ' ') LIKE '%r$ 26,400%' THEN 6 ELSE
     NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Income score for Socioeconomic Index (KB #19): 'Has no income'=1,\
     \ 'R$ 440 or less'/'R$ 440-880'=2, 'R$ 880-1,760'=3, 'R$ 1,760-2,640'=4, 'R$ 2,640-4,400'=5,\
@@ -230,7 +230,7 @@ columns:
   sql: CASE WHEN LOWER(TRIM(json_extract(socioeconomic, '$.Tenure_Type'))) = 'owned'
     THEN 3 WHEN LOWER(TRIM(json_extract(socioeconomic, '$.Tenure_Type'))) = 'rented'
     THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Tenure score for Socioeconomic Index (KB #19): OWNED=3, RENTED=1,\
     \ else 0.\n\n[kb=19]\nCalculated as a weighted sum of income score, expenditure\
@@ -242,7 +242,7 @@ columns:
     kb_id: 19
 - name: expend_coeff_real
   sql: CAST(REPLACE(json_extract(socioeconomic, '$.Expend_Coeff'), ',', '.') AS REAL)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Expenditure coefficient as a REAL number (comma decimal separator\
     \ replaced with dot). Used as the 0-1 expenditure ratio in the Socioeconomic Index\
@@ -276,7 +276,7 @@ columns:
     ',', '.') AS REAL)) + 0.2 * (CASE WHEN LOWER(TRIM(json_extract(socioeconomic,
     '$.Tenure_Type'))) = 'owned' THEN 3 WHEN LOWER(TRIM(json_extract(socioeconomic,
     '$.Tenure_Type'))) = 'rented' THEN 1 ELSE 0 END)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Socioeconomic Index (KB #19): 0.4 * income_score + 0.4 * (1 - expend_coeff)\
     \ + 0.2 * tenure_score. Income score from Income_Bracket (1-6 ladder per KB #19's\

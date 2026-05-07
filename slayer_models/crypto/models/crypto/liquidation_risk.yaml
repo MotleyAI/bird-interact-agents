@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: liquidation_risk
 source_queries:
 - version: 3
@@ -25,7 +25,7 @@ source_queries:
         - marketdata__mktcombo
     columns:
     - name: is_liquidation_high_risk
-      type: boolean
+      type: BOOLEAN
       sql: ABS(midquote_per_pair.marketdata__midquote_avg - riskandmargin.liqquote)
         / NULLIF(riskandmargin.liqquote, 0) <= 0.05
   dimensions:
@@ -60,12 +60,12 @@ data_source: crypto
 columns:
 - name: recordvault
   sql: recordvault
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_liquidation_high_risk
   sql: is_liquidation_high_risk
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

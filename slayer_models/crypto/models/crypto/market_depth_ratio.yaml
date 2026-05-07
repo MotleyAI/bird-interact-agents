@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: market_depth_ratio
 source_queries:
 - version: 3
@@ -40,7 +40,7 @@ source_queries:
         - ordervault
     columns:
     - name: mdr_value
-      type: number
+      type: DOUBLE
       sql: (CASE WHEN (riskandmargin.risk_margin_profile ->> '$.position.posedge')
         = 'Long' THEN depth_per_pair.biddepth_avg ELSE depth_per_pair.askdepth_avg
         END) / NULLIF(orders.dealcount, 0) * lr_per_pair.lr_avg
@@ -78,12 +78,12 @@ data_source: crypto
 columns:
 - name: recordvault
   sql: recordvault
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: mdr_value
   sql: mdr_value
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

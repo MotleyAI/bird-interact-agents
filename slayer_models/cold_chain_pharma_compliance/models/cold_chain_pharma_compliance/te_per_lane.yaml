@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: te_per_lane
 source_queries:
 - version: 3
@@ -21,12 +21,12 @@ data_source: cold_chain_pharma_compliance
 columns:
 - name: shipments__route_string
   sql: shipments__route_string
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: temp_excursion_count_sum
   sql: temp_excursion_count_sum
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Count of temperature excursions beyond limits.
   hidden: false

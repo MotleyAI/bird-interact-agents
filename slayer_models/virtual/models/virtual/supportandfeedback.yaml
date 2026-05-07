@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: supportandfeedback
 sql_table: supportandfeedback
 query_variables: {}
@@ -6,74 +6,74 @@ data_source: virtual
 columns:
 - name: supportreg
   sql: supportreg
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: supportinteractpivot
   sql: supportinteractpivot
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: supportprefpivot
   sql: supportprefpivot
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: techissuerpt
   sql: techissuerpt
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: supptix
   sql: supptix
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: fbsubs
   sql: fbsubs
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: survpart
   sql: survpart
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: betapart
   sql: betapart
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: featreqsubs
   sql: featreqsubs
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: bugsubs
   sql: bugsubs
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: satrate
   sql: satrate
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: npsval
   sql: npsval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:

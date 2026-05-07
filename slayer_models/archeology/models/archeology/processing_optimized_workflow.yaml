@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: processing_optimized_workflow
 source_queries:
 - version: 3
@@ -59,11 +59,11 @@ source_queries:
     source_name: scans_keyed
     columns:
     - name: pru
-      type: number
+      type: DOUBLE
       sql: (proc_per_zone__flowhrs * (proc_per_zone__proccpu + proc_per_zone__procgpu)
         / 2.0) / (gbsize * 10 * log10(mesh_per_zone__facetverts + 10000.0))
     - name: is_processing_optimized_workflow
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN ((proc_per_zone__flowhrs * (proc_per_zone__proccpu + proc_per_zone__procgpu)
         / 2.0) / (gbsize * 10 * log10(mesh_per_zone__facetverts + 10000.0))) < 5.0
         AND mesh_per_zone__mfs > 7.0 THEN 1 ELSE 0 END
@@ -137,34 +137,34 @@ data_source: archeology
 columns:
 - name: questregistry
   sql: questregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: zoneref
   sql: zoneref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_processing_optimized_workflow
   sql: is_processing_optimized_workflow
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 - name: pru
   sql: pru
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: mfs
   sql: mfs
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

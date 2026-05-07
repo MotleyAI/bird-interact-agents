@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: unsafe_vaccine_condition
 source_queries:
 - version: 3
@@ -26,14 +26,14 @@ source_queries:
         - containlink
     columns:
     - name: vsi
-      type: number
+      type: DOUBLE
       sql: ((JULIANDAY(expireday) - JULIANDAY('now')) * agg_per_container_uvc.tss)
         / 365.0 * agg_per_container_uvc.cei * (1 - agg_per_container_uvc.trs)
     - name: ces
-      type: number
+      type: DOUBLE
       sql: ser * agg_per_container_uvc.cei * (1 - agg_per_container_uvc.cri)
     - name: is_unsafe_vaccine_condition
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN (((JULIANDAY(expireday) - JULIANDAY('now')) * agg_per_container_uvc.tss)
         / 365.0 * agg_per_container_uvc.cei * (1 - agg_per_container_uvc.trs)) < 0.4
         AND (ser * agg_per_container_uvc.cei * (1 - agg_per_container_uvc.cri)) <
@@ -98,29 +98,29 @@ data_source: vaccine
 columns:
 - name: vacregistry
   sql: vacregistry
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: containvac
   sql: containvac
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: vsi
   sql: vsi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: ces
   sql: ces
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_unsafe_vaccine_condition
   sql: is_unsafe_vaccine_condition
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

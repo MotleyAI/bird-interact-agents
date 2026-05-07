@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: securityprofile
 sql_table: securityprofile
 query_variables: {}
@@ -6,38 +6,38 @@ data_source: cross_db
 columns:
 - name: securitytrace
   sql: securitytrace
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: flowkey
   sql: flowkey
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: riskkey
   sql: riskkey
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: profilekey
   sql: profilekey
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: recordregistry
   sql: recordregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: encstate
   sql: encstate
-  type: string
+  type: TEXT
   primary_key: false
   description: "Encryption status. KB #23: 'Full' = all data encrypted; 'Partial'\
     \ suggests gaps.\n\n[kb=23]\nEnum: 'Full', 'Partial'. 'Full' indicates all data\
@@ -49,57 +49,57 @@ columns:
     kb_id: 23
 - name: encmeth
   sql: encmeth
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: keymanstate
   sql: keymanstate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: masklevel
   sql: masklevel
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: anonmeth
   sql: anonmeth
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: psymstate
   sql: psymstate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: authmeth
   sql: authmeth
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: authzframe
   sql: authzframe
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: aclstate
   sql: aclstate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: apisecstate
   sql: apisecstate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: logintcheck
   sql: logintcheck
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: logretdays
   sql: logretdays
-  type: number
+  type: INT
   primary_key: false
   description: "Audit log retention period in days. KB #29: 365 meets many compliance\
     \ needs; <30 may violate regulations.\n\n[kb=29]\nInteger \u2265 0 days. A LogRetDays\
@@ -113,23 +113,23 @@ columns:
     kb_id: 29
 - name: bkpstate
   sql: bkpstate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: drecstate
   sql: drecstate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: bcstate
   sql: bcstate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: srs
   sql: CASE WHEN encstate = 'Full' AND aclstate = 'Strong' THEN 3 WHEN encstate =
     'Full' OR aclstate = 'Adequate' THEN 2 ELSE 1 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Security Robustness Score (SRS) \u2014 KB #5: 3 if Full enc AND Strong\
     \ ACL; 2 if Full enc OR Adequate ACL; 1 otherwise.\n\n[kb=5]\nSRS = \\begin{cases}\
@@ -145,7 +145,7 @@ columns:
   sql: (CASE WHEN encstate = 'Full' AND aclstate = 'Strong' THEN 3 WHEN encstate =
     'Full' OR aclstate = 'Adequate' THEN 2 ELSE 1 END) * 1.0 / (riskmanagement.costusd
     + 1)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Security Control Cost Ratio (SCCR) \u2014 KB #31: SRS / (CostUSD +\
     \ 1).\n\n[kb=31]\nSCCR = \\text{SRS} / (\\text{CostUSD} + 1) \u2014 Evaluates\
@@ -160,7 +160,7 @@ columns:
     'Full' OR aclstate = 'Adequate' THEN 2 ELSE 1 END) * (dataprofile.volgb * CASE
     dataprofile.datasense WHEN 'High' THEN 3 WHEN 'Medium' THEN 2 WHEN 'Low' THEN
     1 ELSE 1 END)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Encryption Coverage Ratio (ECR) \u2014 KB #35: SRS \xD7 DSI.\n\n[kb=35]\n\
     ECR = \\text{SRS} \\times \\text{DSI} \u2014 Measures the extent of encryption\
@@ -174,7 +174,7 @@ columns:
     = 'Full' OR aclstate = 'Adequate' THEN 2 ELSE 1 END) * (dataprofile.volgb * CASE
     dataprofile.datasense WHEN 'High' THEN 3 WHEN 'Medium' THEN 2 WHEN 'Low' THEN
     1 ELSE 1 END)) * (logretdays * 1.0 / 365)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Security Posture Maturity (SPM) \u2014 KB #52: ECR \xD7 LogRetDays/365.\n\
     \n[kb=52]\nSPM = \\text{ECR} \\times \\frac{\\text{LogRetDays}}{365} \u2014 Evaluates\
@@ -187,7 +187,7 @@ columns:
 - name: is_secure_data_flow
   sql: (CASE WHEN encstate = 'Full' AND aclstate = 'Strong' THEN 3 WHEN encstate =
     'Full' OR aclstate = 'Adequate' THEN 2 ELSE 1 END) = 3
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Secure Data Flow (KB #11): SRS = 3.\n\n[kb=11]\nA data flow where\
     \ SRS = 3 \u2014 Classifies data flows with strong security controls.\n[/kb=11]"
@@ -200,7 +200,7 @@ columns:
     THEN 2 WHEN 'Low' THEN 1 ELSE 1 END) > 100 AND (CASE WHEN encstate = 'Full' AND
     aclstate = 'Strong' THEN 3 WHEN encstate = 'Full' OR aclstate = 'Adequate' THEN
     2 ELSE 1 END) < 2
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Sensitive Data Exposure (KB #14): DSI > 100 AND SRS < 2.\n\n[kb=14]\n\
     A data profile where DSI > 100 and SRS < 2 \u2014 Highlights data profiles with\
@@ -215,7 +215,7 @@ columns:
     aclstate = 'Strong' THEN 3 WHEN encstate = 'Full' OR aclstate = 'Adequate' THEN
     2 ELSE 1 END) * (dataprofile.volgb * CASE dataprofile.datasense WHEN 'High' THEN
     3 WHEN 'Medium' THEN 2 WHEN 'Low' THEN 1 ELSE 1 END)) < 2
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Unprotected Sensitive Data (KB #41): DSI > 100 AND ECR < 2.\n\n[kb=41]\n\
     A data profile where DSI > 100 and ECR < 2 \u2014 Identifies sensitive data lacking\
@@ -227,7 +227,7 @@ columns:
 - name: is_insecure_high_volume_flow
   sql: dataprofile.volgb > 500 AND (CASE WHEN encstate = 'Full' AND aclstate = 'Strong'
     THEN 3 WHEN encstate = 'Full' OR aclstate = 'Adequate' THEN 2 ELSE 1 END) < 2
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Insecure High-Volume Flow (KB #45): VolGB > 500 AND SRS < 2.\n\n[kb=45]\n\
     A data flow where VolGB > 500 and SRS < 2 \u2014 Identifies high-volume data flows\
@@ -243,7 +243,7 @@ columns:
     THEN 3 WHEN 'Medium' THEN 2 WHEN 'Low' THEN 1 ELSE 1 END) > 100 AND (CASE WHEN
     encstate = 'Full' AND aclstate = 'Strong' THEN 3 WHEN encstate = 'Full' OR aclstate
     = 'Adequate' THEN 2 ELSE 1 END) < 2)
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Sensitive Unstable Flow (KB #68): DFSI < 0.5 AND Sensitive Data Exposure.\n\
     \n[kb=68]\nA data flow where DFSI < 0.5 and Sensitive Data Exposure exists \u2014\

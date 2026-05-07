@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: bond_ratings
 sql_table: bond_ratings
 query_variables: {}
@@ -6,14 +6,14 @@ data_source: exchange_traded_funds
 columns:
 - name: ratekey
   sql: ratekey
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: creditmark
   sql: creditmark
-  type: string
+  type: TEXT
   primary_key: false
   description: "Credit Quality (KB 29): creditworthiness of the bonds a fund holds.\
     \ 'us_government' is the highest quality. 'aaa' / 'aa' are high-grade investment\

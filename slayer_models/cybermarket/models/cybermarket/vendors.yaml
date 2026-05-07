@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: vendors
 sql_table: vendors
 query_variables: {}
@@ -6,61 +6,61 @@ data_source: cybermarket
 columns:
 - name: vendregistry
   sql: vendregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: vendspan
   sql: vendspan
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: vendrate
   sql: vendrate
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: vendtxcount
   sql: vendtxcount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: vendsucccount
   sql: vendsucccount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: venddisputecount
   sql: venddisputecount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: vendplacecount
   sql: vendplacecount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: vendpaymethods
   sql: vendpaymethods
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: vendchecklvl
   sql: vendchecklvl
-  type: string
+  type: TEXT
   primary_key: false
   description: "Vendor verification tier: 'Basic' = minimal (email + captcha) with\
     \ limited platform history; 'Advanced' = additional ID consistency checks + longer\
@@ -79,18 +79,18 @@ columns:
     kb_id: 7
 - name: vendlastmoment
   sql: vendlastmoment
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: mktref
   sql: mktref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: vti
   sql: (vendsucccount * 1.0 / NULLIF(vendtxcount, 0)) * 100 - (venddisputecount *
     1.0 / NULLIF(vendtxcount, 0)) * 50 + (vendrate * 5)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Vendor Trust Index (VTI): (vendsucccount/vendtxcount)*100 - (venddisputecount/vendtxcount)*50\
     \ + 5*vendrate. Higher = more trustworthy vendor.\n\n[kb=11]\nVTI = \\frac{vendsucccount}{vendtxcount}\
@@ -104,7 +104,7 @@ columns:
 - name: vendchecklvl_numeric
   sql: CASE vendchecklvl WHEN 'Basic' THEN 1 WHEN 'Advanced' THEN 2 WHEN 'Premium'
     THEN 3 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Numeric mapping of vendchecklvl: Basic=1, Advanced=2, Premium=3, else=0\
     \ (used by VRS).\n\n[kb=7]\n'Basic' vendors have completed minimal verification\
@@ -123,7 +123,7 @@ columns:
   sql: (vendrate * 10) + (vendsucccount * 1.0 / NULLIF(vendtxcount, 0)) * 50 + (CASE
     vendchecklvl WHEN 'Basic' THEN 1 WHEN 'Advanced' THEN 2 WHEN 'Premium' THEN 3
     ELSE 0 END) * 15 - (venddisputecount * 1.0 / NULLIF(vendtxcount, 0)) * 100
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Vendor Relationship Strength (VRS): 10*vendrate + (vendsucccount/vendtxcount)*50\
     \ + 15*vendchecklvl_numeric - (venddisputecount/vendtxcount)*100. Higher = stronger\
@@ -143,7 +143,7 @@ columns:
     1.0 / NULLIF(vendtxcount, 0)) * 50 + (vendrate * 5)) > 80 AND vendchecklvl IN
     ('Advanced', 'Premium') AND (venddisputecount * 1.0 / NULLIF(vendtxcount, 0))
     < 0.05 AND vendspan > 90
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Trusted Vendor (KB #21): VTI > 80, vendchecklvl Advanced/Premium,\
     \ dispute rate < 5%, vendspan > 90 days.\n\n[kb=21]\nA vendor with VTI > 80, vendchecklvl\
@@ -160,7 +160,7 @@ columns:
     0)) * 100 - (venddisputecount * 1.0 / NULLIF(vendtxcount, 0)) * 50 + (vendrate
     * 5)) * 0.1) - (1 - (CASE markets.sizecluster WHEN 'Small' THEN 1 WHEN 'Medium'
     THEN 2 WHEN 'Large' THEN 3 WHEN 'Mega' THEN 4 ELSE 0 END)) * 10
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Vendor Network Centrality (VNC, KB #31): COUNT(DISTINCT mktref) *\
     \ 5 + vendtxcount/50 + VTI*0.1 - (1 - sizecluster_numeric)*10. Schema shortfall:\
@@ -180,7 +180,7 @@ columns:
 - name: sizecluster_numeric
   sql: CASE markets.sizecluster WHEN 'Small' THEN 1 WHEN 'Medium' THEN 2 WHEN 'Large'
     THEN 3 WHEN 'Mega' THEN 4 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Numeric mapping of the linked market's sizecluster used by VNC: Small=1,\
     \ Medium=2, Large=3, Mega=4.\n\n[kb=31]\nVNC = (COUNT(DISTINCT mktref) \\times\
@@ -202,7 +202,7 @@ columns:
     0)) * 100 - (venddisputecount * 1.0 / NULLIF(vendtxcount, 0)) * 50 + (vendrate
     * 5)) > 80 AND vendchecklvl IN ('Advanced', 'Premium') AND (venddisputecount *
     1.0 / NULLIF(vendtxcount, 0)) < 0.05 AND vendspan > 90
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Market Kingpin (KB #41): VNC > 85, COUNT(DISTINCT mktref) >= 3, vendchecklvl='Premium',\
     \ plus Trusted Vendor characteristics (KB #21). Schema shortfall: COUNT(DISTINCT\

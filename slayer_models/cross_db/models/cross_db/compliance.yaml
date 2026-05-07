@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: compliance
 sql_table: compliance
 query_variables: {}
@@ -6,63 +6,63 @@ data_source: cross_db
 columns:
 - name: compliancetrace
   sql: compliancetrace
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: risktie
   sql: risktie
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: vendortie
   sql: vendortie
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: recordregistry
   sql: recordregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: legalbase
   sql: legalbase
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: consentstate
   sql: consentstate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: consentcoll
   sql: consentcoll
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: consentexp
   sql: consentexp
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: purplimit
   sql: purplimit
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: purpdesc
   sql: purpdesc
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: gdprcomp
   sql: gdprcomp
-  type: string
+  type: TEXT
   primary_key: false
   description: "GDPR compliance level. KB #25: 'Compliant' meets all GDPR rules; 'Non-compliant'\
     \ fails key requirements; 'Partial' is between.\n\n[kb=25]\nEnum: 'Compliant',\
@@ -75,38 +75,38 @@ columns:
     kb_id: 25
 - name: ccpacomp
   sql: ccpacomp
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: piplcomp
   sql: piplcomp
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: loclawcomp
   sql: loclawcomp
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: regapprovals
   sql: regapprovals
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: privimpassess
   sql: privimpassess
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: datasubjright
   sql: datasubjright
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_cross_border_compliance_gap
   sql: (gdprcomp = 'Non-compliant' OR (loclawcomp = 'Non-compliant' AND riskmanagement__dataflow.orignation
     != riskmanagement__dataflow.destnation))
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Cross-Border Compliance Gap (KB #15): GdprComp='Non-compliant' OR\
     \ (LocLawComp='Non-compliant' AND OrigNation\u2260DestNation).\n\n[kb=15]\nA compliance\
@@ -122,7 +122,7 @@ columns:
     WHEN riskmanagement__dataflow.orignation != riskmanagement__dataflow.destnation
     THEN 2 ELSE 1 END) > 1.5 AND (gdprcomp = 'Non-compliant' OR (loclawcomp = 'Non-compliant'
     AND riskmanagement__dataflow.orignation != riskmanagement__dataflow.destnation))
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Regulatory Risk Exposure (KB #19): CBRF > 1.5 AND Cross-Border Compliance\
     \ Gap.\n\n[kb=19]\nA data flow with CBRF > 1.5 and Cross-Border Compliance Gap\
@@ -138,7 +138,7 @@ columns:
     THEN 2 ELSE 1 END) > 1.5 AND (gdprcomp = 'Non-compliant' OR (loclawcomp = 'Non-compliant'
     AND riskmanagement__dataflow.orignation != riskmanagement__dataflow.destnation)))
     AND gdprcomp = 'Non-compliant'
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Regulatory Overload Flow (KB #46): Regulatory Risk Exposure AND GdprComp='Non-compliant'.\n\
     \n[kb=46]\nA data flow with Regulatory Risk Exposure and GdprComp = 'Non-compliant'\
@@ -152,7 +152,7 @@ columns:
   sql: ((riskmanagement.riskassess * 1.0 / NULLIF(riskmanagement.ctrleff, 0)) * (1
     - (riskmanagement.slapct * 1.0 / (riskmanagement.avgresolhrs + 1)))) > 0.8 AND
     gdprcomp = 'Non-compliant'
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Incident-Prone Compliance Flow (KB #64): IIF > 0.8 AND GdprComp='Non-compliant'.\n\
     \n[kb=64]\nA data flow where IIF > 0.8 and GdprComp = 'Non-compliant' \u2014 Flags\

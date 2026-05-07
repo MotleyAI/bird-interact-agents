@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: financials
 sql_table: financials
 query_variables: {}
@@ -6,71 +6,71 @@ data_source: disaster
 columns:
 - name: financeregistry
   sql: financeregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: findistref
   sql: findistref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: finopsref
   sql: finopsref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: budgetallotusd
   sql: budgetallotusd
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: fundsutilpct
   sql: fundsutilpct
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: costbeneusd
   sql: costbeneusd
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: opscostsusd
   sql: opscostsusd
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: transportcostsusd
   sql: transportcostsusd
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: storagecostsusd
   sql: storagecostsusd
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: personnelcostsusd
   sql: personnelcostsusd
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: fundingstate
   sql: fundingstate
-  type: string
+  type: TEXT
   primary_key: false
   description: "Financial-resource condition for operations (KB #4). Adequate = sufficient\
     \ funds; Limited = funding constraints affecting some activities; Critical = severe\
@@ -85,14 +85,14 @@ columns:
     kb_id: 4
 - name: donorcommitmentsusd
   sql: donorcommitmentsusd
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: resourcegapsusd
   sql: resourcegapsusd
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
@@ -100,7 +100,7 @@ columns:
 - name: fsr
   sql: (donorcommitmentsusd * 1.0 / NULLIF(budgetallotusd, 0)) * (1 - fundsutilpct
     / 100.0) - (resourcegapsusd * 1.0 / NULLIF(budgetallotusd, 0))
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Financial Sustainability Ratio (FSR, KB #18): (donorcommitmentsusd/budgetallotusd)\
     \ * (1 - fundsutilpct/100) - resourcegapsusd/budgetallotusd.\n\n[kb=18]\nFSR =\
@@ -115,7 +115,7 @@ columns:
   sql: fundsutilpct > 80 AND fundingstate = 'Critical' AND ((donorcommitmentsusd *
     1.0 / NULLIF(budgetallotusd, 0)) * (1 - fundsutilpct / 100.0) - (resourcegapsusd
     * 1.0 / NULLIF(budgetallotusd, 0))) < 0.2
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Financial Crisis Risk (KB #27): fundsutilpct>80 AND fundingstate='Critical'\
     \ AND FSR<0.2.\n\n[kb=27]\nOperations where fundsutilpct > 80 AND fundingstate\
@@ -132,7 +132,7 @@ columns:
     / 100.0) - (resourcegapsusd * 1.0 / NULLIF(budgetallotusd, 0))) * (1 + (transportation.deliverysuccessrate
     / 100.0 * (1 - transportation.avgdeliveryhours / 24.0) * (1 + transportation.distributionpoints
     / 10.0)) / 10.0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Financial Efficiency Metric (FEM, KB #35): (benefeedbackscore/costbeneusd)\
     \ * FSR * (1 + OEI/10).\n\n[kb=35]\nFEM = \\frac{benefeedbackscore}{costbeneusd}\

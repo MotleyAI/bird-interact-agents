@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: projects
 sql_table: projects
 query_variables: {}
@@ -6,27 +6,27 @@ data_source: archeology
 columns:
 - name: arcregistry
   sql: arcregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: vesseltag
   sql: vesseltag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: fundflux
   sql: fundflux
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: authpin
   sql: authpin
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: authhalt
   sql: authhalt
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

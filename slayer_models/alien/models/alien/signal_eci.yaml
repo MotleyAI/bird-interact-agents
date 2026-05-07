@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: signal_eci
 source_queries:
 - version: 3
@@ -15,7 +15,7 @@ source_queries:
         - signalref
     columns:
     - name: eci
-      type: number
+      type: DOUBLE
       sql: (signaldecoding.compressratio * signalclassification.complexidx * signalclassification.entropyval)
         / 10.0
   dimensions:
@@ -34,12 +34,12 @@ data_source: alien
 columns:
 - name: signalregistry
   sql: signalregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: eci
   sql: eci
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: market_stability_index
 source_queries:
 - version: 3
@@ -19,7 +19,7 @@ source_queries:
     source_name: vendor_disputes_per_market
     columns:
     - name: msi
-      type: number
+      type: DOUBLE
       sql: (markets__mktspan * 1.0 / 365) * (markets__esccomprate * 1.0 / 100) * (1
         - venddisputecount_sum * 1.0 / NULLIF(vendtxcount_sum, 0)) * 100
   dimensions:
@@ -45,12 +45,12 @@ data_source: cybermarket
 columns:
 - name: mktref
   sql: mktref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: msi
   sql: msi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

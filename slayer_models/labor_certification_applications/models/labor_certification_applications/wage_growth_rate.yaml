@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: wage_growth_rate
 source_queries:
 - version: 3
@@ -8,7 +8,7 @@ source_queries:
     columns:
     - name: recv_year
       sql: CAST(SUBSTR(cases.recvday, 1, 4) AS INTEGER)
-      type: number
+      type: DOUBLE
   measures:
   - formula: offered_wage_annual:avg
     name: avg_offered_wage
@@ -21,11 +21,11 @@ source_queries:
     columns:
     - name: prev_year_avg
       sql: LAG(avg_offered_wage, 1) OVER (ORDER BY recv_year)
-      type: number
+      type: DOUBLE
     - name: wage_growth_rate
       sql: (avg_offered_wage - LAG(avg_offered_wage, 1) OVER (ORDER BY recv_year))
         * 100.0 / NULLIF(LAG(avg_offered_wage, 1) OVER (ORDER BY recv_year), 0)
-      type: number
+      type: DOUBLE
   dimensions:
   - name: recv_year
   - name: avg_offered_wage
@@ -57,12 +57,12 @@ data_source: labor_certification_applications
 columns:
 - name: recv_year
   sql: recv_year
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: avg_offered_wage
   sql: avg_offered_wage
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Offered wage annualized for this case_worksite, denormalized via prevailing_wage
     join. Used for KB #28 / KB #31 industry-wage analyses.'
@@ -71,12 +71,12 @@ columns:
     type: float
 - name: prev_year_avg
   sql: prev_year_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: wage_growth_rate
   sql: wage_growth_rate
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

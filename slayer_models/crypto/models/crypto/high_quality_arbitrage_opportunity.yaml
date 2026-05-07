@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: high_quality_arbitrage_opportunity
 source_queries:
 - version: 3
@@ -47,7 +47,7 @@ source_queries:
         - recordvault
     columns:
     - name: is_high_quality
-      type: boolean
+      type: BOOLEAN
       sql: aw_per_pair.aos_avg > 0.05 AND roi.roi_v > 0.005 AND mer.mer_v < 1.2
   dimensions:
   - name: recordvault
@@ -156,12 +156,12 @@ data_source: crypto
 columns:
 - name: recordvault
   sql: recordvault
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_high_quality
   sql: is_high_quality
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

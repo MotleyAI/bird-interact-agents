@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: plant
 sql_table: plant
 query_variables: {}
@@ -6,24 +6,24 @@ data_source: solar
 columns:
 - name: growregistry
   sql: growregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: growalias
   sql: growalias
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: gencapmw
   sql: gencapmw
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: initdate
   sql: initdate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

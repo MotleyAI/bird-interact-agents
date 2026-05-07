@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: amenities
 sql_table: amenities
 query_variables: {}
@@ -6,21 +6,21 @@ data_source: households
 columns:
 - name: amenityref
   sql: amenityref
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: houseid
   sql: houseid
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: cablestatus
   sql: cablestatus
-  type: string
+  type: TEXT
   primary_key: false
   description: "Cable TV availability (KB #7). Truthy values: 'avail', 'available',\
     \ 'yes' (case-insensitive).\n\n[kb=7]\nValues indicating availability, based on\

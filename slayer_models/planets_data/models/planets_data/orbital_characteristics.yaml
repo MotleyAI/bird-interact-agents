@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: orbital_characteristics
 sql_table: orbital_characteristics
 query_variables: {}
@@ -6,21 +6,21 @@ data_source: planets_data
 columns:
 - name: orbitalref
   sql: orbitalref
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: bodylink
   sql: bodylink
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: period
   sql: period
-  type: number
+  type: INT
   primary_key: false
   description: "Orbital period in days (KB #45). 'Hot Jupiters' have a few-day periods;\
     \ distant orbits can take thousands of years.\n\n[kb=45]\nMeasured in days. 'Hot\
@@ -35,7 +35,7 @@ columns:
     kb_id: 45
 - name: semimajor
   sql: semimajor
-  type: number
+  type: INT
   primary_key: false
   description: Semi-major axis in AU. Range 0.0044..2500 AU.
   hidden: false
@@ -44,7 +44,7 @@ columns:
   meta: {}
 - name: eccentricity
   sql: eccentricity
-  type: number
+  type: INT
   primary_key: false
   description: "Orbital eccentricity (KB #46). 0 = circular, approaches 1 = elongated/comet-like.\n\
     \n[kb=46]\nA dimensionless value from 0 to <1. An eccentricity of 0 is a perfect\
@@ -59,7 +59,7 @@ columns:
     kb_id: 46
 - name: inclination
   sql: inclination
-  type: number
+  type: INT
   primary_key: false
   description: Orbital inclination in degrees relative to sky plane. 0 = face-on,
     180 = retrograde.
@@ -71,7 +71,7 @@ columns:
   sql: CAST(json_extract(planets__stars.stellarprops, '$.physical.Temp_Value') AS
     REAL) * sqrt(CAST(json_extract(planets__stars.stellarprops, '$.physical.Radius_Value')
     AS REAL) * 0.00465047 / (2.0 * NULLIF(semimajor, 0)))
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Planetary equilibrium temperature in Kelvin (KB #5): T_eq = T_star\
     \ * sqrt(R_star / (2a)). Inlines stellar temperature/radius from JSON (1 R_sun\
@@ -87,7 +87,7 @@ columns:
 - name: orbital_velocity
   sql: sqrt(6.6743e-11 * CAST(json_extract(planets__stars.stellarprops, '$.physical.Mass_Value')
     AS REAL) * 1.989e30 / NULLIF(semimajor * 1.496e11, 0))
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Orbital velocity in m/s (KB #11): v_orb = sqrt(G * M_star / a). Inlines\
     \ stellar mass from JSON (1 M_sun = 1.989e30 kg, 1 AU = 1.496e11 m).\n\n[kb=11]\n\
@@ -101,7 +101,7 @@ columns:
     kb_id: 11
 - name: kepler_stellar_mass
   sql: pow(semimajor, 3) / NULLIF(pow(period / 365.25, 2), 0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Stellar mass in solar masses inferred from Kepler's Third Law (KB\
     \ #15): M_star = a^3 / P^2, with a in AU and P in years (period stored in days,\
@@ -122,7 +122,7 @@ columns:
     '$.physical.Temp_Value') AS REAL) / 5778.0, 4)) / 0.53) - sqrt((pow(CAST(json_extract(planets__stars.stellarprops,
     '$.physical.Radius_Value') AS REAL), 2) * pow(CAST(json_extract(planets__stars.stellarprops,
     '$.physical.Temp_Value') AS REAL) / 5778.0, 4)) / 1.1), 0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Goldilocks Value (KB #14): G = (a - r_i) / (r_o - r_i). 0.5 = perfectly\
     \ centered in habitable zone. Inlines the HZ boundary formulas (KB #6, #7) since\
@@ -138,7 +138,7 @@ columns:
     kb_id: 14
 - name: is_short_period
   sql: period < 10
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Short-Period Planet (KB #22): orbital period < 10 days.\n\n[kb=22]\n\
     A planet with an orbital period of less than 10 days. \u2014 A planet that orbits\
@@ -149,7 +149,7 @@ columns:
     kb_id: 22
 - name: is_high_eccentricity
   sql: eccentricity > 0.25
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "High Eccentricity Planet (KB #27): orbital eccentricity > 0.25.\n\n\
     [kb=27]\nA planet with an orbital eccentricity greater than 0.25. \u2014 A planet\
@@ -161,7 +161,7 @@ columns:
     kb_id: 27
 - name: is_retrograde
   sql: inclination > 90
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Retrograde Orbit (KB #31): orbital inclination > 90 degrees.\n\n[kb=31]\n\
     A planet with an orbital inclination greater than 90 degrees. \u2014 A planet\
@@ -176,7 +176,7 @@ columns:
     '$.physical.Temp_Value') AS REAL) / 5778.0, 4)) / 1.1) AND sqrt((pow(CAST(json_extract(planets__stars.stellarprops,
     '$.physical.Radius_Value') AS REAL), 2) * pow(CAST(json_extract(planets__stars.stellarprops,
     '$.physical.Temp_Value') AS REAL) / 5778.0, 4)) / 0.53)
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Planet in Habitable Zone (KB #25): semi-major axis falls between r_i\
     \ and r_o. Inlines the HZ boundary formulas (KB #6, #7).\n\n[kb=25]\nA planet\

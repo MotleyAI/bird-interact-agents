@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: returns
 sql_table: returns
 query_variables: {}
@@ -6,32 +6,32 @@ data_source: reverse_logistics
 columns:
 - name: casenum
   sql: casenum
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: logtime
   sql: logtime
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: srctxn
   sql: srctxn
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: itemlink
   sql: itemlink
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: revdate
   sql: revdate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: dayslapsed
   sql: dayslapsed
-  type: number
+  type: INT
   primary_key: false
   description: "Days Lapsed: number of calendar days between original transaction\
     \ and completion of return processing.\n\n[kb=16]\nDifference in days between\
@@ -46,7 +46,7 @@ columns:
     kb_id: 16
 - name: return_channel
   sql: return_channel
-  type: string
+  type: TEXT
   primary_key: false
   description: "Return Channels \u2014 pathway through which the customer sent the\
     \ item back. 'Store' (in-person retail outlet), 'Courier' (doorstep pickup), 'Mail'\
@@ -64,12 +64,12 @@ columns:
     kb_id: 20
 - name: return_details
   sql: return_details
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: shipping_fee
   sql: CAST(json_extract(return_details, '$.shipping.fee') AS REAL)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Shipping Fee (S_f): cost charged by the logistics provider for transporting\
     \ the returned item.\n\n[kb=10]\nA monetary amount reflecting transportation cost\
@@ -81,7 +81,7 @@ columns:
     kb_id: 10
 - name: fraud_flags
   sql: CAST(json_extract(return_details, '$.fraud.fraud_flags') AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Number of fraud flags raised on this return (0-5).\n\n[kb=7]\n$$FFS\
     \ = F_f \\times w_{risk}$$ where $F_f$ is number of fraud flags and $w_{risk}$\
@@ -93,7 +93,7 @@ columns:
     kb_id: 7
 - name: fraud_risk_level
   sql: TRIM(json_extract(return_details, '$.fraud.risk_level'), '"')
-  type: string
+  type: TEXT
   primary_key: false
   description: "Fraud Risk Level \u2014 qualitative grading of suspected fraud severity.\
     \ 'Low', 'Medium', or 'High'.\n\n[kb=21]\nThere are 3 different levels: 'Low',\
@@ -106,7 +106,7 @@ columns:
 - name: fraud_risk_weight
   sql: CASE TRIM(json_extract(return_details, '$.fraud.risk_level'), '"') WHEN 'Low'
     THEN 1 WHEN 'Medium' THEN 2 WHEN 'High' THEN 3 ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Risk weight for FFS \u2014 Low=1, Medium=2, High=3 (KB does not pin\
     \ exact weights; using ascending-by-severity ordinals).\n\n[kb=7]\n$$FFS = F_f\
@@ -121,7 +121,7 @@ columns:
   sql: CAST(json_extract(return_details, '$.fraud.fraud_flags') AS INTEGER) * (CASE
     TRIM(json_extract(return_details, '$.fraud.risk_level'), '"') WHEN 'Low' THEN
     1 WHEN 'Medium' THEN 2 WHEN 'High' THEN 3 ELSE NULL END)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Fraud Flag Severity Score (FFS) = F_f * w_risk. F_f is fraud_flags;\
     \ w_risk is 1/2/3 for Low/Medium/High.\n\n[kb=7]\n$$FFS = F_f \\times w_{risk}$$\
@@ -134,7 +134,7 @@ columns:
     kb_id: 7
 - name: warranty_status
   sql: TRIM(json_extract(return_details, '$.authorization.warranty_status'), '"')
-  type: string
+  type: TEXT
   primary_key: false
   description: "Warranty Status \u2014 'Valid' (within manufacturer/retailer warranty),\
     \ 'Expired' (term lapsed), 'Not Applicable' (no warranty / proof unavailable).\n\
@@ -148,7 +148,7 @@ columns:
     kb_id: 27
 - name: warranty_claim
   sql: TRIM(json_extract(return_details, '$.authorization.warranty_claim'), '"')
-  type: string
+  type: TEXT
   primary_key: false
   description: "Warranty claim identifier (NULL if none filed).\n\n[kb=6]\n$$WCR =\
     \ \\frac{N_{claims}}{T_r}$$ where $N_{claims}$ is the number of authorised warranty\
@@ -163,7 +163,7 @@ columns:
     'null' AND json_extract(return_details, '$.authorization.warranty_claim') IS NOT
     NULL AND TRIM(json_extract(return_details, '$.authorization.auth_status'), '"')
     = 'Approved' THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "1 if an authorised warranty claim was filed for this return (claim\
     \ id present AND auth_status='Approved'), else 0. KB #6 N_claims indicator.\n\n\

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: adjacent_planet_period_ratios
 source_queries:
 - version: 3
@@ -7,16 +7,16 @@ source_queries:
     source_name: orbital_characteristics
     columns:
     - name: hostlink
-      type: number
+      type: DOUBLE
       sql: planets.hostlink
     - name: period_inner
-      type: number
+      type: DOUBLE
       sql: LAG(period) OVER (PARTITION BY planets.hostlink ORDER BY period ASC)
     - name: period_outer
-      type: number
+      type: DOUBLE
       sql: period
     - name: period_ratio
-      type: number
+      type: DOUBLE
       sql: period * 1.0 / NULLIF(LAG(period) OVER (PARTITION BY planets.hostlink ORDER
         BY period ASC), 0)
   dimensions:
@@ -60,29 +60,29 @@ data_source: planets_data
 columns:
 - name: bodylink
   sql: bodylink
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: hostlink
   sql: hostlink
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: period_inner
   sql: period_inner
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: period_outer
   sql: period_outer
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: period_ratio
   sql: period_ratio
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

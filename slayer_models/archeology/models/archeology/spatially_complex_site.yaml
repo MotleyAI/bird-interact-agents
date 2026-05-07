@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: spatially_complex_site
 source_queries:
 - version: 3
@@ -46,7 +46,7 @@ source_queries:
     source_name: sdi_per_arcref
     columns:
     - name: is_spatially_complex_site
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN sp_per_arcref__area_m2 > 100 AND sdi > 50 THEN 1 ELSE 0 END
   measures:
   - formula: sdi:avg
@@ -121,24 +121,24 @@ data_source: archeology
 columns:
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_spatially_complex_site
   sql: is_spatially_complex_site
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 - name: sdi
   sql: sdi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: area_m2
   sql: area_m2
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

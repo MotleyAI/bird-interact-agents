@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: worksite_geographic_diversity
 source_queries:
 - version: 3
@@ -19,7 +19,7 @@ source_queries:
     - name: geographic_diversity
       sql: CASE WHEN distinct_worksites <= 1 THEN 'Single-Location' WHEN distinct_states
         <= 3 THEN 'Regional' ELSE 'National' END
-      type: string
+      type: TEXT
   dimensions:
   - name: homefirm
   - name: distinct_worksites
@@ -46,27 +46,27 @@ data_source: labor_certification_applications
 columns:
 - name: homefirm
   sql: homefirm
-  type: string
+  type: TEXT
   primary_key: false
   description: Employer (homefirm) for the case, denormalized via cases join.
   hidden: false
 - name: distinct_worksites
   sql: distinct_worksites
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: distinct_states
   sql: distinct_states
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: geographic_diversity
   sql: geographic_diversity
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

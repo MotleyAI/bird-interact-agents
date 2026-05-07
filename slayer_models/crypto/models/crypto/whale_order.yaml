@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: whale_order
 source_queries:
 - version: 3
@@ -22,7 +22,7 @@ source_queries:
         - mktcombo
     columns:
     - name: is_whale_order
-      type: boolean
+      type: BOOLEAN
       sql: dealcount > 0.10 * (CASE WHEN dealedge = 'Buy' THEN depth_per_pair.askunits_avg
         ELSE depth_per_pair.bidunits_avg END)
   dimensions:
@@ -48,12 +48,12 @@ data_source: crypto
 columns:
 - name: recordvault
   sql: recordvault
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_whale_order
   sql: is_whale_order
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

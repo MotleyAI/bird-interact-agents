@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: visa_dependent_industry
 source_queries:
 - version: 3
@@ -16,10 +16,10 @@ source_queries:
     columns:
     - name: industry_share
       sql: _count * 1.0 / SUM(_count) OVER ()
-      type: number
+      type: DOUBLE
     - name: is_visa_dependent
       sql: _count * 1.0 / SUM(_count) OVER () > 0.15
-      type: boolean
+      type: BOOLEAN
   dimensions:
   - name: naics_code
   - name: _count
@@ -43,25 +43,25 @@ data_source: labor_certification_applications
 columns:
 - name: naics_code
   sql: naics_code
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Employer NAICS code (KB #6) resolved via the employer join.'
   hidden: false
 - name: _count
   sql: _count
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: industry_share
   sql: industry_share
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_visa_dependent
   sql: is_visa_dependent
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

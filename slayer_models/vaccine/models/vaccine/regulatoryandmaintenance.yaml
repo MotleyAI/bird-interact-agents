@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: regulatoryandmaintenance
 sql_table: regulatoryandmaintenance
 query_variables: {}
@@ -6,49 +6,49 @@ data_source: vaccine
 columns:
 - name: regmaintregistry
   sql: regmaintregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: maintflag
   sql: maintflag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: maintdatelast
   sql: maintdatelast
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: maintdatenext
   sql: maintdatenext
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: calibflag
   sql: calibflag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: calibdatelast
   sql: calibdatelast
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: calibdatenext
   sql: calibdatenext
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: docuflag
   sql: docuflag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: compscore
   sql: compscore
-  type: number
+  type: INT
   primary_key: false
   description: "Compliance / condition score. A score above 0.9 indicates excellent\
     \ compliance with all regulatory requirements (KB #21).\n\n[kb=21]\nA score above\
@@ -62,84 +62,84 @@ columns:
     kb_id: 21
 - name: riskflag
   sql: riskflag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: incidents
   sql: incidents
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: resolveflag
   sql: resolveflag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: respperson
   sql: respperson
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: contactno
   sql: contactno
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: contactemerg
   sql: contactemerg
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: inspectdatelast
   sql: inspectdatelast
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: inspectdatenext
   sql: inspectdatenext
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: inspectoutcome
   sql: inspectoutcome
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: correctactions
   sql: correctactions
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: preventsteps
   sql: preventsteps
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: validflag
   sql: validflag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: verifymethod
   sql: verifymethod
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: shipgov
   sql: shipgov
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: vehgov
   sql: vehgov
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: mcs
   sql: compscore * (1 - COALESCE(CAST(incidents AS REAL) / 10, 0))
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Maintenance Compliance Score (MCS). Compliance with maintenance schedules:\
     \ CompScore * (1 - Incidents/10) (KB #7).\n\n[kb=7]\nMCS = CompScore \\times (1\
@@ -153,7 +153,7 @@ columns:
   sql: CASE WHEN (compscore * (1 - COALESCE(CAST(incidents AS REAL) / 10, 0))) < 0.7
     AND (julianday('now') > julianday(maintdatenext) OR julianday('now') > julianday(calibdatenext))
     THEN 1 ELSE 0 END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Maintenance Due flag. True when MCS < 0.7 AND (Current_Date > MaintDateNext\
     \ OR Current_Date > CalibDateNext) (KB #13).\n\n[kb=13]\nEquipment where MCS <\
@@ -166,7 +166,7 @@ columns:
 - name: days_overdue
   sql: MAX(julianday('now') - julianday(maintdatenext), julianday('now') - julianday(calibdatenext),
     0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Days Overdue. Number of days past the scheduled maintenance or calibration\
     \ date: max(Current_Date - MaintDateNext, Current_Date - CalibDateNext, 0) (KB\

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: markets
 sql_table: markets
 query_variables: {}
@@ -6,17 +6,17 @@ data_source: cybermarket
 columns:
 - name: mktregistry
   sql: mktregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: mktdenom
   sql: mktdenom
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: mktclass
   sql: mktclass
-  type: string
+  type: TEXT
   primary_key: false
   description: "Primary business model: 'Forum' = info exchange / community with minimal\
     \ direct transactions; 'Service' = digital services rather than goods; 'Marketplace'\
@@ -34,14 +34,14 @@ columns:
     kb_id: 0
 - name: mktspan
   sql: mktspan
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: sizecluster
   sql: sizecluster
-  type: string
+  type: TEXT
   primary_key: false
   description: "Market scale and reach: 'Small' (<10k monthly users, limited vendors),\
     \ 'Medium' (10-50k users, moderate vendor diversity), 'Large' (50-100k users,\
@@ -59,62 +59,62 @@ columns:
     kb_id: 1
 - name: dlyflow
   sql: dlyflow
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: mthactive
   sql: mthactive
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: vendcount
   sql: vendcount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: buycount
   sql: buycount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: listtotal
   sql: listtotal
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: interscore
   sql: interscore
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: esccomprate
   sql: esccomprate
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: market_status_reputation
   sql: market_status_reputation
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: mrs
   sql: (dlyflow * 1.0 / 1000) + (esccomprate * 0.2) + (interscore * 0.3) + (vendcount
     * 0.1) - (mktspan * 1.0 / 100)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Market Risk Score (MRS): dlyflow/1000 + 0.2*esccomprate + 0.3*interscore\
     \ + 0.1*vendcount - mktspan/100. Higher = greater risk exposure.\n\n[kb=10]\n\

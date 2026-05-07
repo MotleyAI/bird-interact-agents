@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: signal_is_observation_verified
 source_queries:
 - version: 3
@@ -27,7 +27,7 @@ source_queries:
         - observstation
     columns:
     - name: is_observation_verified
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN ((1 - signalprobabilities.falseposprob) * signaldecoding.decodeconf
         * signalclassification.classconf * (CASE WHEN (snrratio - 0.1 * ABS(noisefloordbm))
         > 0 THEN (snrratio - 0.1 * ABS(noisefloordbm)) / 10.0 + 0.5 ELSE 0.1 END))
@@ -75,12 +75,12 @@ data_source: alien
 columns:
 - name: signalregistry
   sql: signalregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_observation_verified
   sql: is_observation_verified
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

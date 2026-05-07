@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: contentbehavior
 sql_table: contentbehavior
 query_variables: {}
@@ -6,24 +6,24 @@ data_source: fake
 columns:
 - name: cntref
   sql: cntref
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: cntsessref
   sql: cntsessref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: postnum
   sql: postnum
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: postfreq
   sql: postfreq
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Post frequency. Used in KB #13 (Content Farm: postfreq > 50) and KB\
     \ #73 (High-Impact Amplifier: postfreq > 30). \u03A3 postfreq across all content\
@@ -40,21 +40,21 @@ columns:
     kb_id: 76
 - name: postintvar
   sql: postintvar
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: cntsimscore
   sql: cntsimscore
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: cntuniqscore
   sql: cntuniqscore
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Content uniqueness score (KB #23). Range 0-1; >0.8 highly unique;\
     \ <0.3 duplicate / templated. Component of CAS (KB #1) and CMS uses (1 - cntuniqscore)\
@@ -69,69 +69,69 @@ columns:
     kb_id: 23
 - name: cntdiverseval
   sql: cntdiverseval
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: cntlangnum
   sql: cntlangnum
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: cnttopicent
   sql: cnttopicent
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: hashusepat
   sql: hashusepat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: hashratio
   sql: hashratio
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: mentionpat
   sql: mentionpat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: mentionratio
   sql: mentionratio
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: urlsharefreq
   sql: urlsharefreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: urldomdiv
   sql: urldomdiv
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: mediaupratio
   sql: mediaupratio
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: mediareratio
   sql: mediareratio
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Media reuse ratio. Component of CMS (KB #8).'
   hidden: false

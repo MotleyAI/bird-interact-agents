@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: mesh_to_point_ratio
 source_queries:
 - version: 3
@@ -50,7 +50,7 @@ source_queries:
     source_name: scans_keyed
     columns:
     - name: mpr
-      type: number
+      type: DOUBLE
       sql: (mesh_per_zone__facetverts * 1.0 / pc_per_arcref__totalpts) * 100 * power(mesh_per_zone__mcr
         / 10.0, 0.3)
   measures:
@@ -97,22 +97,22 @@ data_source: archeology
 columns:
 - name: questregistry
   sql: questregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: zoneref
   sql: zoneref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: mpr
   sql: mpr
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: fan_value_segmentation
 source_queries:
 - version: 3
@@ -6,7 +6,7 @@ source_queries:
     source_name: engagement
     columns:
     - name: flv_percentile
-      type: number
+      type: DOUBLE
       sql: NTILE(100) OVER (ORDER BY ((membershipandspending.spendusd * (1 + membershipandspending.membdays
         / 365.0 * 0.5) * (1 + interactions.gifttot / 10.0 * 0.2)) * (1 - ((1 - preferencesandsettings.intconsist)
         * 2 + (julianday('2025-03-01') - julianday(preferencesandsettings.lastlogdt))
@@ -15,7 +15,7 @@ source_queries:
         * 2) / 10.0) * (1 + ((engrate * 0.4) + (socintscore / 100.0 * 0.3) + (actdayswk
         / 7.0 * 0.2) + (avgsesscount / 10.0 * 0.1))) * 24) DESC)
     - name: fan_value_segment
-      type: string
+      type: TEXT
       sql: CASE WHEN NTILE(100) OVER (ORDER BY ((membershipandspending.spendusd *
         (1 + membershipandspending.membdays / 365.0 * 0.5) * (1 + interactions.gifttot
         / 10.0 * 0.2)) * (1 - ((1 - preferencesandsettings.intconsist) * 2 + (julianday('2025-03-01')
@@ -141,31 +141,31 @@ data_source: virtual
 columns:
 - name: engagereg
   sql: engagereg
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: engagememberpivot
   sql: engagememberpivot
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: fei
   sql: fei
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Fan Engagement Index (FEI, KB #10) = (engrate*0.4) + (socintscore/100*0.3)
     + (actdayswk/7*0.2) + (avgsesscount/10*0.1). Range 0-1; higher = more engaged.'
   hidden: false
 - name: mv
   sql: mv
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Monetization Value (MV, KB #11) = spendusd * (1 + membdays/365 * 0.5)
     * (1 + gifttot/10 * 0.2). Adjusts spending for membership tenure and gift activity.'
   hidden: false
 - name: rrf
   sql: rrf
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Retention Risk Factor (RRF, KB #13) = (1 - intconsist) * 2 + (days_since_last_login
     / 30) * 0.5 + (churnflag_numeric / 3) * 2. The ''now'' anchor for days_since_last_login
@@ -174,19 +174,19 @@ columns:
   hidden: false
 - name: flv
   sql: flv
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Fan Lifetime Value (FLV, KB #16) = MV * (1 - RRF/10) * (1 + FEI) *
     24. 24-month projection adjusted for retention risk and engagement.'
   hidden: false
 - name: flv_percentile
   sql: flv_percentile
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: fan_value_segment
   sql: fan_value_segment
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

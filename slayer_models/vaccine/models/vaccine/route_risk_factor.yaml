@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: route_risk_factor
 source_queries:
 - version: 3
@@ -22,7 +22,7 @@ source_queries:
         - vehsenseref
     columns:
     - name: rrf
-      type: number
+      type: DOUBLE
       sql: (1 - rcp / 100.0) * trs_cei_per_vehicle.trs * (1 - trs_cei_per_vehicle.cei)
   dimensions:
   - name: vehiclereg
@@ -72,33 +72,33 @@ data_source: vaccine
 columns:
 - name: vehiclereg
   sql: vehiclereg
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: rcp
   sql: rcp
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Route Completion Percentage (RCP). Percentage of route completed:
     DistDoneKm / (DistDoneKm + DistLeftKm) * 100 (KB #4).'
   hidden: false
 - name: trs_cei_per_vehicle__trs
   sql: trs_cei_per_vehicle__trs
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: trs_cei_per_vehicle__cei
   sql: trs_cei_per_vehicle__cei
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: rrf
   sql: rrf
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

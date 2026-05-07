@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: actuation_data
 sql_table: actuation_data
 query_variables: {}
@@ -6,69 +6,69 @@ data_source: robot
 columns:
 - name: actreg
   sql: actreg
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: actoperref
   sql: actoperref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: actdetref
   sql: actdetref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: actrecref
   sql: actrecref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: tcpxval
   sql: tcpxval
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tcpyval
   sql: tcpyval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: tcpzval
   sql: tcpzval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: tcp_rxval
   sql: tcp_rxval
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tcp_ryval
   sql: tcp_ryval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: tcp_rzval
   sql: tcp_rzval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: tcpspeedval
   sql: tcpspeedval
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Tool Center Point linear speed (mm/s). Higher speeds may be required\
     \ for some applications but can affect precision (KB #23).\n\n[kb=23]\nTCP speed\
@@ -83,21 +83,21 @@ columns:
     kb_id: 23
 - name: tcpaccelval
   sql: tcpaccelval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: pathaccmmval
   sql: pathaccmmval
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: poserrmmval
   sql: poserrmmval
-  type: number
+  type: INT
   primary_key: false
   description: "Position error (mm). Lower values indicate higher precision (KB #22).\n\
     \n[kb=22]\nPosition error is measured in millimeters. Lower values indicate higher\
@@ -110,112 +110,112 @@ columns:
     kb_id: 22
 - name: orienterrdegval
   sql: orienterrdegval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: payloadwval
   sql: payloadwval
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: payloadival
   sql: payloadival
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: m1currval
   sql: m1currval
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: m2currval
   sql: m2currval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: m3currval
   sql: m3currval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: m4currval
   sql: m4currval
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: m5currval
   sql: m5currval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: m6currval
   sql: m6currval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: m1voltval
   sql: m1voltval
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: m2voltval
   sql: m2voltval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: m3voltval
   sql: m3voltval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: m4voltval
   sql: m4voltval
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: m5voltval
   sql: m5voltval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: m6voltval
   sql: m6voltval
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: row_payload_ratio
   sql: payloadwval * 1.0 / NULLIF(robot_details.payloadcapkg, 0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Row-level payload weight relative to robot's payload capacity \u2014\
     \ helper for PUR (KB #39).\n\n[kb=39]\nFor a given robot R, PUR = \\frac{\\sum_{ad\
@@ -231,7 +231,7 @@ columns:
 - name: is_aged_over_one
   sql: ((julianday(robot_details__robot_record.rects) - julianday(robot_details.instdateval))
     / 365.25) > 1
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: 'Row-level: is the owning robot older than 1 year (RAY>1)? Helper for
     KB #49 Overloaded.'
@@ -316,6 +316,17 @@ measures:
     \ \u2014 Flags robots operating near or beyond payload capacity.\n[/kb=49]"
   meta:
     kb_id: 49
+- formula: percent_rank(ape, partition_by=actuation_data.robot_details.ctrltypeval)
+  name: ape_rank
+  label: APE Rank
+  description: "APE Rank (KB #53) \u2014 PERCENT_RANK over Average Position Error\
+    \ within each controller type, descending. Group by actdetref and include robot_details.ctrltypeval\
+    \ as a dimension; percent_rank partitions on it.\n\n[kb=53]\nFor a given robot\
+    \ R, APE Rank = \\text{PERCENT_RANK}() \\text{ OVER } (\\text{PARTITION BY } ctrltypeval\
+    \ \\text{ ORDER BY } APE \\text{ DESC}) \u2014 Ranks the Average Position Error\
+    \ within each controller type to assess relative precision.\n[/kb=53]"
+  meta:
+    kb_id: 53
 aggregations: []
 joins:
 - target_model: robot_details

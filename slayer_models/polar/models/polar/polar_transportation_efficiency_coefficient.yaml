@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: polar_transportation_efficiency_coefficient
 source_queries:
 - version: 3
@@ -68,12 +68,12 @@ data_source: polar
 columns:
 - name: chassiseqref
   sql: chassiseqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: vpc_avg
   sql: vpc_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Vehicle Performance Coefficient (KB #5): wear / speed / engine-load
     product. Cross-table to engineandfluids for engineloadpercent.'
@@ -82,14 +82,14 @@ columns:
     type: float
 - name: ptec
   sql: ptec
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: esi_per_eq__esi_avg
   sql: esi_per_eq__esi_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

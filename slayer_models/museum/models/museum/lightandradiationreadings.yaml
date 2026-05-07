@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: lightandradiationreadings
 sql_table: lightandradiationreadings
 query_variables: {}
@@ -6,21 +6,21 @@ data_source: museum
 columns:
 - name: lightradregistry
   sql: lightradregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: envreadref
   sql: envreadref
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: lightlux
   sql: lightlux
-  type: number
+  type: INT
   primary_key: false
   description: "[kb=29]\nValues in lux range from near-dark (5-10 lux) to typical\
     \ indoor lighting (300-500 lux). Conservation standards recommend 50 lux for highly\
@@ -36,21 +36,21 @@ columns:
     kb_id: 29
 - name: uvuwcm2
   sql: uvuwcm2
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: irwm2
   sql: irwm2
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: visibleexplxh
   sql: visibleexplxh
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
@@ -59,7 +59,7 @@ columns:
   sql: CASE WHEN lightlux > 200 THEN 'Exceeds Medium-Sensitivity Threshold' WHEN lightlux
     > 50 THEN 'Exceeds High-Sensitivity Threshold' ELSE 'Within High-Sensitivity Threshold'
     END
-  type: string
+  type: TEXT
   primary_key: false
   description: "[kb=53]\nHigh sensitivity artifacts (textiles, paper) must not exceed\
     \ 50 lux; Medium sensitivity (paintings, wood) must not exceed 200 lux. Based\

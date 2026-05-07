@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: signal_is_technosig_high_conf
 source_queries:
 - version: 3
@@ -19,7 +19,7 @@ source_queries:
         - signalref
     columns:
     - name: is_technosig_high_conf
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN signalprobabilities.techsigprob > 0.7 AND signalprobabilities.natsrcprob
         < 0.3 AND signalprobabilities.artsrcprob < 50 AND (bwhz / (centerfreqmhz *
         1000000.0)) < 0.001 AND signalclassification.infodense > 0.8 AND ((1 - signalprobabilities.falseposprob)
@@ -67,12 +67,12 @@ data_source: alien
 columns:
 - name: signalregistry
   sql: signalregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_technosig_high_conf
   sql: is_technosig_high_conf
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

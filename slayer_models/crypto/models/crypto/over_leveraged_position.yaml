@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: over_leveraged_position
 source_queries:
 - version: 3
@@ -25,10 +25,10 @@ source_queries:
         - marketdata__mktcombo
     columns:
     - name: leverage_x_vol
-      type: number
+      type: DOUBLE
       sql: riskandmargin.posmagn_n * vol_per_pair.vol_avg
     - name: is_over_leveraged
-      type: boolean
+      type: BOOLEAN
       sql: (riskandmargin.posmagn_n * vol_per_pair.vol_avg) > 500
   dimensions:
   - name: recordvault
@@ -56,17 +56,17 @@ data_source: crypto
 columns:
 - name: recordvault
   sql: recordvault
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: leverage_x_vol
   sql: leverage_x_vol
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_over_leveraged
   sql: is_over_leveraged
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

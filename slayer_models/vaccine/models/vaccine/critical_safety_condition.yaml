@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: critical_safety_condition
 source_queries:
 - version: 3
@@ -27,7 +27,7 @@ source_queries:
         - containlink
     columns:
     - name: vsi_inline
-      type: number
+      type: DOUBLE
       sql: ((julianday(expireday) - julianday('now')) * agg_per_container_csc.tss)
         / 365.0 * agg_per_container_csc.cei * (1 - agg_per_container_csc.trs)
   measures:
@@ -74,12 +74,12 @@ source_queries:
         - vehsenseref
     columns:
     - name: tsr_value
-      type: number
+      type: DOUBLE
       sql: (CAST(transportinfo.distdonekm AS REAL) / NULLIF(transportinfo.distdonekm
         + transportinfo.distleftkm, 0) * 100) / 100.0 * (1 - agg_per_vehicle_csc.trs)
         * agg_per_vehicle_csc.hqi
     - name: is_critical_safety_condition
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN vsi_per_shipment.vsi < 0.3 AND ((CAST(transportinfo.distdonekm
         AS REAL) / NULLIF(transportinfo.distdonekm + transportinfo.distleftkm, 0)
         * 100) / 100.0 * (1 - agg_per_vehicle_csc.trs) * agg_per_vehicle_csc.hqi)
@@ -175,24 +175,24 @@ data_source: vaccine
 columns:
 - name: shipmentregistry
   sql: shipmentregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: vsi_per_shipment__vsi
   sql: vsi_per_shipment__vsi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: tsr_value
   sql: tsr_value
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_critical_safety_condition
   sql: is_critical_safety_condition
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

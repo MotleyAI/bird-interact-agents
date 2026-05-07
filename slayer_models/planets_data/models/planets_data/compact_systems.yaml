@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: compact_systems
 source_queries:
 - version: 3
@@ -68,24 +68,24 @@ data_source: planets_data
 columns:
 - name: hostlink
   sql: hostlink
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: stars__hostplname
   sql: stars__hostplname
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: stars__compcount
   sql: stars__compcount
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: period_ratio_max
   sql: period_ratio_max
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

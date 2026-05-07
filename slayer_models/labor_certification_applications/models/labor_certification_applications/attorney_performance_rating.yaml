@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: attorney_performance_rating
 source_queries:
 - version: 3
@@ -15,10 +15,10 @@ source_queries:
     source_name: att_rates
     columns:
     - name: approval_rate
-      type: number
+      type: DOUBLE
       sql: is_case_certified_sum * 100.0 / NULLIF(_count, 0)
     - name: performance_rating
-      type: string
+      type: TEXT
       sql: CASE WHEN is_case_certified_sum * 100.0 / NULLIF(_count, 0) > 95 THEN 'High
         Performer' WHEN is_case_certified_sum * 100.0 / NULLIF(_count, 0) >= 85 THEN
         'Standard Performer' ELSE 'Underperformer' END
@@ -52,31 +52,31 @@ data_source: labor_certification_applications
 columns:
 - name: counselmail
   sql: counselmail
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_case_certified_sum
   sql: is_case_certified_sum
-  type: number
+  type: DOUBLE
   primary_key: false
   description: '1 if joined case is certified, else 0. Resolved via the cases join.
     KB #24.'
   hidden: false
 - name: _count
   sql: _count
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: approval_rate
   sql: approval_rate
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: performance_rating
   sql: performance_rating
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

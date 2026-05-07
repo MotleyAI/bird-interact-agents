@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: personnel
 sql_table: personnel
 query_variables: {}
@@ -6,22 +6,22 @@ data_source: archeology
 columns:
 - name: crewregistry
   sql: crewregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: crewlabel
   sql: crewlabel
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: leadregistry
   sql: leadregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: leadlabel
   sql: leadlabel
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

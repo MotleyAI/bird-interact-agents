@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: continuous_filing_employer
 source_queries:
 - version: 3
@@ -14,7 +14,7 @@ source_queries:
     source_name: emp_months
     columns:
     - name: is_continuous_filer
-      type: boolean
+      type: BOOLEAN
       sql: recv_month_count_distinct >= 9
   dimensions:
   - name: homefirm
@@ -36,12 +36,12 @@ data_source: labor_certification_applications
 columns:
 - name: homefirm
   sql: homefirm
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: recv_month_count_distinct
   sql: recv_month_count_distinct
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Month of receipt (1-12), parsed from recvday ''YYYY/MM/DD''. Used
     for KB #23/50 seasonal analysis.'
@@ -50,7 +50,7 @@ columns:
     type: integer
 - name: is_continuous_filer
   sql: is_continuous_filer
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

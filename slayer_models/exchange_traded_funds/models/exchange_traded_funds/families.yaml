@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: families
 sql_table: families
 query_variables: {}
@@ -6,27 +6,27 @@ data_source: exchange_traded_funds
 columns:
 - name: famcode
   sql: famcode
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: groupname
   sql: groupname
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: avg_beta3y
   sql: (SELECT AVG(rm.beta3y) FROM funds f JOIN risk_metrics rm ON rm.investmentref
     = f.tickersym WHERE f.parentgroup = families.groupname AND rm.beta3y IS NOT NULL)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Family's average 3Y Beta across all its funds.
   hidden: false
 - name: n_alpha_generators
   sql: (SELECT COUNT(*) FROM funds f JOIN risk_metrics rm ON rm.investmentref = f.tickersym
     WHERE f.parentgroup = families.groupname AND rm.alpha5y > 0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Number of Alpha Generators (5Y alpha > 0) in this family.
   hidden: false
@@ -36,7 +36,7 @@ columns:
     < 1.0 AND (SELECT COUNT(*) FROM funds f JOIN risk_metrics rm ON rm.investmentref
     = f.tickersym WHERE f.parentgroup = families.groupname AND rm.alpha5y > 0) >=
     5
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Top-Tier Family (KB 88): avg 3Y Beta < 1.0 AND \u22655 alpha-generating\
     \ funds.\n\n[kb=88]\nA fund family is 'Top-Tier' if its average 3-year beta is\
@@ -51,7 +51,7 @@ columns:
   sql: (SELECT s.industrytag FROM sectors s JOIN sector_allocations sa ON sa.sectorlink
     = s.secid JOIN funds f ON f.tickersym = sa.productlink WHERE f.parentgroup = families.groupname
     GROUP BY s.industrytag ORDER BY AVG(sa.weightpct) DESC LIMIT 1)
-  type: string
+  type: TEXT
   primary_key: false
   description: "Family Sector Concentration Profile (KB 87): the economic sector with\
     \ the highest average weight across all funds in this family.\n\n[kb=87]\nFor\

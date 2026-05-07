@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: scientific_mission_success_probability
 source_queries:
 - version: 3
@@ -66,12 +66,12 @@ data_source: polar
 columns:
 - name: scieqref
   sql: scieqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: ser_avg
   sql: ser_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Scientific Equipment Reliability (KB #8): accuracy% \xD7 calibration\
     \ multiplier."
@@ -80,14 +80,14 @@ columns:
     type: float
 - name: smsp
   sql: smsp
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: cri_per_eq__cri_avg
   sql: cri_per_eq__cri_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

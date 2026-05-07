@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: scanmesh
 sql_table: scanmesh
 query_variables: {}
@@ -6,62 +6,62 @@ data_source: archeology
 columns:
 - name: facetregistry
   sql: facetregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: zoneref
   sql: zoneref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: equipref
   sql: equipref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: facetverts
   sql: facetverts
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: facetfaces
   sql: facetfaces
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: facetresmm
   sql: facetresmm
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: texdist
   sql: texdist
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: texpix
   sql: texpix
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: uvmapqual
   sql: uvmapqual
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: geomdeltamm
   sql: geomdeltamm
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Geometric Accuracy (mm) \u2014 average deviation between the scan\
     \ and the final 3D model. <0.1mm = museum-quality; ~1.0mm = general documentation\
@@ -79,7 +79,7 @@ columns:
     kb_id: 24
 - name: mcr
   sql: (facetfaces * 1.0 / (facetverts * facetresmm * facetresmm)) * 1000.0
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Mesh Complexity Ratio (MCR, KB #4): FacetFaces / (FacetVerts * FacetResMm^2)\
     \ * 10^3. Higher values indicate more complex meshes for a given resolution.\n\
@@ -94,7 +94,7 @@ columns:
     kb_id: 4
 - name: tdi
   sql: (texpix * 1.0 / (sqrt(facetfaces) * facetresmm)) * 0.01
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Texture Density Index (TDI, KB #5): TexPix / (sqrt(FacetFaces) * FacetResMm)\
     \ * 10^-2. Higher = more detailed textures relative to geometric complexity.\n\
@@ -109,7 +109,7 @@ columns:
 - name: mfs
   sql: ((facetfaces * 1.0 / (facetverts * facetresmm * facetresmm)) * 1000.0) * (((texpix
     * 1.0 / (sqrt(facetfaces) * facetresmm)) * 0.01) / 10.0) * (1 + exp(-geomdeltamm))
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Model Fidelity Score (MFS, KB #6): MCR * (TDI/10) * (1 + exp(-GeomDeltaMm)).\
     \ Higher = more accurate and detailed models with appropriate complexity.\n\n\
@@ -125,7 +125,7 @@ columns:
 - name: is_high_fidelity_mesh
   sql: CASE WHEN ((facetfaces * 1.0 / (facetverts * facetresmm * facetresmm)) * 1000.0)
     > 5.0 AND facetresmm < 1.0 AND geomdeltamm < 0.5 THEN 1 ELSE 0 END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "High Fidelity Mesh (KB #13): MCR > 5.0 AND FacetResMm < 1.0 AND GeomDeltaMm\
     \ < 0.5 \u2014 capable of representing fine archaeological details and surface\
@@ -142,7 +142,7 @@ columns:
   sql: CASE WHEN ((facetfaces * 1.0 / (facetverts * facetresmm * facetresmm)) * 1000.0)
     > 5.0 AND facetresmm < 1.0 AND geomdeltamm < 0.5 THEN 'Has High-Fidelity Meshes'
     WHEN facetfaces IS NOT NULL THEN 'Standard Mesh Quality' ELSE 'No Mesh Data' END
-  type: string
+  type: TEXT
   primary_key: false
   description: "Mesh Quality Classification (KB #53): three-tier classification \u2014\
     \ 'Has High-Fidelity Meshes' (KB #13), 'Standard Mesh Quality', or 'No Mesh Data'.\n\

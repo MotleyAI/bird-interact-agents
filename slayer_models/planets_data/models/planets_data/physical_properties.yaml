@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: physical_properties
 sql_table: physical_properties
 query_variables: {}
@@ -6,21 +6,21 @@ data_source: planets_data
 columns:
 - name: physref
   sql: physref
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: objectlink
   sql: objectlink
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: massjup
   sql: massjup
-  type: number
+  type: INT
   primary_key: false
   description: "Planet mass in Jupiter masses (KB #47). Range 0.00006..28.5 M_J.\n\
     \n[kb=47]\nTypically measured in Jupiter masses ($M_J$). Earth's mass is about\
@@ -34,7 +34,7 @@ columns:
     kb_id: 47
 - name: radjup
   sql: radjup
-  type: number
+  type: INT
   primary_key: false
   description: "Planet radius in Jupiter radii (KB #48). Range 0.027..6.9 R_J.\n\n\
     [kb=48]\nTypically measured in Jupiter radii ($R_J$). Earth's radius is about\
@@ -49,7 +49,7 @@ columns:
     kb_id: 48
 - name: densvalue
   sql: densvalue
-  type: number
+  type: INT
   primary_key: false
   description: "Bulk planet density in g/cm^3 (KB #49). <1 = puffy gas giant, ~5.5\
     \ = rocky, >20 = super-dense.\n\n[kb=49]\nMeasured in grams per cubic centimeter\
@@ -64,7 +64,7 @@ columns:
     kb_id: 49
 - name: mass_earth
   sql: massjup * 317.83
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Planet mass in Earth masses (KB #1): M_E = M_J x 317.83.\n\n[kb=1]\n\
     Given a planet's mass in Jupiter masses ($M_J$), its mass in Earth masses ($M_E$)\
@@ -76,7 +76,7 @@ columns:
     kb_id: 1
 - name: radius_earth
   sql: radjup * 11.209
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Planet radius in Earth radii (KB #2): R_E = R_J x 11.209.\n\n[kb=2]\n\
     Given a planet's radius in Jupiter radii ($R_J$), its radius in Earth radii ($R_E$)\
@@ -88,7 +88,7 @@ columns:
     kb_id: 2
 - name: surface_gravity
   sql: (massjup * 317.83) / pow(radjup * 11.209, 2)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Planet surface gravity relative to Earth (KB #4): g_p = M_E / R_E^2.\n\
     \n[kb=4]\nThe surface gravity ($g_p$) relative to Earth's is found by: $g_p =\
@@ -102,7 +102,7 @@ columns:
     kb_id: 4
 - name: mass_radius_ratio
   sql: (massjup * 317.83) / NULLIF(radjup * 11.209, 0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Mass-Radius Ratio (KB #16): MRR = M_E / R_E.\n\n[kb=16]\nA basic mass-radius\
     \ ratio ($MRR$) can be expressed as: $MRR = \\frac{M_E}{R_E}$, which depends on\
@@ -115,7 +115,7 @@ columns:
 - name: escape_velocity
   sql: sqrt(2.0 * 6.6743e-11 * (massjup * 317.83 * 5.972e24) / NULLIF(radjup * 11.209
     * 6.371e6, 0))
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Planet escape velocity in m/s (KB #10): v_e = sqrt(2 G M_p / R_p).\
     \ Earth-mass and Earth-radius converted to SI (1 M_E=5.972e24 kg, 1 R_E=6.371e6\
@@ -132,7 +132,7 @@ columns:
 - name: transit_depth
   sql: pow((radjup * 11.209) / NULLIF(CAST(json_extract(planets__stars.stellarprops,
     '$.physical.Radius_Value') AS REAL) * 109.076, 0), 2)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Transit Depth (KB #9): Delta F = (R_p / R_star)^2. Both radii converted\
     \ to common units (Earth radii; 1 R_sun = 109.076 R_E).\n\n[kb=9]\nThe transit\
@@ -147,7 +147,7 @@ columns:
 - name: planet_star_mass_ratio
   sql: (massjup * 317.83) / NULLIF(CAST(json_extract(planets__stars.stellarprops,
     '$.physical.Mass_Value') AS REAL) * 332946.0, 0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Planet-Star Mass Ratio (KB #18): q = M_p / M_star. Both masses converted\
     \ to Earth masses (1 M_sun = 332946 M_E).\n\n[kb=18]\nThe mass ratio ($q$) is:\
@@ -160,7 +160,7 @@ columns:
     kb_id: 18
 - name: is_gas_giant
   sql: massjup > 0.1
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Gas Giant (KB #20): planet mass > 0.1 Jupiter masses.\n\n[kb=20]\n\
     A planet with a mass greater than 0.1 Jupiter masses. \u2014 A large planet composed\
@@ -171,7 +171,7 @@ columns:
     kb_id: 20
 - name: is_rocky_planet
   sql: densvalue > 3
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Rocky Planet (KB #21): bulk density > 3 g/cm^3.\n\n[kb=21]\nA planet\
     \ with a bulk density greater than 3 g/cm\xB3. \u2014 A planet composed primarily\
@@ -182,7 +182,7 @@ columns:
     kb_id: 21
 - name: is_super_earth
   sql: densvalue > 3 AND (massjup * 317.83) BETWEEN 1 AND 10
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Super-Earth (KB #24): a Rocky Planet with mass between 1 and 10 Earth\
     \ masses.\n\n[kb=24]\nA planet that is likely a Rocky Planet and has a mass between\
@@ -195,7 +195,7 @@ columns:
     kb_id: 24
 - name: is_inflated_gas_giant
   sql: massjup > 0.1 AND densvalue < 0.5
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Inflated Gas Giant (KB #32): a Gas Giant with bulk density < 0.5 g/cm^3.\n\
     \n[kb=32]\nA Gas Giant Planet with a bulk density less than 0.5 g/cm\xB3. \u2014\

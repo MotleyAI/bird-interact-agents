@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: loyaltyandachievements
 sql_table: loyaltyandachievements
 query_variables: {}
@@ -6,55 +6,55 @@ data_source: virtual
 columns:
 - name: loyaltyreg
   sql: loyaltyreg
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: loyaltyeventspivot
   sql: loyaltyeventspivot
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: loyaltyengagepivot
   sql: loyaltyengagepivot
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: rankpos
   sql: rankpos
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: inflscore
   sql: inflscore
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: reputelv
   sql: reputelv
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: trustval
   sql: trustval
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: reward_progress
   sql: reward_progress
-  type: string
+  type: TEXT
   primary_key: false
   description: 'JSONB: loyalty (loypts, rewtier) and achievements (achcount, badgecoll,
     spectitles). Sub-fields are exposed as helper columns.'
   hidden: false
 - name: loypts
   sql: CAST(json_extract(reward_progress, '$.loyalty.loypts') AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Loyalty points (KB #9), cumulative reward for activities. Bands: 0-1000\
     \ entry (basic digital items); 1001-5000 intermediate (limited-time privileges\
@@ -75,25 +75,25 @@ columns:
     kb_id: 9
 - name: rewtier
   sql: reward_progress ->> '$.loyalty.rewtier'
-  type: string
+  type: TEXT
   primary_key: false
   description: Reward tier (Bronze / Silver / Gold / Platinum), extracted from reward_progress.loyalty.rewtier.
   hidden: false
 - name: achcount
   sql: CAST(json_extract(reward_progress, '$.achievements.achcount') AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Achievements count, extracted from reward_progress.achievements.achcount.
   hidden: false
 - name: badgecoll
   sql: CAST(json_extract(reward_progress, '$.achievements.badgecoll') AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Badge collection count, extracted from reward_progress.achievements.badgecoll.
   hidden: false
 - name: spectitles
   sql: CAST(json_extract(reward_progress, '$.achievements.spectitles') AS INTEGER)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Special titles count, extracted from reward_progress.achievements.spectitles.
   hidden: false

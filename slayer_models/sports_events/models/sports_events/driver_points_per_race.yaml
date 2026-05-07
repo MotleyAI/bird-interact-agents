@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: driver_points_per_race
 sql: "SELECT\n  ds.drive_link AS drive_link,\n  r.yr AS yr,\n  MAX(ds.acc_pt) AS season_total_points,\n\
   \  COUNT(*) AS races_completed,\n  CAST(MAX(ds.acc_pt) AS REAL) / NULLIF(COUNT(*),\
@@ -9,32 +9,32 @@ data_source: sports_events
 columns:
 - name: drive_link
   sql: drive_link
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Foreign key to drivers.
   hidden: false
 - name: yr
   sql: yr
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Year of the season.
   hidden: false
 - name: season_total_points
   sql: season_total_points
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Driver's cumulative season points (max acc_pt across the season's standings
     rows).
   hidden: false
 - name: races_completed
   sql: races_completed
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Number of races the driver has standings rows for in the season.
   hidden: false
 - name: ppr
   sql: ppr
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Driver's Points Per Race (KB #26): season_total_points / races_completed.\
     \ Measure of points-scoring efficiency.\n\n[kb=26]\nPPR = \\frac{P_{total}}{R_{completed}},\

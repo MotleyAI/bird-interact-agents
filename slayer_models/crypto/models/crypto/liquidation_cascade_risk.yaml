@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: liquidation_cascade_risk
 source_queries:
 - version: 3
@@ -23,7 +23,7 @@ source_queries:
     source_name: marketdata
     columns:
     - name: abs_obi_raw
-      type: number
+      type: DOUBLE
       sql: ABS((CAST(marketdata.quote_depth_snapshot ->> '$.depth.biddepth' AS REAL)
         - CAST(marketdata.quote_depth_snapshot ->> '$.depth.askdepth' AS REAL)) /
         NULLIF(CAST(marketdata.quote_depth_snapshot ->> '$.depth.biddepth' AS REAL)
@@ -44,7 +44,7 @@ source_queries:
         - mktcombo
     columns:
     - name: is_liquidation_cascade
-      type: number
+      type: DOUBLE
       sql: CASE WHEN lr_per_pair.high_risk_share > 0.15 AND obi_per_pair.abs_obi_avg
         > 0.3 THEN 1 ELSE 0 END
   dimensions:
@@ -121,26 +121,26 @@ data_source: crypto
 columns:
 - name: orders__mktnote
   sql: orders__mktnote
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: high_risk_share
   sql: high_risk_share
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: obi_per_pair__abs_obi_avg
   sql: obi_per_pair__abs_obi_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: is_liquidation_cascade
   sql: is_liquidation_cascade
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

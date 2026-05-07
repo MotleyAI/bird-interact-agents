@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: transactions
 sql_table: transactions
 query_variables: {}
@@ -6,22 +6,22 @@ data_source: cybermarket
 columns:
 - name: txregistry
   sql: txregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: rectag
   sql: rectag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: eventstamp
   sql: eventstamp
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: paymethod
   sql: paymethod
-  type: string
+  type: TEXT
   primary_key: false
   description: "Payment method, by anonymity / traceability: 'Crypto_A' typically\
     \ Bitcoin (pseudonymous, public ledger); 'Crypto_B' typically Monero / privacy\
@@ -40,38 +40,38 @@ columns:
     kb_id: 2
 - name: payamtusd
   sql: payamtusd
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: txfeeusd
   sql: txfeeusd
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: escrowused
   sql: escrowused
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: escrowhrs
   sql: escrowhrs
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: multisigflag
   sql: multisigflag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: txstatus
   sql: txstatus
-  type: string
+  type: TEXT
   primary_key: false
   description: "Transaction lifecycle stage: 'Pending' = initiated, awaiting verification\
     \ or escrow; 'Completed' = successfully executed; 'Cancelled' = terminated before\
@@ -89,55 +89,55 @@ columns:
     kb_id: 3
 - name: txfinishhrs
   sql: txfinishhrs
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: shipmethod
   sql: shipmethod
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: shipregionsrc
   sql: shipregionsrc
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: shipregiondst
   sql: shipregiondst
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: crossborderflag
   sql: crossborderflag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: routecomplexity
   sql: routecomplexity
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: mktref
   sql: mktref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: prodref
   sql: prodref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: buyref
   sql: buyref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: tas
   sql: (payamtusd * 1.0 / 1000) * (txfinishhrs * 1.0 / 24) * (1 + escrowhrs * 1.0
     / 100) * (1 - markets.esccomprate * 1.0 / 100)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Transaction Anomaly Score (TAS): (payamtusd/1000)*(txfinishhrs/24)*(1+escrowhrs/100)*(1-esccomprate/100).\
     \ esccomprate is from the associated market (joined via mktref). Higher = more\
@@ -153,7 +153,7 @@ columns:
 - name: prodtheme_weight
   sql: CASE products.prodtheme WHEN 'Digital' THEN 10 WHEN 'Data' THEN 20 WHEN 'Service'
     THEN 30 WHEN 'Physical' THEN 50 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Numeric weight of the linked product's prodtheme used by PRE: Digital=10,\
     \ Data=20, Service=30, Physical=50.\n\n[kb=4]\n'Digital' products include software,\
@@ -170,7 +170,7 @@ columns:
     kb_id: 4
 - name: escrowused_numeric
   sql: CASE WHEN escrowused = 'Yes' THEN 0 WHEN escrowused = 'No' THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Numeric mapping of escrowused (used by PRE): 0 if escrow used ('Yes'),\
     \ 1 if not ('No').\n\n[kb=4]\n'Digital' products include software, account credentials,\
@@ -190,7 +190,7 @@ columns:
     THEN 30 WHEN 'Physical' THEN 50 ELSE 0 END) + (CASE WHEN escrowused = 'Yes' THEN
     0 WHEN escrowused = 'No' THEN 1 ELSE 0 END) * 10 - (escrowhrs * 1.0 / 24) + (payamtusd
     * 1.0 / 500)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Product Risk Exposure (PRE): prodtheme_weight + 10*escrowused_numeric\
     \ - escrowhrs/24 + payamtusd/500. Encoded on transactions because both product\
@@ -208,7 +208,7 @@ columns:
   sql: ((payamtusd * 1.0 / 1000) * (txfinishhrs * 1.0 / 24) * (1 + escrowhrs * 1.0
     / 100) * (1 - markets.esccomprate * 1.0 / 100)) > 75 AND paymethod = 'Crypto_B'
     AND (escrowused = 'No' OR escrowhrs < 24) AND routecomplexity = 'Complex'
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Suspicious Transaction Pattern (KB #22): TAS > 75, paymethod = 'Crypto_B'\
     \ (privacy coin), escrow disabled or <24h, routecomplexity = 'Complex'.\n\n[kb=22]\n\
@@ -227,7 +227,7 @@ columns:
     0 WHEN escrowused = 'No' THEN 1 ELSE 0 END) * 10 - (escrowhrs * 1.0 / 24) + (payamtusd
     * 1.0 / 500)) > 60 AND products.prodtheme = 'Physical' AND escrowused = 'No' AND
     paymethod = 'Crypto_B'
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "High-Exposure Product (KB #42): PRE > 60, prodtheme='Physical', escrowused='No',\
     \ paymethod='Crypto_B'. Encoded on transactions (the row that carries pay/escrow/method\

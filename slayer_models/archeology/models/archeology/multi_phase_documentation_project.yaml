@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: multi_phase_documentation_project
 source_queries:
 - version: 3
@@ -62,7 +62,7 @@ source_queries:
     source_name: merged
     columns:
     - name: is_multi_phase_documentation_project
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN scan_count > 1 AND avg_adc < 70 AND per_project_dpq__avg_dpq
         > 80 THEN 1 ELSE 0 END
   measures:
@@ -323,31 +323,31 @@ data_source: archeology
 columns:
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_multi_phase_documentation_project
   sql: is_multi_phase_documentation_project
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 - name: scan_count
   sql: scan_count
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: avg_adc
   sql: avg_adc
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: avg_dpq
   sql: avg_dpq
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

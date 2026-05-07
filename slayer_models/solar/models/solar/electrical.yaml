@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: electrical
 sql_table: electrical
 query_variables: {}
@@ -6,78 +6,78 @@ data_source: solar
 columns:
 - name: elecregistry
   sql: elecregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: engyunitref
   sql: engyunitref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: efflogref
   sql: efflogref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: iscinita
   sql: iscinita
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: isccurra
   sql: isccurra
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: vocinitv
   sql: vocinitv
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: voccurrv
   sql: voccurrv
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: impinita
   sql: impinita
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: impcurra
   sql: impcurra
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: vmpinitv
   sql: vmpinitv
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: vmpcurrv
   sql: vmpcurrv
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: ffactorinit
   sql: ffactorinit
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "FillFactorInitial (KB#24): initial fill factor at install. Dimensionless\
     \ 0-1; high-quality commercial panels: 0.75-0.85.\n\n[kb=24]\nA dimensionless\
@@ -93,7 +93,7 @@ columns:
     kb_id: 24
 - name: ffactorcurr
   sql: ffactorcurr
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'FillFactorCurrent (KB#24): current fill factor measurement. Lower
     than initial reflects degradation.'
@@ -102,14 +102,14 @@ columns:
     type: float
 - name: seriesresohm
   sql: seriesresohm
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: shuntresohm
   sql: shuntresohm
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
@@ -117,7 +117,7 @@ columns:
 - name: ffdr
   sql: CASE WHEN panel_performance.years_since_install > 0 THEN (ffactorinit - ffactorcurr)
     / panel_performance.years_since_install * 100 ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Fill Factor Degradation Rate (FFDR, KB#5): (FillFactorInitial - FillFactorCurrent)\
     \ / Years_Since_Installation \xD7 100. Years_Since_Installation comes from the\
@@ -133,7 +133,7 @@ columns:
   sql: CASE WHEN ffactorinit > 0 AND vocinitv > 0 AND iscinita > 0 THEN (ffactorinit
     - ffactorcurr) / ffactorinit + (vocinitv - voccurrv) / vocinitv + (iscinita -
     isccurra) / iscinita ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Electrical Degradation Index (EDI, KB#38): (FillFactorInitial - FillFactorCurrent)/FillFactorInitial\
     \ + (VocInitialV - VocCurrV)/VocInitialV + (IscInitialA - IscCurrA)/IscInitialA.\

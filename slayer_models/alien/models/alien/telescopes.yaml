@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: telescopes
 sql_table: telescopes
 query_variables: {}
@@ -6,80 +6,80 @@ data_source: alien
 columns:
 - name: telescregistry
   sql: telescregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: observstation
   sql: observstation
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: equipstatus
   sql: equipstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: calibrstatus
   sql: calibrstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: pointaccarc
   sql: pointaccarc
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: trackaccarc
   sql: trackaccarc
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: focusquality
   sql: focusquality
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: detecttempk
   sql: detecttempk
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: coolsysstatus
   sql: coolsysstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: powerstatus
   sql: powerstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: datastorstatus
   sql: datastorstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: netstatus
   sql: netstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: bandusagepct
   sql: bandusagepct
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: procqueuestatus
   sql: procqueuestatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: oqf
@@ -87,7 +87,7 @@ columns:
     * (1 - 0.02 * observatories.windspeedms)) * (1 - ((1 - observatories.lunardistdeg
     / 180.0) * (1 - observatories.atmostransparency))) * (CASE WHEN pointaccarc <
     2 THEN 1 ELSE 2.0 / pointaccarc END)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Observation Quality Factor (OQF) = AOI * (1 - LIF) * (PointAccArc\
     \ < 2 ? 1 : 2/PointAccArc). Combines atmospheric AOI (=AtmosTransparency*(1-HumidityRate/100)*(1-0.02*WindSpeedMs)),\
@@ -111,7 +111,7 @@ columns:
     >= 0.5 AND (observatories.atmostransparency * (1 - observatories.humidityrate
     / 100.0) * (1 - 0.02 * observatories.windspeedms)) <= 0.8 THEN 'Medium' ELSE 'Low'
     END
-  type: string
+  type: TEXT
   primary_key: false
   description: "Observational Confidence Level (OCL) tier: 'High' (AOI>0.8 AND EquipStatus='Operational'\
     \ AND CalibrStatus='Current'), 'Medium' (AOI in 0.5-0.8 with minor issues), 'Low'\
@@ -128,7 +128,7 @@ columns:
 - name: has_equipment_problem
   sql: CASE WHEN equipstatus <> 'Operational' OR calibrstatus <> 'Current' OR coolsysstatus
     <> 'Normal' THEN 1 ELSE 0 END
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Equipment Problems: a telescope has an equipment problem whenever\
     \ any of its key subsystem states are not in their nominal condition: EquipStatus<>'Operational',\

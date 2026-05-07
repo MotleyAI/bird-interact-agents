@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: patients
 sql_table: patients
 query_variables: {}
@@ -6,84 +6,84 @@ data_source: mental
 columns:
 - name: patkey
   sql: patkey
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: patage
   sql: patage
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: patgender
   sql: patgender
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: pateth
   sql: pateth
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: edulevel
   sql: edulevel
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: empstat
   sql: empstat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: maristat
   sql: maristat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: livingarr
   sql: livingarr
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: insurtype
   sql: insurtype
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: insurstat
   sql: insurstat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: disabstat
   sql: disabstat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: housestable
   sql: housestable
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: cultfactor
   sql: cultfactor
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: stigmaimp
   sql: stigmaimp
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: finstress
   sql: finstress
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: clinleadref
   sql: clinleadref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: point_cloud_density_ratio
 source_queries:
 - version: 3
@@ -66,33 +66,33 @@ data_source: archeology
 columns:
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: totalpts_avg
   sql: totalpts_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: clouddense_avg
   sql: clouddense_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: pcdr
   sql: pcdr
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: sp_per_arcref__aream2_avg
   sql: sp_per_arcref__aream2_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: signal_is_habitable_zone_transmission
 source_queries:
 - version: 3
@@ -19,7 +19,7 @@ source_queries:
         - signalref
     columns:
     - name: is_habitable_zone_transmission
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN ((signalprobabilities.techsigprob * (1 - signalprobabilities.natsrcprob)
         * signalprobabilities.sigunique * (0.5 + signalprobabilities.anomscore / 10.0))
         * (CASE WHEN sourceproperties.objtype = 'Dwarf' THEN (CASE WHEN sourceproperties.objmasssol
@@ -63,12 +63,12 @@ data_source: alien
 columns:
 - name: signalregistry
   sql: signalregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_habitable_zone_transmission
   sql: is_habitable_zone_transmission
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

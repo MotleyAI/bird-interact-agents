@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: vaccine_efficiency_rank
 source_queries:
 - version: 3
@@ -6,7 +6,7 @@ source_queries:
     source_name: vaccinedetails
     columns:
     - name: efficiency_rank
-      type: number
+      type: DOUBLE
       sql: RANK() OVER (ORDER BY CAST(vialtally AS REAL) * 10 / NULLIF(container.volliters,
         0) DESC)
   dimensions:
@@ -27,14 +27,14 @@ data_source: vaccine
 columns:
 - name: vacregistry
   sql: vacregistry
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: ser
   sql: ser
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Storage Efficiency Ratio (SER). How efficiently container volume is
     utilized: VialTally * 10 / VolLiters (KB #5). Reaches container.volliters via
@@ -42,7 +42,7 @@ columns:
   hidden: false
 - name: efficiency_rank
   sql: efficiency_rank
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: sustainable_polar_operations
 source_queries:
 - version: 3
@@ -7,7 +7,7 @@ source_queries:
     source_name: resource_self_sufficiency_index
     columns:
     - name: rssi_ok
-      type: number
+      type: DOUBLE
       sql: CASE WHEN rssi > 0.7 THEN 1 ELSE 0 END
   measures:
   - formula: rssi_ok:min
@@ -21,7 +21,7 @@ source_queries:
     source_name: energy_water_resource_integration_index
     columns:
     - name: ewrii_ok
-      type: number
+      type: DOUBLE
       sql: CASE WHEN ewrii > 0.65 THEN 1 ELSE 0 END
   measures:
   - formula: ewrii_ok:min
@@ -35,7 +35,7 @@ source_queries:
     source_name: lightingandsafety
     columns:
     - name: waste_normal_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN wastemanagementstatus = 'Normal' THEN 1 ELSE 0 END
   measures:
   - formula: waste_normal_flag:min
@@ -49,7 +49,7 @@ source_queries:
     source_name: equipment
     columns:
     - name: env_ok_flag
-      type: number
+      type: DOUBLE
       sql: CASE WHEN environmentalimpactindex < 6.0 THEN 1 ELSE 0 END
   measures:
   - formula: env_ok_flag:min
@@ -226,34 +226,34 @@ data_source: polar
 columns:
 - name: equipmentcode
   sql: equipmentcode
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: env_ok_min
   sql: env_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: is_sustainable
   sql: is_sustainable
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: waste_flag_p_eq_spo__waste_ok_min
   sql: waste_flag_p_eq_spo__waste_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: ewrii_flag_p_eq__ewrii_ok_min
   sql: ewrii_flag_p_eq__ewrii_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: rssi_flag_p_eq__rssi_ok_min
   sql: rssi_flag_p_eq__rssi_ok_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

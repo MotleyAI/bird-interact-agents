@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: attorney_specialization_category
 source_queries:
 - version: 3
@@ -25,10 +25,10 @@ source_queries:
     source_name: att_totals
     columns:
     - name: dominant_visa_pct
-      type: number
+      type: DOUBLE
       sql: _count_max * 100.0 / NULLIF(_count_sum, 0)
     - name: specialization_category
-      type: string
+      type: TEXT
       sql: CASE WHEN visacls_count_distinct = 1 THEN 'Exclusive Specialists' WHEN
         _count_max * 100.0 / NULLIF(_count_sum, 0) > 80 THEN 'Specialists' WHEN visacls_count_distinct
         BETWEEN 2 AND 3 THEN 'Hybrid Practitioners' ELSE 'Generalists' END
@@ -72,19 +72,19 @@ data_source: labor_certification_applications
 columns:
 - name: counselmail
   sql: counselmail
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: _count_sum
   sql: _count_sum
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: visacls_count_distinct
   sql: visacls_count_distinct
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Visa class for the case (KB #1) via cases join, denormalized.'
   hidden: false
@@ -92,19 +92,19 @@ columns:
     type: integer
 - name: _count_max
   sql: _count_max
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: dominant_visa_pct
   sql: dominant_visa_pct
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: specialization_category
   sql: specialization_category
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

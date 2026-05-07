@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: customer_loyalty_network
 source_queries:
 - version: 3
@@ -33,7 +33,7 @@ source_queries:
         - products__vendref
     columns:
     - name: is_customer_loyalty_network
-      type: number
+      type: DOUBLE
       sql: CASE WHEN vendors.vrs > 90 AND COALESCE(loyal_buyers_per_vendor.loyal_buyer_count,
         0) >= 1 AND vendors.vendrate > 4.8 AND vendors.vendchecklvl IN ('Advanced','Premium')
         THEN 1 ELSE 0 END
@@ -71,12 +71,12 @@ data_source: cybermarket
 columns:
 - name: vendregistry
   sql: vendregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_customer_loyalty_network
   sql: is_customer_loyalty_network
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

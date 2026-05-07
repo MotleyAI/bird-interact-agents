@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: network_security_threat
 source_queries:
 - version: 3
@@ -223,7 +223,7 @@ data_source: fake
 columns:
 - name: account_id
   sql: account_id
-  type: string
+  type: TEXT
   primary_key: false
   description: "Per-row account identifier resolved through the moderationaction \u2192\
     \ contentbehavior \u2192 sessionbehavior \u2192 profile join chain. Convenience\
@@ -231,7 +231,7 @@ columns:
   hidden: false
 - name: cluster_id
   sql: cluster_id
-  type: string
+  type: TEXT
   primary_key: false
   description: "Per-row cluster identifier resolved through the moderationaction \u2192\
     \ contentbehavior \u2192 sessionbehavior \u2192 profile \u2192 account join chain.\
@@ -240,7 +240,7 @@ columns:
   hidden: false
 - name: nts_v
   sql: nts_v
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Network Trust Score (KB #36): PCI * (1-NGV) * (1-CBR). All inlined.'
   hidden: false
@@ -248,14 +248,14 @@ columns:
     type: float
 - name: cluster_scores__avg_bbi_max
   sql: cluster_scores__avg_bbi_max
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: cluster_scores__max_clustsize_max
   sql: cluster_scores__max_clustsize_max
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

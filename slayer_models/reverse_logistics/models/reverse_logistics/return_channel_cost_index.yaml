@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: return_channel_cost_index
 source_queries:
 - version: 3
@@ -52,12 +52,12 @@ data_source: reverse_logistics
 columns:
 - name: casenum
   sql: casenum
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: return_channel
   sql: return_channel
-  type: string
+  type: TEXT
   primary_key: false
   description: "Return Channels \u2014 pathway through which the customer sent the\
     \ item back. 'Store' (in-person retail outlet), 'Courier' (doorstep pickup), 'Mail'\
@@ -66,7 +66,7 @@ columns:
   hidden: false
 - name: shipping_fee_avg
   sql: shipping_fee_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Shipping Fee (S_f): cost charged by the logistics provider for transporting
     the returned item.'
@@ -75,14 +75,14 @@ columns:
     type: float
 - name: rcci
   sql: rcci
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: avg_fee_per_channel__channel_avg_fee_avg
   sql: avg_fee_per_channel__channel_avg_fee_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

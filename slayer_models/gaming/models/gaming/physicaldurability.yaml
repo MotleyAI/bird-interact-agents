@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: physicaldurability
 sql_table: physicaldurability
 query_variables: {}
@@ -6,159 +6,159 @@ data_source: gaming
 columns:
 - name: physregistry
   sql: physregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: physrgbref
   sql: physrgbref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: physperfref
   sql: physperfref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: wgtgram
   sql: wgtgram
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: wgtdist
   sql: wgtdist
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: cablegram
   sql: cablegram
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: cabledrag
   sql: cabledrag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: feetmat
   sql: feetmat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: feetthkmm
   sql: feetthkmm
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: glidecons
   sql: glidecons
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: fricstatic
   sql: fricstatic
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: frickinetic
   sql: frickinetic
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: surfcompat
   sql: surfcompat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: gripsty
   sql: gripsty
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: gripcoat
   sql: gripcoat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: gripdur
   sql: gripdur
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: sweatres
   sql: sweatres
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: tempres
   sql: tempres
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: humidres
   sql: humidres
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: dustres
   sql: dustres
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: waterres
   sql: waterres
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: impres
   sql: impres
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: drophtm
   sql: drophtm
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: bendforce
   sql: bendforce
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: twistdeg
   sql: twistdeg
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: cablebend
   sql: cablebend
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: usbconndur
   sql: usbconndur
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
@@ -166,7 +166,7 @@ columns:
 - name: ds
   sql: ((drophtm * 1.0 / 2) + (bendforce * 1.0 / 100) + (twistdeg * 1.0 / 90)) * (usbconndur
     * 1.0 / 10000) * 10
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Durability Score (DS) \u2014 (DropHtM/2 + BendForce/100 + TwistDeg/90)\
     \ \xD7 UsbConnDur/10000 \xD7 10.\n\n[kb=7]\nDS = \\left(\\frac{DropHtM}{2} + \\\
@@ -186,7 +186,7 @@ columns:
     WHEN 'IPX0' THEN 0 WHEN 'IPX1' THEN 1 WHEN 'IPX2' THEN 2 WHEN 'IPX3' THEN 3 WHEN
     'IPX4' THEN 4 WHEN 'IPX5' THEN 5 WHEN 'IPX6' THEN 6 WHEN 'IPX7' THEN 7 WHEN 'IPX8'
     THEN 8 ELSE 0 END) * 1.0 / 6) * (1 - (100 - bendforce) * 1.0 / 200)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Physical Endurance Rating (PER) = DS \xD7 (1 + (DustRes_score + WaterRes_score)/6)\
     \ \xD7 (1 - (100 - BendForce)/200). IP rating maps IPX0=0, IPX1=1, IPX2=2, IPX3=3\
@@ -204,7 +204,7 @@ columns:
   sql: (((drophtm * 1.0 / 2) + (bendforce * 1.0 / 100) + (twistdeg * 1.0 / 90)) *
     (usbconndur * 1.0 / 10000) * 10) > 8.5 AND usbconndur > 15000 AND drophtm > 1.5
     AND gripdur > 1000
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Competitive-Grade Durability (KB #16): DS > 8.5 AND UsbConnDur > 15000\
     \ AND DropHtM > 1.5 AND GripDur > 1000.\n\n[kb=16]\nA device with DS > 8.5, UsbConnDur\
@@ -226,7 +226,7 @@ columns:
     (((drophtm * 1.0 / 2) + (bendforce * 1.0 / 100) + (twistdeg * 1.0 / 90)) * (usbconndur
     * 1.0 / 10000) * 10) > 8.5 AND usbconndur > 20000 AND (drophtm > 2.0 OR waterres
     IN ('IPX7', 'IPX8'))
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Ultra-Durable Tournament Device (KB #47): PER > 9.0 AND DS > 8.5 AND\
     \ UsbConnDur > 20000 AND (DropHtM > 2.0 OR WaterRes >= IPX7).\n\n[kb=47]\nA device\

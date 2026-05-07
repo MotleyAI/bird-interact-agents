@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: lightingandsafety
 sql_table: lightingandsafety
 query_variables: {}
@@ -6,81 +6,81 @@ data_source: polar
 columns:
 - name: lightregistry
   sql: lightregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: lighteqref
   sql: lighteqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: lightingstatus
   sql: lightingstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: lightingintensitypercent
   sql: lightingintensitypercent
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: externallightstatus
   sql: externallightstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: emergencylightstatus
   sql: emergencylightstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: emergencystopstatus
   sql: emergencystopstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: alarmstatus
   sql: alarmstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: safetysystemstatus
   sql: safetysystemstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: lifesupportstatus
   sql: lifesupportstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: oxygensupplystatus
   sql: oxygensupplystatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: medicalequipmentstatus
   sql: medicalequipmentstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: wastemanagementstatus
   sql: wastemanagementstatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: watersupplystatus
   sql: watersupplystatus
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: safetysensors
   sql: safetysensors
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

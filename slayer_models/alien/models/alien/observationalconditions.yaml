@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: observationalconditions
 sql_table: observationalconditions
 query_variables: {}
@@ -6,22 +6,22 @@ data_source: alien
 columns:
 - name: signalref
   sql: signalref
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: obstime
   sql: obstime
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: obsdate
   sql: obsdate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: obsdurhrs
   sql: obsdurhrs
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

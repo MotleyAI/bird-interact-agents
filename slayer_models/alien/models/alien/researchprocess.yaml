@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: researchprocess
 sql_table: researchprocess
 query_variables: {}
@@ -6,57 +6,57 @@ data_source: alien
 columns:
 - name: signalref
   sql: signalref
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: analysisprio
   sql: analysisprio
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: followstat
   sql: followstat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: peerrevstat
   sql: peerrevstat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: pubstat
   sql: pubstat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: resprio
   sql: resprio
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: fundstat
   sql: fundstat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: collabstat
   sql: collabstat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: secclass
   sql: secclass
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: discstat
   sql: discstat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: notesmemo
   sql: notesmemo
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

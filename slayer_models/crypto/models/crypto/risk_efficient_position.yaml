@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: risk_efficient_position
 source_queries:
 - version: 3
@@ -24,7 +24,7 @@ source_queries:
         - ordervault
     columns:
     - name: is_risk_efficient
-      type: boolean
+      type: BOOLEAN
       sql: rar_stage.rar_v > 1.5 AND (ABS(riskandmargin__orders.dealquote - CASE riskandmargin.risk_margin_profile
         ->> '$.position.posedge' WHEN 'Long' THEN CAST(riskandmargin.risk_margin_profile
         ->> '$.price_levels.stopquote' AS REAL) ELSE CAST(riskandmargin.risk_margin_profile
@@ -90,12 +90,12 @@ data_source: crypto
 columns:
 - name: recordvault
   sql: recordvault
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_risk_efficient
   sql: is_risk_efficient
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

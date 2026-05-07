@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: smc_avg
 source_queries:
 - version: 3
@@ -7,7 +7,7 @@ source_queries:
     columns:
     - name: k
       sql: '1'
-      type: number
+      type: DOUBLE
   measures:
   - formula: smc_score:avg
   dimensions:
@@ -24,12 +24,12 @@ data_source: cold_chain_pharma_compliance
 columns:
 - name: k
   sql: k
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: smc_score_avg
   sql: smc_score_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Stock Management Capability proxy (KB #30, SCRS sub-score, 0-10):
     GDP compliance Full = 9, Partial = 6, else = 3. Used inside Supply Chain Resilience

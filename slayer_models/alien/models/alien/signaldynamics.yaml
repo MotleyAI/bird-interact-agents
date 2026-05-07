@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: signaldynamics
 sql_table: signaldynamics
 query_variables: {}
@@ -6,67 +6,67 @@ data_source: alien
 columns:
 - name: signalref
   sql: signalref
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: sigintegrity
   sql: sigintegrity
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sigrecurr
   sql: sigrecurr
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sigevolve
   sql: sigevolve
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: tempstab
   sql: tempstab
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: spatstab
   sql: spatstab
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: freqstab
   sql: freqstab
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: phasestab
   sql: phasestab
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: ampstab
   sql: ampstab
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: modstab
   sql: modstab
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sigcoherence
   sql: sigcoherence
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sigdisp
   sql: sigdisp
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sigscint
   sql: sigscint
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

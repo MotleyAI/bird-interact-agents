@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: preferencesandsettings
 sql_table: preferencesandsettings
 query_variables: {}
@@ -6,116 +6,116 @@ data_source: virtual
 columns:
 - name: prefreg
   sql: prefreg
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: preferencesmemberpivot
   sql: preferencesmemberpivot
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: preferencessocialpivot
   sql: preferencessocialpivot
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: privset
   sql: privset
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: dsconsent
   sql: dsconsent
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: notifpref
   sql: notifpref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: commpref
   sql: commpref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: markpref
   sql: markpref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: langset
   sql: langset
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: accessset
   sql: accessset
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: devcount
   sql: devcount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: logfreq
   sql: logfreq
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: lastlogdt
   sql: lastlogdt
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: sesscount
   sql: sesscount
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: timehrs
   sql: timehrs
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: avgdailymin
   sql: avgdailymin
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: peaksess
   sql: peaksess
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: intconsist
   sql: intconsist
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: platstable
   sql: platstable
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: connqual
   sql: connqual
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

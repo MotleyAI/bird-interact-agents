@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: high_risk_market
 source_queries:
 - version: 3
@@ -23,7 +23,7 @@ source_queries:
         - communication__transactions__mktref
     columns:
     - name: is_high_risk_market
-      type: number
+      type: DOUBLE
       sql: CASE WHEN markets.mrs > 500 AND markets.vendcount > 100 AND markets.dlyflow
         > 5000 AND COALESCE(high_alerts_per_market.high_alert_count, 0) >= 1 THEN
         1 ELSE 0 END
@@ -55,12 +55,12 @@ data_source: cybermarket
 columns:
 - name: mktregistry
   sql: mktregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_high_risk_market
   sql: is_high_risk_market
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

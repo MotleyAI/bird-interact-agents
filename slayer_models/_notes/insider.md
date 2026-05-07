@@ -33,8 +33,8 @@ to defer:
    the multistage encoding is feasible, but it crosses an aggregation
    boundary in the same way the current `trader_*` models do.
 2. **STDDEV_SAMP availability**: SQLite's stock build doesn't ship
-   `STDDEV_SAMP` as a window-aggregate UDF; SLayer 0.4.2 registers
-   the math UDFs needed for `log10` (KB #35) but the verifier-tested
+   `STDDEV_SAMP` as a window-aggregate UDF; SLayer registers the
+   math UDFs needed for `log10` (KB #35) but the verifier-tested
    surface here didn't include `STDDEV_SAMP` for the SQLite backend
    in this run. Encoding KB #73 cleanly needs either a custom UDF
    registration or a manual two-pass query (compute mean/stddev per

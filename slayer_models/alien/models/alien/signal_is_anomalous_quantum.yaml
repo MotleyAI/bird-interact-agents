@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: signal_is_anomalous_quantum
 source_queries:
 - version: 3
@@ -15,7 +15,7 @@ source_queries:
         - signalref
     columns:
     - name: is_anomalous_quantum
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN signaladvancedphenomena.quanteffects IN ('Significant', 'Observed')
         AND signalprobabilities.anomscore > 8 AND (modindex * (1 + ((1 - ABS(freqdrifthzs)
         / (freqmhz * 1000.0)) * sigdursec / (1 + doppshifthz / 1000.0))) * (CASE modtype
@@ -42,12 +42,12 @@ data_source: alien
 columns:
 - name: signalregistry
   sql: signalregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_anomalous_quantum
   sql: is_anomalous_quantum
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 measures: []

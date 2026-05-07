@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: panel_performance
 sql_table: performance
 query_variables: {}
@@ -6,53 +6,53 @@ data_source: solar
 columns:
 - name: perfregistry
   sql: perfregistry
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: solmodref
   sql: solmodref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: perfmoment
   sql: perfmoment
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: measpoww
   sql: measpoww
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'MeasuredPowerW: actual measured panel power output in watts at perfmoment.'
   hidden: false
 - name: powlossw
   sql: powlossw
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: efficiency_profile
   sql: efficiency_profile
-  type: string
+  type: TEXT
   primary_key: false
   description: 'JSON: {degradation:{cumdegpct,anndegrate}, current_efficiency:{curreffpct,efflosspct}}.'
   hidden: false
   meta: {}
 - name: curreffpct
   sql: json_extract(efficiency_profile, '$.current_efficiency.curreffpct')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'CurrentEfficiencyPercent (extracted from efficiency_profile JSON):
     the panel''s current measured efficiency %.'
   hidden: false
 - name: efflosspct
   sql: json_extract(efficiency_profile, '$.current_efficiency.efflosspct')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: EfficiencyLossPercent (extracted from efficiency_profile JSON).
   hidden: false
 - name: cumdegpct
   sql: json_extract(efficiency_profile, '$.degradation.cumdegpct')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "CumDegPct (KB#27): cumulative degradation % since installation. Extracted\
     \ from efficiency_profile.degradation.cumdegpct.\n\n[kb=27]\nExpressed as a percentage,\
@@ -67,7 +67,7 @@ columns:
     kb_id: 27
 - name: anndegrate
   sql: json_extract(efficiency_profile, '$.degradation.anndegrate')
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "AnnDegRate (KB#26): annual degradation rate %. Extracted from efficiency_profile.degradation.anndegrate.\n\
     \n[kb=26]\nExpressed as a percentage, representing how much a panel's output decreases\
@@ -82,7 +82,7 @@ columns:
 - name: ppr
   sql: CASE WHEN panel.powratew > 0 THEN measpoww * 1.0 / panel.powratew * 100 ELSE
     NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Panel Performance Ratio (PPR, KB#0): MeasuredPowerW / PowerRatedW\
     \ expressed as a percentage. Indicates how a panel performs vs its rated nameplate\
@@ -96,7 +96,7 @@ columns:
     kb_id: 0
 - name: years_since_install
   sql: (julianday(perfmoment) - julianday(panel__plant.initdate)) / 365.25
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Years between panel installation (plant.initdate) and the performance
     measurement. Used as the denominator in PELR (KB#1) and FFDR (KB#5).
@@ -106,7 +106,7 @@ columns:
     > 0 THEN (CAST(json_extract(efficiency_profile, '$.current_efficiency.curreffpct')
     AS REAL) - panel.paneeffpct) / ((julianday(perfmoment) - julianday(panel__plant.initdate))
     / 365.25) * 100 ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Panel Efficiency Loss Rate (PELR, KB#1): (CurrentEfficiencyPercent\
     \ - InitialEfficiencyPercent) / Years_Since_Installation \xD7 100. CurrentEfficiencyPercent\
@@ -126,7 +126,7 @@ columns:
     AS REAL) - panel.paneeffpct) / ((julianday(perfmoment) - julianday(panel__plant.initdate))
     / 365.25) * 100) / CAST(json_extract(efficiency_profile, '$.degradation.anndegrate')
     AS REAL) ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Normalized Degradation Index (NDI, KB#34): PELR / AnnDegRate. Values\
     \ > 1.0 indicate faster than expected degradation. AnnDegRate is from efficiency_profile.degradation.anndegrate.\n\
@@ -149,7 +149,7 @@ columns:
     - julianday(panel__plant.initdate)) / 365.25) * 100) / CAST(json_extract(efficiency_profile,
     '$.degradation.anndegrate') AS REAL) >= 1.0 THEN 'Moderate Degradation' ELSE 'Normal
     Degradation' END ELSE NULL END
-  type: string
+  type: TEXT
   primary_key: false
   description: "Degradation Severity Classification (KB#52): 'High Degradation' if\
     \ NDI > 1.5; 'Moderate Degradation' if NDI in [1.0, 1.5]; 'Normal Degradation'\
@@ -163,7 +163,7 @@ columns:
     kb_id: 52
 - name: tpci
   sql: panel.powratew * panel.tempcoef * (panel__environment.celltempc - 25)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Temperature Performance Coefficient Impact (TPCI, KB#2): PowerRatedW\
     \ \xD7 TempCoef \xD7 (CellTempC - 25). 25 C is the Standard Test Conditions baseline.\
@@ -180,7 +180,7 @@ columns:
 - name: iel
   sql: measpoww * (1 - CAST(json_extract(panel__inverter.power_metrics, '$.inverteffpct')
     AS REAL) / 100.0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Inverter Efficiency Loss (IEL, KB#4): MeasuredPowerW \xD7 (1 - InverterEffPct/100).\
     \ InverterEffPct from inverter.power_metrics.inverteffpct. Cross-table via panel\
@@ -195,7 +195,7 @@ columns:
   sql: CASE WHEN panel.powratew > 0 THEN (measpoww * 1.0 / panel.powratew * 100) *
     (1 - panel__environment.soillosspct / 100.0) * (1 - CAST(json_extract(efficiency_profile,
     '$.degradation.cumdegpct') AS REAL) / 100.0) ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Energy Production Efficiency (EPE, KB#3): PPR \xD7 (1 - SoilingLossPct/100)\
     \ \xD7 (1 - CumulativeDegradationPercent/100). Combines nameplate-derived PPR\
@@ -211,7 +211,7 @@ columns:
   sql: CASE WHEN panel.powratew > 0 THEN (measpoww * 1.0 / panel.powratew * 100) +
     (panel.powratew * panel.tempcoef * (panel__environment.celltempc - 25)) / panel.powratew
     ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Temperature Adjusted Performance Ratio (TAPR, KB#30): PPR + (TPCI\
     \ / PowerRatedW). Adjusts the Panel Performance Ratio for the temperature performance\
@@ -228,7 +228,7 @@ columns:
     AS REAL) / 100.0) + (measpoww * panel__environment.soillosspct / 100.0) + (measpoww
     * (1 - CAST(json_extract(panel__inverter.power_metrics, '$.inverteffpct') AS REAL)
     / 100.0))
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Total System Loss (TSL, KB#31): (PowerRatedW \xD7 CumDegPct/100) +\
     \ (MeasuredPowerW \xD7 SoilingLossPct/100) + IEL. Combined power loss from degradation,\
@@ -246,7 +246,7 @@ columns:
     AS REAL) * (1 + panel.tempcoef * (25 - panel__environment.celltempc) / 100.0)
     * (1000.0 / CAST(json_extract(panel__environment.irradiance_conditions, '$.irradiance_types[3]')
     AS REAL)) ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Weather Corrected Efficiency (WCE, KB#35): CurrentEfficiencyPercent\
     \ \xD7 (1 + TempCoef \xD7 (25 - CellTempC) / 100) \xD7 (1000 / POAIrradianceWM2).\
@@ -266,7 +266,7 @@ columns:
     '$.degradation.cumdegpct') AS REAL) / 100.0) ELSE NULL END) * (panel__environment.soillosspct
     / panel__environment.dustdengm2) * CAST(json_extract(panel__environment.irradiance_conditions,
     '$.irradiance_types[3]') AS REAL) / 1000.0 ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Expected Energy Yield (EEY, KB#36): PowerRatedW \xD7 EPE \xD7 SIF\
     \ \xD7 POAIrradianceWM2 / 1000. EPE is the Energy Production Efficiency (KB#3)\
@@ -284,7 +284,7 @@ columns:
     > 0 THEN 100.0 - ((julianday(perfmoment) - julianday(panel__plant.initdate)) /
     365.25) * CAST(json_extract(efficiency_profile, '$.degradation.anndegrate') AS
     REAL) ELSE 100.0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Expected PPR % for the panel's age, applying normal annual degradation:\
     \ 100 - Years_Since_Installation \xD7 AnnDegRate. Used as the reference curve\
@@ -297,7 +297,7 @@ columns:
     < 0.8 * (100.0 - ((julianday(perfmoment) - julianday(panel__plant.initdate)) /
     365.25) * CAST(json_extract(efficiency_profile, '$.degradation.anndegrate') AS
     REAL)) THEN 1 ELSE 0 END ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Critical Performance Threshold (KB#10): 1 when PPR < 80% of the expected\
     \ value for the panel's age, accounting for normal degradation; else 0. Expected\
@@ -321,7 +321,7 @@ columns:
     * (100.0 - ((julianday(perfmoment) - julianday(panel__plant.initdate)) / 365.25)
     * CAST(json_extract(efficiency_profile, '$.degradation.anndegrate') AS REAL))
     THEN 1 ELSE 0 END ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Advanced Performance Degradation Alert (KB#40): 1 when NDI > 1.5 AND\
     \ TAPR is below the Critical Performance Threshold (i.e., TAPR < 80% of the age-expected\
@@ -340,7 +340,7 @@ columns:
     AS REAL) - panel.paneeffpct) / ((julianday(perfmoment) - julianday(panel__plant.initdate))
     / 365.25) * 100) / CAST(json_extract(efficiency_profile, '$.degradation.anndegrate')
     AS REAL) > 0.9 THEN 1 ELSE 0 END ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "End-of-Warranty Optimization (KB#44, encodable portion): 1 when NDI\
     \ > 0.9 (the encodable half of the rule). The 'fails Warranty Claim Threshold'\
@@ -357,7 +357,7 @@ columns:
 - name: end_of_life_indicator
   sql: CASE WHEN CAST(json_extract(efficiency_profile, '$.degradation.cumdegpct')
     AS REAL) > 20 THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "End-of-Life Indicator (KB#14, partial): 1 when CumDegPct > 20%, else\
     \ 0. The KB also allows triggering on '12-month maintenance costs > 30% of replacement\
@@ -374,7 +374,7 @@ columns:
 - name: optimal_cleaning_schedule_trigger
   sql: CASE WHEN panel__environment.soillosspct > 5 OR panel__environment.dustdengm2
     > 0.15 THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Optimal Cleaning Schedule (KB#42, partial): 1 when SIF \xD7 DustDensityGM2\
     \ = SoilingLossPct exceeds the Soiling Cleaning Threshold (KB#13), else 0. The\

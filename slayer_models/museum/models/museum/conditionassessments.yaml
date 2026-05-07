@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: conditionassessments
 sql_table: conditionassessments
 query_variables: {}
@@ -6,43 +6,43 @@ data_source: museum
 columns:
 - name: conditionassessregistry
   sql: conditionassessregistry
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: artrefexamined
   sql: artrefexamined
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: showcaserefexamined
   sql: showcaserefexamined
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: lightreadrefobserved
   sql: lightreadrefobserved
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: condassessscore
   sql: condassessscore
-  type: number
+  type: INT
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: conserveassessdate
   sql: conserveassessdate
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: nextassessdue
   sql: nextassessdue
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

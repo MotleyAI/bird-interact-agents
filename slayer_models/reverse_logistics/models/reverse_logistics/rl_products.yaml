@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: rl_products
 sql_table: products
 query_variables: {}
@@ -6,33 +6,33 @@ data_source: reverse_logistics
 columns:
 - name: itemcode
   sql: itemcode
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: itemcategory
   sql: itemcategory
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: subcat
   sql: subcat
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: unit_value
   sql: unit_value
-  type: number
+  type: INT
   primary_key: false
   hidden: false
 - name: product_traceability
   sql: product_traceability
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: regulatory_compliance
   sql: TRIM(json_extract(product_traceability, '$.compliance.regulatory_compliance'),
     '"')
-  type: string
+  type: TEXT
   primary_key: false
   description: "Regulatory Compliance Statuses \u2014 'Compliant' (meeting all relevant\
     \ safety/environmental standards) or 'Non-compliant' (failing certification, recall\

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: effective_leverage
 source_queries:
 - version: 3
@@ -24,7 +24,7 @@ source_queries:
         - usertag
     columns:
     - name: el_value
-      type: number
+      type: DOUBLE
       sql: (CAST(riskandmargin.risk_margin_profile ->> '$.position.posmagn' AS REAL))
         * (riskandmargin.risk_margin_profile ->> '$.position.possum') / NULLIF(wallet_per_user.wallet_total,
         0)
@@ -51,17 +51,17 @@ data_source: crypto
 columns:
 - name: recordvault
   sql: recordvault
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: userlink
   sql: userlink
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: el_value
   sql: el_value
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: signal_cip_class
 source_queries:
 - version: 3
@@ -11,7 +11,7 @@ source_queries:
         - signalref
     columns:
     - name: cip_class
-      type: string
+      type: TEXT
       sql: CASE WHEN ((1 - ABS(freqdrifthzs) / (freqmhz * 1000.0)) * sigdursec / (1
         + doppshifthz / 1000.0)) > 0.8 AND signalclassification.entropyval BETWEEN
         0.4 AND 0.8 AND modindex > 0.5 THEN 'Coherent Information Pattern Detected'
@@ -40,12 +40,12 @@ data_source: alien
 columns:
 - name: signalregistry
   sql: signalregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: cip_class
   sql: cip_class
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

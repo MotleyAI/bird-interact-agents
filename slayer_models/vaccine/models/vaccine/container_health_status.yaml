@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: container_health_status
 source_queries:
 - version: 3
@@ -7,7 +7,7 @@ source_queries:
     source_name: sensordata
     columns:
     - name: is_within_year_chs
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN julianday(alerttime) >= julianday('now', '-1 year') THEN 1 ELSE
         0 END
   measures:
@@ -32,20 +32,20 @@ source_queries:
         - containlink
     columns:
     - name: tss_avg_year
-      type: number
+      type: DOUBLE
       sql: agg_per_container_chs.tss_avg
     - name: tbs_max_year
-      type: number
+      type: DOUBLE
       sql: agg_per_container_chs.tbs_max
     - name: tss_current_min
-      type: number
+      type: DOUBLE
       sql: agg_per_container_chs.tss_min
     - name: cri_for_chs
-      type: number
+      type: DOUBLE
       sql: (1 - COALESCE(agg_per_container_chs.tss_avg, 0)) * (1 - COALESCE(coolremainpct,
         0) / 100)
     - name: container_health_status
-      type: string
+      type: TEXT
       sql: CASE WHEN ((1 - COALESCE(agg_per_container_chs.tss_avg, 0)) * (1 - COALESCE(coolremainpct,
         0) / 100)) > 0.6 OR agg_per_container_chs.tss_min < 0.4 THEN 'Critical' WHEN
         agg_per_container_chs.tss_avg >= 0.7 AND agg_per_container_chs.tbs_max <=
@@ -95,27 +95,27 @@ data_source: vaccine
 columns:
 - name: containregistry
   sql: containregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: tss_avg_year
   sql: tss_avg_year
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: tbs_max_year
   sql: tbs_max_year
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: tss_current_min
   sql: tss_current_min
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 - name: container_health_status
   sql: container_health_status
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

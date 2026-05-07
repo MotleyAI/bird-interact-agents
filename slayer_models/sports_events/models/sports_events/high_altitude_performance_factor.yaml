@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: high_altitude_performance_factor
 source_queries:
 - version: 3
@@ -6,7 +6,7 @@ source_queries:
     source_name: lap_times
     columns:
     - name: lap_seconds_high_altitude_only
-      type: number
+      type: DOUBLE
       sql: CASE WHEN CAST(json_extract(races__circuits.location_metadata, '$.coordinates.elevation_m')
         AS REAL) > 800 THEN msec_val / 1000.0 ELSE NULL END
       description: 'Lap time in seconds, only when the lap was run at a High-Altitude
@@ -46,7 +46,7 @@ data_source: sports_events
 columns:
 - name: wheel_unit
   sql: wheel_unit
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Foreign key to drivers.
   hidden: false
@@ -54,14 +54,14 @@ columns:
     type: integer
 - name: races__yr
   sql: races__yr
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: lap_seconds_high_altitude_only_avg
   sql: lap_seconds_high_altitude_only_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Lap time in seconds, only when the lap was run at a High-Altitude
     Circuit (KB #14, elevation > 800 m).'
@@ -70,7 +70,7 @@ columns:
     type: float
 - name: lap_seconds_avg
   sql: lap_seconds_avg
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Lap Time in Seconds (KB #21): T_seconds = T_milliseconds / 1000.'
   hidden: false
@@ -78,7 +78,7 @@ columns:
     type: float
 - name: high_altitude_performance_factor
   sql: high_altitude_performance_factor
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

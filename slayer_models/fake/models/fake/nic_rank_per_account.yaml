@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: nic_rank_per_account
 source_queries:
 - version: 3
@@ -15,7 +15,7 @@ source_queries:
     source_name: nic_per_account
     columns:
     - name: nic_rank
-      type: number
+      type: DOUBLE
       sql: RANK() OVER (ORDER BY nic_v DESC)
   dimensions:
   - name: account_id
@@ -50,7 +50,7 @@ data_source: fake
 columns:
 - name: account_id
   sql: account_id
-  type: string
+  type: TEXT
   primary_key: false
   description: "Per-row account identifier resolved through the moderationaction \u2192\
     \ contentbehavior \u2192 sessionbehavior \u2192 profile join chain. Convenience\
@@ -58,7 +58,7 @@ columns:
   hidden: false
 - name: nic_v
   sql: nic_v
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Network Influence Centrality (KB #51): 0.4*connqualscore + 0.3*netinflscore
     + 0.3*interactdiv.'
@@ -67,7 +67,7 @@ columns:
     type: float
 - name: nic_rank
   sql: nic_rank
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

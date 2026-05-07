@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: sectors
 sql_table: sectors
 query_variables: {}
@@ -6,14 +6,14 @@ data_source: exchange_traded_funds
 columns:
 - name: secid
   sql: secid
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: industrytag
   sql: industrytag
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: registration_accuracy_ratio
 source_queries:
 - version: 3
@@ -43,7 +43,7 @@ source_queries:
     source_name: merged
     columns:
     - name: rar
-      type: number
+      type: DOUBLE
       sql: scanresolmm / (reg_per_arcref__logaccumm * sqrt(1 + reg_per_arcref__errvalmm
         / reg_per_arcref__logaccumm))
   measures:
@@ -83,12 +83,12 @@ data_source: archeology
 columns:
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: rar
   sql: rar
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

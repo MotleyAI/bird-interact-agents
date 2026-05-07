@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: container_efficiency_score
 source_queries:
 - version: 3
@@ -22,7 +22,7 @@ source_queries:
         - containlink
     columns:
     - name: ces
-      type: number
+      type: DOUBLE
       sql: ser * cei_cri_per_container.cei * (1 - cei_cri_per_container.cri)
   dimensions:
   - name: vacregistry
@@ -69,19 +69,19 @@ data_source: vaccine
 columns:
 - name: vacregistry
   sql: vacregistry
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: integer
 - name: containvac
   sql: containvac
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: ser
   sql: ser
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Storage Efficiency Ratio (SER). How efficiently container volume is
     utilized: VialTally * 10 / VolLiters (KB #5). Reaches container.volliters via
@@ -89,21 +89,21 @@ columns:
   hidden: false
 - name: cei_cri_per_container__cei
   sql: cei_cri_per_container__cei
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: cei_cri_per_container__cri
   sql: cei_cri_per_container__cri
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: ces
   sql: ces
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
 measures: []

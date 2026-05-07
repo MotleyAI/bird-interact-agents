@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: equipment_optimization_opportunity
 source_queries:
 - version: 3
@@ -58,11 +58,11 @@ source_queries:
     source_name: scan_with_equip
     columns:
     - name: eer
-      type: number
+      type: DOUBLE
       sql: (pc_per_arcref__sqs * scanprocessing__equipment__equipstatus_value) / (scanprocessing__equipment__powerlevel
         * (101 - scanprocessing__equipment__equipage_days) / 365.0) * 25
     - name: is_equipment_optimization_opportunity
-      type: boolean
+      type: BOOLEAN
       sql: CASE WHEN ((pc_per_arcref__sqs * scanprocessing__equipment__equipstatus_value)
         / (scanprocessing__equipment__powerlevel * (101 - scanprocessing__equipment__equipage_days)
         / 365.0) * 25) < 30 AND env_per_zone__esi > 80 THEN 1 ELSE 0 END
@@ -154,39 +154,39 @@ data_source: archeology
 columns:
 - name: questregistry
   sql: questregistry
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: arcref
   sql: arcref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: zoneref
   sql: zoneref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: scanprocessing__equipref
   sql: scanprocessing__equipref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: is_equipment_optimization_opportunity
   sql: is_equipment_optimization_opportunity
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   hidden: false
 - name: eer
   sql: eer
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:
     type: float
 - name: esi
   sql: esi
-  type: number
+  type: DOUBLE
   primary_key: false
   hidden: false
   format:

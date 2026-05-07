@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: constructors
 sql_table: constructors
 query_variables: {}
@@ -6,7 +6,7 @@ data_source: sports_events
 columns:
 - name: cstr_key
   sql: cstr_key
-  type: number
+  type: INT
   primary_key: true
   description: Unique constructor identifier.
   hidden: false
@@ -14,19 +14,19 @@ columns:
     type: integer
 - name: refcod
   sql: refcod
-  type: string
+  type: TEXT
   primary_key: false
   description: Constructor reference code (e.g. mclaren, williams).
   hidden: false
 - name: namelabel
   sql: namelabel
-  type: string
+  type: TEXT
   primary_key: false
   description: Full team name.
   hidden: false
 - name: naty
   sql: naty
-  type: string
+  type: TEXT
   primary_key: false
   description: "Constructor nationality. NULL = not recorded (KB #6).\n\n[kb=6]\n\
     When a constructor's nationality is not specified, it means the team's country\
@@ -38,7 +38,7 @@ columns:
     kb_id: 6
 - name: linkpage
   sql: linkpage
-  type: string
+  type: TEXT
   primary_key: false
   description: URL of the constructor's reference page.
   hidden: false

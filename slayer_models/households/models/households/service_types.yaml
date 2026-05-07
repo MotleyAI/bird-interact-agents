@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: service_types
 sql_table: service_types
 query_variables: {}
@@ -6,14 +6,14 @@ data_source: households
 columns:
 - name: serviceref
   sql: serviceref
-  type: number
+  type: INT
   primary_key: true
   hidden: false
   format:
     type: integer
 - name: domestichelp
   sql: domestichelp
-  type: string
+  type: TEXT
   primary_key: false
   description: "Domestic worker availability (KB #8). 'Full-time' (daily), 'Part-time'\
     \ (periodic), 'Occasional', 'None', 'Live-in'. Null = informal/undisclosed.\n\n\
@@ -27,7 +27,7 @@ columns:
     kb_id: 8
 - name: socsupport
   sql: socsupport
-  type: string
+  type: TEXT
   primary_key: false
   description: "Social assistance participation (KB #9 / KB #37). Binary 'Yes' / 'No'.\n\
     \n[kb=9]\nBinary indicator where 'Yes' means the household accepts social assistance\
@@ -40,13 +40,13 @@ columns:
 - name: domestic_help_score
   sql: CASE LOWER(TRIM(domestichelp)) WHEN 'live-in' THEN 4 WHEN 'full-time' THEN
     3 WHEN 'part-time' THEN 2 WHEN 'occasional' THEN 1 WHEN 'none' THEN 0 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Numeric mapping of domestichelp tier (KB #8).'
   hidden: false
 - name: soc_support_score
   sql: CASE LOWER(TRIM(socsupport)) WHEN 'yes' THEN 1 ELSE 0 END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: '1 if household participates in social assistance, else 0 (KB #9).'
   hidden: false
@@ -54,7 +54,7 @@ columns:
   sql: (CASE LOWER(TRIM(domestichelp)) WHEN 'live-in' THEN 4 WHEN 'full-time' THEN
     3 WHEN 'part-time' THEN 2 WHEN 'occasional' THEN 1 WHEN 'none' THEN 0 ELSE 0 END)
     + 2 * (CASE LOWER(TRIM(socsupport)) WHEN 'yes' THEN 1 ELSE 0 END)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: 'Heuristic Service Support helper (KB #16 weights are unspecified in
     KB definition; agent should compose ad-hoc from domestic_help_score and soc_support_score
@@ -63,7 +63,7 @@ columns:
   meta: {}
 - name: is_supported_household
   sql: LOWER(TRIM(socsupport)) = 'yes'
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Supported Household (KB #24): TRUE iff socsupport='Yes'.\n\n[kb=24]\n\
     A household with social support status marked as 'Yes'. \u2014 Defines a household\

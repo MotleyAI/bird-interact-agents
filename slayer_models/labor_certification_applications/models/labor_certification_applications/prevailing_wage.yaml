@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: prevailing_wage
 sql_table: prevailing_wage
 query_variables: {}
@@ -6,12 +6,12 @@ data_source: labor_certification_applications
 columns:
 - name: trackno
   sql: trackno
-  type: string
+  type: TEXT
   primary_key: true
   hidden: false
 - name: wage_details
   sql: wage_details
-  type: string
+  type: TEXT
   primary_key: false
   description: JSON column. Holds offered_wage (from/to/unit), prevailing_wage (value/unit/level/oes_year),
     and alternate_source. Per kb_id placement rule, the JSON blob itself is untagged;
@@ -21,7 +21,7 @@ columns:
   meta: {}
 - name: offered_wage_unit
   sql: wage_details ->> '$.offered_wage.unit'
-  type: string
+  type: TEXT
   primary_key: false
   description: "Offered wage payment unit (Hour, Week, Month, Year) (KB #8).\n\n[kb=8]\n\
     Wage payment units indicate how wages are calculated and paid, with common units\
@@ -37,7 +37,7 @@ columns:
     kb_id: 8
 - name: prevailing_wage_unit
   sql: wage_details ->> '$.prevailing_wage.unit'
-  type: string
+  type: TEXT
   primary_key: false
   description: "Prevailing wage payment unit (Hour, Week, Month, Year) (KB #8).\n\n\
     [kb=8]\nWage payment units indicate how wages are calculated and paid, with common\
@@ -53,7 +53,7 @@ columns:
     kb_id: 8
 - name: prevailing_wage_level
   sql: wage_details ->> '$.prevailing_wage.level'
-  type: string
+  type: TEXT
   primary_key: false
   description: "Prevailing wage level I (entry) - IV (fully competent) (KB #5).\n\n\
     [kb=5]\nPrevailing wage levels range from I to IV, representing increasingly higher\
@@ -69,7 +69,7 @@ columns:
     kb_id: 5
 - name: alternate_source_type
   sql: wage_details ->> '$.alternate_source.source_type'
-  type: string
+  type: TEXT
   primary_key: false
   description: "Alternate prevailing-wage source type when not OES: CBA, Survey, etc.\
     \ (KB #60).\n\n[kb=60]\nAcceptable sources for prevailing wage determinations\
@@ -85,7 +85,7 @@ columns:
 - name: offered_wage_raw
   sql: CAST(REPLACE(REPLACE(wage_details ->> '$.offered_wage.from', '$', ''), ',',
     '') AS REAL)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Numeric offered wage in its native unit (parsed from offered_wage.from
     like '$130000.00').
@@ -93,7 +93,7 @@ columns:
 - name: prevailing_wage_raw
   sql: CAST(REPLACE(REPLACE(REPLACE(wage_details ->> '$.prevailing_wage.value', 'USD',
     ''), ',', ''), ' ', '') AS REAL)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: Numeric prevailing wage in its native unit (parsed from prevailing_wage.value
     like 'USD 116,979.00').
@@ -102,7 +102,7 @@ columns:
   sql: CAST(REPLACE(REPLACE(wage_details ->> '$.offered_wage.from', '$', ''), ',',
     '') AS REAL) * CASE wage_details ->> '$.offered_wage.unit' WHEN 'Hour' THEN 2080
     WHEN 'Week' THEN 52 WHEN 'Month' THEN 12 WHEN 'Year' THEN 1 ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Offered wage annualized: hourly\xD72080, weekly\xD752, monthly\xD7\
     12, yearly\xD71."
@@ -112,7 +112,7 @@ columns:
     ''), ',', ''), ' ', '') AS REAL) * CASE wage_details ->> '$.prevailing_wage.unit'
     WHEN 'Hour' THEN 2080 WHEN 'Week' THEN 52 WHEN 'Month' THEN 12 WHEN 'Year' THEN
     1 ELSE NULL END
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Prevailing wage annualized: hourly\xD72080, weekly\xD752, monthly\xD7\
     12, yearly\xD71."
@@ -127,7 +127,7 @@ columns:
     ->> '$.prevailing_wage.value', 'USD', ''), ',', ''), ' ', '') AS REAL) * CASE
     wage_details ->> '$.prevailing_wage.unit' WHEN 'Hour' THEN 2080 WHEN 'Week' THEN
     52 WHEN 'Month' THEN 12 WHEN 'Year' THEN 1 ELSE NULL END, 0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Wage Differential Rate (KB #11): ((offered_annual - prevailing_annual)\
     \ / prevailing_annual) * 100.\n\n[kb=11]\nWDR = ((Offered Wage - Prevailing Wage)\
@@ -149,7 +149,7 @@ columns:
     ->> '$.prevailing_wage.value', 'USD', ''), ',', ''), ' ', '') AS REAL) * CASE
     wage_details ->> '$.prevailing_wage.unit' WHEN 'Hour' THEN 2080 WHEN 'Week' THEN
     52 WHEN 'Month' THEN 12 WHEN 'Year' THEN 1 ELSE NULL END, 0)
-  type: number
+  type: DOUBLE
   primary_key: false
   description: "Wage Premium Rate (KB #17): ((offered - minimum_required) / minimum_required)\
     \ * 100. Minimum required is the prevailing wage in this dataset.\n\n[kb=17]\n\
@@ -172,7 +172,7 @@ columns:
     ->> '$.prevailing_wage.value', 'USD', ''), ',', ''), ' ', '') AS REAL) * CASE
     wage_details ->> '$.prevailing_wage.unit' WHEN 'Hour' THEN 2080 WHEN 'Week' THEN
     52 WHEN 'Month' THEN 12 WHEN 'Year' THEN 1 ELSE NULL END, 0) > 20
-  type: boolean
+  type: BOOLEAN
   primary_key: false
   description: "Premium Wage Position (KB #40): true iff WDR > 20%.\n\n[kb=40]\nA\
     \ position is considered a premium wage position if the Wage Differential Rate\
@@ -205,7 +205,7 @@ columns:
     wage_details ->> '$.prevailing_wage.unit' WHEN 'Hour' THEN 2080 WHEN 'Week' THEN
     52 WHEN 'Month' THEN 12 WHEN 'Year' THEN 1 ELSE NULL END, 0) <= 10 THEN 'Market-Competitive'
     ELSE 'Premium' END
-  type: string
+  type: TEXT
   primary_key: false
   description: "Wage Competitiveness Tier (KB #48): Below-Market (WDR<0), Market-Competitive\
     \ (0\u2264WDR\u226410), Premium (WDR>10).\n\n[kb=48]\nWage offers are classified\
@@ -222,7 +222,7 @@ columns:
   sql: CASE wage_details ->> '$.prevailing_wage.level' WHEN 'I' THEN 'General' WHEN
     'II' THEN 'Specialized' WHEN 'III' THEN 'Highly Specialized' WHEN 'IV' THEN 'Highly
     Specialized' ELSE NULL END
-  type: string
+  type: TEXT
   primary_key: false
   description: "Occupational Specialization Level (KB #49). KB defines this as General\
     \ / Specialized / Highly Specialized typically correlated with wage level and\

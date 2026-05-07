@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: critical_infrastructure_protection_level
 source_queries:
 - version: 3
@@ -57,7 +57,7 @@ source_queries:
     source_name: joined_cipl
     columns:
     - name: cipl_level
-      type: string
+      type: TEXT
       sql: CASE WHEN ssf_v > 0.8 AND loss_v > 0.85 AND ospi_v > 0.9 THEN 'A' WHEN
         ssf_v > 0.7 AND loss_v > 0.75 AND ospi_v > 0.8 THEN 'B' ELSE 'C' END
   dimensions:
@@ -125,12 +125,12 @@ data_source: polar
 columns:
 - name: equipmentcode
   sql: equipmentcode
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: cipl_level
   sql: cipl_level
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []

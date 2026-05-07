@@ -1,4 +1,4 @@
-version: 4
+version: 5
 name: comprehensive_environmental_adaptability_rating
 source_queries:
 - version: 3
@@ -43,7 +43,7 @@ source_queries:
     source_name: joined_cear
     columns:
     - name: cear_level
-      type: string
+      type: TEXT
       sql: CASE WHEN ecac_v > 0.85 AND ssf_v > 0.8 AND insul_cear__insulationstatus
         = 'Good' THEN 'Excellent Adaptability' WHEN ecac_v > 0.7 AND ssf_v > 0.65
         AND insul_cear__insulationstatus != 'Poor' THEN 'Good Adaptability' ELSE 'Limited
@@ -149,12 +149,12 @@ data_source: polar
 columns:
 - name: operationmaintenance__opmainteqref
   sql: operationmaintenance__opmainteqref
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 - name: cear_level
   sql: cear_level
-  type: string
+  type: TEXT
   primary_key: false
   hidden: false
 measures: []
