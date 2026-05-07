@@ -7,6 +7,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from bird_interact_agents.harness import ACTION_COSTS
+
 
 class _FakeState(SimpleNamespace):
     """Mimics the shared shape of TaskState/TaskDeps/_ctx — only the
@@ -80,6 +82,7 @@ def test_submit_slayer_query_returns_error_on_bad_json():
     from bird_interact_agents.agents import _submit
 
     state = _FakeState()
+    start = state.status.remaining_budget
     out = _submit.submit_slayer_query(
         state,
         query_json="{not json",
@@ -87,6 +90,10 @@ def test_submit_slayer_query_returns_error_on_bad_json():
     )
     assert "Invalid JSON" in out
     assert state.result is None
+    # Failed submits must charge submit budget — prevents free retry loops.
+    assert state.status.remaining_budget == start - ACTION_COSTS["submit_query"]
+    assert "[Remaining budget:" in out
+    assert out.count("[Remaining budget:") == 1
 
 
 def test_submit_slayer_query_returns_error_on_render_failure():
@@ -97,6 +104,7 @@ def test_submit_slayer_query_returns_error_on_render_failure():
             raise RuntimeError("boom")
 
     state = _FakeState()
+    start = state.status.remaining_budget
     out = _submit.submit_slayer_query(
         state,
         query_json='{"models": []}',
@@ -104,6 +112,44 @@ def test_submit_slayer_query_returns_error_on_render_failure():
     )
     assert "Could not generate SQL" in out
     assert state.result is None
+    assert state.status.remaining_budget == start - ACTION_COSTS["submit_query"]
+    assert "[Remaining budget:" in out
+    assert out.count("[Remaining budget:") == 1
+
+
+def test_submit_slayer_query_charges_budget_on_success(monkeypatch):
+    from bird_interact_agents.agents import _submit
+
+    monkeypatch.setattr(
+        _submit, "execute_submit_action",
+        lambda sql, status, dpb: ("ok", 1.0, True, True, True),
+    )
+    fake_client = SimpleNamespace(sql_sync=lambda d: "SELECT 1")
+
+    state = _FakeState()
+    start = state.status.remaining_budget
+    out = _submit.submit_slayer_query(
+        state,
+        query_json='{"models": ["m"]}',
+        slayer_client_factory=lambda s: fake_client,
+    )
+    assert state.status.remaining_budget == start - ACTION_COSTS["submit_query"]
+    assert out.count("[Remaining budget:") == 1
+
+
+def test_submit_raw_sql_charges_budget_once(monkeypatch):
+    from bird_interact_agents.agents import _submit
+
+    monkeypatch.setattr(
+        _submit, "execute_submit_action",
+        lambda sql, status, dpb: ("ok", 1.0, True, False, True),
+    )
+
+    state = _FakeState()
+    start = state.status.remaining_budget
+    out = _submit.submit_raw_sql(state, "SELECT 1")
+    assert state.status.remaining_budget == start - ACTION_COSTS["submit_sql"]
+    assert out.count("[Remaining budget:") == 1
 
 
 def test_run_env_action_renders_template_and_calls_executor(monkeypatch):

@@ -293,10 +293,10 @@ async def submit_sql(args: dict) -> dict:
     state = _state_view()
     observation = submit_raw_sql(state, args["sql"])
     # `state` is a SimpleNamespace view — `state.result` doesn't write back
-    # to the contextvar dict, so persist it explicitly.
+    # to the contextvar dict, so persist it explicitly. Budget + budget-note
+    # are owned by `submit_raw_sql`.
     _ctx["result"] = {**state.result, "observation": observation}
-    update_budget(_ctx["status"], "submit_sql")
-    return _text(observation + _budget_note(_ctx["status"]))
+    return _text(observation)
 
 
 # ---------------------------------------------------------------------------
@@ -336,12 +336,11 @@ async def submit_query(args: dict) -> dict:
         state, args["query_json"], lambda _s: _slayer_client(),
     )
     if state.result is None:
-        # JSON-decode or sql_sync failure — propagate the helper's message
-        # without touching budget.
+        # Helper already charged + appended the budget note for the
+        # bad-JSON / failed-sql_sync paths; just propagate.
         return _text(observation)
     _ctx["result"] = {**state.result, "observation": observation}
-    update_budget(_ctx["status"], "submit_query")
-    return _text(observation + _budget_note(_ctx["status"]))
+    return _text(observation)
 
 
 # ---------------------------------------------------------------------------

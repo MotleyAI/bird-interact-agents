@@ -32,8 +32,8 @@ from bird_interact_agents.usage import acompletion_tracked
 
 
 # ---------------------------------------------------------------------------
-# Budget bookkeeping — mirrors `claude_sdk.agent._gate`. Centralised here so
-# every adapter shares one authoritative gate + budget-update path.
+# Budget bookkeeping. Centralised so every adapter shares one authoritative
+# budget-update path; `claude_sdk.agent._gate` does pre-call rejection only.
 # ---------------------------------------------------------------------------
 
 def _budget_note(state: Any) -> str:
@@ -126,13 +126,15 @@ def submit_slayer_query(
     try:
         query_dict = json.loads(query_json)
     except json.JSONDecodeError as e:
-        return f"Invalid JSON — submission aborted: {e}"
+        update_budget(state.status, "submit_query")
+        return f"Invalid JSON — submission aborted: {e}" + _budget_note(state)
 
     client = slayer_client_factory(state)
     try:
         sql = client.sql_sync(query_dict)
     except Exception as e:
-        return f"Could not generate SQL — submission aborted: {e}"
+        update_budget(state.status, "submit_query")
+        return f"Could not generate SQL — submission aborted: {e}" + _budget_note(state)
 
     observation, reward, p1, p2, finished = execute_submit_action(
         sql, state.status, state.data_path_base,
