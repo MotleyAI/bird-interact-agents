@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
-# Reproducible single-DB benchmark run: pydantic_ai + slayer + Haiku 4.5
-# on a-interact mode. Each invocation creates a timestamped output dir
-# under results/, filters mini_interact.jsonl to one DB, and runs the
-# bird-interact CLI with the canonical-only-info prompt set.
+# Reproducible single-DB benchmark run: pydantic_ai + slayer + Anthropic
+# Claude on a-interact mode. Each invocation creates a timestamped output
+# dir under results/, filters mini_interact.jsonl to one DB, and runs
+# the bird-interact CLI with the canonical-only-info prompt set.
+#
+# Default agent + user-sim model: claude-haiku-4-5-20251001. Override
+# either with --agent-model / --user-sim-model. Script name keeps the
+# original "haiku" suffix for git history continuity, but the wrapper
+# is now model-agnostic.
 #
 # Usage:
 #   scripts/run_haiku_slayer.sh --db households --concurrency 5
+#   scripts/run_haiku_slayer.sh --db households \
+#       --agent-model anthropic/claude-sonnet-4-5
 #   scripts/run_haiku_slayer.sh --db credit --limit 3 --concurrency 1
 #
 # Required env: ANTHROPIC_API_KEY.
@@ -19,14 +26,21 @@ DB="households"
 LIMIT=""
 CONCURRENCY=5
 PATIENCE=3
+AGENT_MODEL="anthropic/claude-haiku-4-5-20251001"
+USER_SIM_MODEL="anthropic/claude-haiku-4-5-20251001"
 
 usage() {
   cat <<EOF
 Usage: $0 [--db NAME] [--limit N] [--concurrency K] [--patience P]
-  --db NAME           target database (default: households)
-  --limit N           cap on tasks to run from the filtered list
-  --concurrency K     concurrent task workers (default: 5)
-  --patience P        user_patience_budget (default: 3, matches canonical)
+          [--agent-model PROVIDER/MODEL] [--user-sim-model PROVIDER/MODEL]
+  --db NAME             target database (default: households)
+  --limit N             cap on tasks to run from the filtered list
+  --concurrency K       concurrent task workers (default: 5)
+  --patience P          user_patience_budget (default: 3, matches canonical)
+  --agent-model M       LiteLLM-style model id for the system agent
+                        (default: anthropic/claude-haiku-4-5-20251001)
+  --user-sim-model M    LiteLLM-style model id for the user simulator
+                        (default: anthropic/claude-haiku-4-5-20251001)
 EOF
 }
 
@@ -36,6 +50,8 @@ while [[ $# -gt 0 ]]; do
     --limit) LIMIT="$2"; shift 2 ;;
     --concurrency) CONCURRENCY="$2"; shift 2 ;;
     --patience) PATIENCE="$2"; shift 2 ;;
+    --agent-model) AGENT_MODEL="$2"; shift 2 ;;
+    --user-sim-model) USER_SIM_MODEL="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown flag: $1" >&2; usage; exit 1 ;;
   esac
@@ -57,8 +73,15 @@ if [[ ! -d "$BIRD_DB_PATH" ]]; then
   echo "DB path not found: $BIRD_DB_PATH" >&2; exit 1
 fi
 
+# Compact tag for the output dir: strip provider prefix + Anthropic
+# date suffix. `claude-haiku-4-5-20251001` -> `haiku-4-5`,
+# `claude-sonnet-4-5` -> `sonnet-4-5`. Falls through to the bare model
+# id for non-Claude models.
+MODEL_TAG="$(printf '%s' "$AGENT_MODEL" \
+  | sed -E 's|^[^/]+/||; s|^claude-||; s|-202[0-9]{5,}$||')"
+
 TS=$(date +%Y%m%d-%H%M)
-OUT="$REPO_ROOT/results/${TS}_pa_haiku_${DB}_slayer_a"
+OUT="$REPO_ROOT/results/${TS}_pa_${MODEL_TAG}_${DB}_slayer_a"
 mkdir -p "$OUT"
 
 # Filter the dataset to the chosen DB.
@@ -100,8 +123,8 @@ fi
   echo "BIRD_DATA_PATH=$BIRD_DATA_PATH"
   echo "BIRD_DB_PATH=$BIRD_DB_PATH"
   echo "BIRD_BIRD_INTERACT_ROOT=$BIRD_BIRD_INTERACT_ROOT"
-  echo "AGENT_MODEL=anthropic/claude-haiku-4-5-20251001"
-  echo "USER_SIM_MODEL=anthropic/claude-haiku-4-5-20251001"
+  echo "AGENT_MODEL=$AGENT_MODEL"
+  echo "USER_SIM_MODEL=$USER_SIM_MODEL"
   date -Iseconds
 } > "$OUT/invocation.txt"
 
@@ -109,8 +132,8 @@ uv run bird-interact \
   --framework pydantic_ai \
   --query-mode slayer \
   --mode a-interact \
-  --agent-model anthropic/claude-haiku-4-5-20251001 \
-  --user-sim-model anthropic/claude-haiku-4-5-20251001 \
+  --agent-model "$AGENT_MODEL" \
+  --user-sim-model "$USER_SIM_MODEL" \
   --slayer-storage-root "$REPO_ROOT/slayer_storage" \
   --data "$BIRD_DATA_PATH" \
   --db-path "$BIRD_DB_PATH" \
