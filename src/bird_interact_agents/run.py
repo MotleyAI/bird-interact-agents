@@ -4,6 +4,8 @@ import argparse
 import asyncio
 import json
 import logging
+import statistics
+import time
 from pathlib import Path
 
 from bird_interact_agents.harness import (
@@ -14,6 +16,13 @@ from bird_interact_agents.harness import (
     load_tasks,
     SampleStatus,
 )
+from bird_interact_agents.results_db import (
+    TaskResultRow,
+    insert_run_metadata,
+    insert_task_result,
+    open_db,
+)
+from bird_interact_agents.usage import TokenUsage
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s"
@@ -166,6 +175,55 @@ async def run_evaluation(
     else:
         raise ValueError(f"Unknown framework: {framework}")
 
+    # Open the per-run results.db (lives next to eval.json) and write
+    # the run-metadata header before any task starts.
+    output_dir = Path(output_path).parent
+    output_dir.mkdir(parents=True, exist_ok=True)
+    db_path = output_dir / "results.db"
+    db_conn = open_db(db_path)
+    run_id = output_dir.name or "default"
+    insert_run_metadata(
+        db_conn,
+        run_id=run_id,
+        agent_model=agent_model,
+        user_sim_model=user_sim_model,
+        framework=framework,
+        mode=mode,
+        started_at=time.time(),
+    )
+
+    def _persist(td: dict, r: dict, started_at: float) -> None:
+        """Insert one task result into the DB. Called immediately after
+        each task — both successes and failures — so a mid-run crash
+        never throws away completed-task data."""
+        usage_blob = r.get("usage")
+        usage_json = json.dumps(usage_blob) if usage_blob is not None else "{}"
+        sol = td.get("sol_sql")
+        if isinstance(sol, list) and sol:
+            ground_truth = sol[0]
+        elif isinstance(sol, str):
+            ground_truth = sol
+        else:
+            ground_truth = None
+        insert_task_result(db_conn, TaskResultRow(
+            run_id=run_id,
+            framework=framework,
+            mode=mode,
+            query_mode=query_mode,
+            instance_id=str(r.get("instance_id") or td.get("instance_id") or ""),
+            database=str(r.get("database") or td.get("selected_database") or ""),
+            started_at=started_at,
+            duration_s=float(r.get("duration_s") or 0.0),
+            phase1_passed=bool(r.get("phase1_passed")),
+            phase2_passed=bool(r.get("phase2_passed")),
+            total_reward=float(r.get("total_reward") or 0.0),
+            submitted_sql=r.get("submitted_sql"),
+            submitted_query=r.get("submitted_query"),
+            ground_truth_sql=r.get("ground_truth_sql") or ground_truth,
+            error=r.get("error"),
+            usage_json=usage_json,
+        ))
+
     # Run tasks with concurrency limiter
     semaphore = asyncio.Semaphore(concurrency)
     results: list[dict] = []
@@ -178,6 +236,8 @@ async def run_evaluation(
         async with semaphore:
             instance_id = td["instance_id"]
             logger.info("Task %d/%d: %s", i + 1, len(tasks), instance_id)
+            started_at = time.time()
+            t_start = time.perf_counter()
             try:
                 r = await run_one(td)
             except Exception as e:
@@ -196,6 +256,8 @@ async def run_evaluation(
                     deleted_kb_ids=[],
                     slayer_storage_dir="",
                 )
+            r["duration_s"] = time.perf_counter() - t_start
+            _persist(td, r, started_at)
             results.append(r)
             total_reward += r.get("total_reward", 0)
             if r.get("phase1_passed"):
@@ -203,7 +265,26 @@ async def run_evaluation(
             if r.get("phase2_passed"):
                 p2_count += 1
 
-    await asyncio.gather(*[_run_with_sem(i, td) for i, td in enumerate(tasks)])
+    try:
+        await asyncio.gather(*[_run_with_sem(i, td) for i, td in enumerate(tasks)])
+    finally:
+        db_conn.close()
+
+    # Sum per-task usage blocks into a top-level total. Any task missing
+    # `usage` (e.g. oracle pre-instrumentation) is skipped without error.
+    total_usage = TokenUsage()
+    for r in results:
+        u_blob = r.get("usage")
+        if u_blob is not None:
+            total_usage.merge(TokenUsage.model_validate(u_blob))
+
+    durations = [float(r.get("duration_s") or 0.0) for r in results]
+    timing = {
+        "total_duration_s": sum(durations),
+        "avg_duration_s": (sum(durations) / len(durations)) if durations else 0.0,
+        "p50_duration_s": statistics.median(durations) if durations else 0.0,
+        "max_duration_s": max(durations) if durations else 0.0,
+    }
 
     # Build metrics
     n = len(tasks)
@@ -218,6 +299,8 @@ async def run_evaluation(
         "phase2_rate": p2_count / n if n else 0,
         "total_reward": total_reward,
         "average_reward": total_reward / n if n else 0,
+        "total_usage": total_usage.model_dump(),
+        **timing,
         "results": results,
     }
 
@@ -232,6 +315,24 @@ async def run_evaluation(
         (total_reward / n) if n else 0,
     )
     return metrics
+
+
+def _apply_price_overrides(path: str) -> None:
+    """Merge a JSON price-overrides file into litellm's built-in pricing
+    table. Entries are `{"name": str, "input_per_m": float, "output_per_m": float}`.
+
+    Per-million → per-token conversion happens here.
+    """
+    import litellm
+
+    with open(path) as f:
+        entries = json.load(f)
+
+    for e in entries:
+        litellm.model_cost[e["name"]] = {
+            "input_cost_per_token": float(e["input_per_m"]) / 1_000_000,
+            "output_cost_per_token": float(e["output_per_m"]) / 1_000_000,
+        }
 
 
 def main() -> None:
@@ -313,7 +414,20 @@ def main() -> None:
             "for it and exits with a clear error when --strict is given."
         ),
     )
+    parser.add_argument(
+        "--price-overrides",
+        default=None,
+        help=(
+            "Optional JSON file with price overrides merged into litellm's "
+            "built-in pricing table. Format: a list of "
+            '{"name": "<model>", "input_per_m": <float>, '
+            '"output_per_m": <float>} entries.'
+        ),
+    )
     args = parser.parse_args()
+
+    if args.price_overrides:
+        _apply_price_overrides(args.price_overrides)
 
     filter_ids: list[str] | None = None
     if args.filter_ids:
