@@ -32,6 +32,12 @@ logger = logging.getLogger(__name__)
 
 async def run_oracle_task(task_data: dict, data_path_base: str) -> dict:
     """Submit ground-truth SQL directly — no LLM, validates eval pipeline."""
+    from bird_interact_agents.agents._submit import (
+        capture_result_snapshot,
+        classify_submission,
+    )
+    import json as _json
+
     instance_id = task_data["instance_id"]
     db_name = task_data["selected_database"]
     sol_sql = task_data.get("sol_sql", [])
@@ -47,6 +53,8 @@ async def run_oracle_task(task_data: dict, data_path_base: str) -> dict:
         sol_sql, status, data_path_base
     )
 
+    predicted = capture_result_snapshot(sol_sql, db_name, data_path_base)
+    gold = capture_result_snapshot(sol_sql, db_name, data_path_base)
     return finalize_result_row(
         {
             "task_id": instance_id,
@@ -55,8 +63,23 @@ async def run_oracle_task(task_data: dict, data_path_base: str) -> dict:
             "phase1_passed": p1,
             "phase2_passed": p2,
             "total_reward": reward if reward is not None else 0.0,
+            "submitted_sql": sol_sql,
+            "submitted_query": None,
             "trajectory": [],
             "error": None,
+            "submission_status": classify_submission(
+                p1=p1, p2=p2, observation=observation,
+            ),
+            "phase1_observation": observation,
+            "phase2_observation": None,
+            "predicted_result_json": (
+                _json.dumps(predicted, default=str)
+                if predicted is not None else None
+            ),
+            "gold_result_json": (
+                _json.dumps(gold, default=str) if gold is not None else None
+            ),
+            "n_agent_turns": 0,
         },
         deleted_kb_ids=[],
         slayer_storage_dir="",
@@ -205,6 +228,7 @@ async def run_evaluation(
             ground_truth = sol
         else:
             ground_truth = None
+        n_turns = r.get("n_agent_turns")
         insert_task_result(db_conn, TaskResultRow(
             run_id=run_id,
             framework=framework,
@@ -222,6 +246,15 @@ async def run_evaluation(
             ground_truth_sql=r.get("ground_truth_sql") or ground_truth,
             error=r.get("error"),
             usage_json=usage_json,
+            user_query=td.get("amb_user_query"),
+            submission_status=str(
+                r.get("submission_status") or "never_submitted"
+            ),
+            phase1_observation=r.get("phase1_observation"),
+            phase2_observation=r.get("phase2_observation"),
+            predicted_result_json=r.get("predicted_result_json"),
+            gold_result_json=r.get("gold_result_json"),
+            n_agent_turns=int(n_turns) if isinstance(n_turns, int) else None,
         ))
 
     # Run tasks with concurrency limiter

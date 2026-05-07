@@ -159,3 +159,117 @@ def test_insert_task_result_persists_to_disk(tmp_path):
         "SELECT instance_id, phase1_passed, submitted_sql, ground_truth_sql FROM task_results"
     ))
     assert rows == [("alien_1", 1, "S1", "GT")]
+
+
+def test_diagnostic_columns_round_trip(tmp_path):
+    """The diagnostic columns added for failure-mode analysis must
+    round-trip through TaskResultRow + insert_task_result + SELECT."""
+    from bird_interact_agents.results_db import (
+        TaskResultRow, insert_task_result, open_db,
+    )
+
+    conn = open_db(tmp_path / "results.db")
+    row = TaskResultRow(
+        run_id="run-1", framework="pydantic_ai", mode="a-interact",
+        query_mode="slayer", instance_id="households_1", database="households",
+        started_at=0.0, duration_s=2.0,
+        phase1_passed=False, phase2_passed=False, total_reward=0.0,
+        submitted_sql="SELECT 1", submitted_query='{"source_model": "x"}',
+        ground_truth_sql="SELECT 2", error=None, usage_json="{}",
+        user_query="how many?", submission_status="wrong_result",
+        phase1_observation="Default test case failed: 1 != 2",
+        phase2_observation=None,
+        predicted_result_json='{"row_count": 1}',
+        gold_result_json='{"row_count": 1}',
+        n_agent_turns=7,
+    )
+    insert_task_result(conn, row)
+    got = list(conn.execute(
+        "SELECT user_query, submission_status, phase1_observation, "
+        "predicted_result_json, gold_result_json, n_agent_turns "
+        "FROM task_results"
+    ))
+    assert got == [(
+        "how many?", "wrong_result",
+        "Default test case failed: 1 != 2",
+        '{"row_count": 1}', '{"row_count": 1}', 7,
+    )]
+
+
+def test_open_db_migrates_pre_diagnostic_table(tmp_path):
+    """If results.db was created before the diagnostic columns existed,
+    open_db must ALTER it to add them — old DBs must remain usable."""
+    from bird_interact_agents.results_db import (
+        TaskResultRow, insert_task_result, open_db,
+    )
+
+    db_path = tmp_path / "results.db"
+    pre = sqlite3.connect(db_path)
+    pre.execute(
+        """
+        CREATE TABLE task_results (
+            run_id TEXT NOT NULL,
+            framework TEXT NOT NULL,
+            mode TEXT NOT NULL,
+            query_mode TEXT NOT NULL,
+            instance_id TEXT NOT NULL,
+            database TEXT NOT NULL,
+            started_at REAL NOT NULL,
+            duration_s REAL NOT NULL,
+            phase1_passed INTEGER NOT NULL,
+            phase2_passed INTEGER NOT NULL,
+            total_reward REAL NOT NULL,
+            submitted_sql TEXT,
+            submitted_query TEXT,
+            ground_truth_sql TEXT,
+            error TEXT,
+            usage_json TEXT NOT NULL DEFAULT '{}',
+            PRIMARY KEY (run_id, framework, mode, query_mode, instance_id)
+        )
+        """
+    )
+    pre.execute(
+        """
+        INSERT INTO task_results
+        (run_id, framework, mode, query_mode, instance_id, database,
+         started_at, duration_s, phase1_passed, phase2_passed,
+         total_reward, submitted_sql, submitted_query, ground_truth_sql,
+         error, usage_json)
+        VALUES ('legacy', 'pydantic_ai', 'a-interact', 'slayer',
+                'old_1', 'old', 0, 0, 0, 0, 0.0,
+                NULL, NULL, NULL, NULL, '{}')
+        """,
+    )
+    pre.commit()
+    pre.close()
+
+    conn = open_db(db_path)
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(task_results)")}
+    assert "submission_status" in cols
+    assert "phase1_observation" in cols
+    assert "predicted_result_json" in cols
+    assert "gold_result_json" in cols
+    assert "n_agent_turns" in cols
+    assert "user_query" in cols
+
+    # Pre-existing row survives intact, with diagnostic columns NULL.
+    rows = list(conn.execute(
+        "SELECT instance_id, submission_status, phase1_observation, "
+        "predicted_result_json FROM task_results"
+    ))
+    assert rows == [("old_1", "never_submitted", None, None)]
+
+    # New rows insert cleanly through the upgraded schema.
+    insert_task_result(conn, TaskResultRow(
+        run_id="legacy", framework="pydantic_ai", mode="a-interact",
+        query_mode="slayer", instance_id="new_1", database="old",
+        started_at=0.0, duration_s=0.0,
+        phase1_passed=True, phase2_passed=False, total_reward=1.0,
+        submission_status="passed_phase1",
+        phase1_observation="ok",
+        predicted_result_json='{"row_count": 0}',
+    ))
+    rows = sorted(conn.execute(
+        "SELECT instance_id, submission_status FROM task_results"
+    ))
+    assert rows == [("new_1", "passed_phase1"), ("old_1", "never_submitted")]

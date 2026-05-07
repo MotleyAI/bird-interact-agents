@@ -56,6 +56,41 @@ from bird_interact_agents.usage import TokenUsage
 _BY_NAME = {t.name: t for t in BIRD_INTERACT_TOOLS}
 
 
+# Higher retry budget than pydantic-ai's default of 2. The Anthropic SDK
+# already implements jittered exp backoff + retry-after on 429 and 5xx;
+# we just want a higher ceiling for concurrent benchmark bursts.
+_ANTHROPIC_CLIENT_RETRIES = 8
+
+
+def _build_anthropic_model_with_retries(model_id: str):
+    """Construct a PydanticAI `AnthropicModel` whose underlying SDK client
+    carries a higher `max_retries` budget than the library default.
+
+    Returns `None` (caller falls back to the default colon-form model
+    string) when the local environment can't construct the SDK client —
+    chiefly when an `ALL_PROXY=socks5h://…` env var is set without
+    `socksio` installed, which httpx flags at AsyncClient creation. We'd
+    rather lose the retry hardening than break the whole agent factory in
+    test environments.
+    """
+    try:
+        from anthropic import AsyncAnthropic
+        from pydantic_ai.models.anthropic import AnthropicModel
+        from pydantic_ai.providers.anthropic import AnthropicProvider
+    except Exception:  # noqa: BLE001 — defensive, never block on import
+        return None
+    try:
+        client = AsyncAnthropic(max_retries=_ANTHROPIC_CLIENT_RETRIES)
+    except Exception as e:  # noqa: BLE001 — env-dependent (e.g. SOCKS)
+        logger.warning(
+            "Falling back to default Anthropic client (max_retries=2): %s", e,
+        )
+        return None
+    return AnthropicModel(
+        model_id, provider=AnthropicProvider(anthropic_client=client),
+    )
+
+
 def _make_prepare_tools(strict_value: bool):
     """Return a `prepare_tools` callback that forces a uniform `strict` on
     every tool definition right before each model request.
@@ -262,7 +297,11 @@ class PydanticAIAgent:
         model: str = "anthropic/claude-sonnet-4-5",
         strict: bool = False,
     ) -> None:
-        from bird_interact_agents.model_string import build_pydantic_ai_model
+        from bird_interact_agents.model_string import (
+            build_pydantic_ai_model,
+            is_anthropic,
+            native_model_id,
+        )
 
         self.slayer_storage_root = slayer_storage_root
         # Accept the canonical LiteLLM-style `provider/model_id` and convert
@@ -270,7 +309,11 @@ class PydanticAIAgent:
         # `provider:model_id` string; for OpenAI-compatible third parties
         # like DeepInfra it's a fully-built OpenAIChatModel instance.
         self.model_id = model  # litellm form, kept for cost lookup
-        self.model = build_pydantic_ai_model(model)
+        anthropic_model = (
+            _build_anthropic_model_with_retries(native_model_id(model))
+            if is_anthropic(model) else None
+        )
+        self.model = anthropic_model or build_pydantic_ai_model(model)
         self.strict = strict
 
     def _select_agent(
@@ -356,6 +399,7 @@ class PydanticAIAgent:
         agent = self._select_agent(query_mode, eval_mode, slayer_storage_dir)
         prompt = await self._build_prompt(query_mode, eval_mode, task_data, budget, deps)
 
+        n_agent_turns: int | None = None
         try:
             # Lift PydanticAI's default request_limit (50) above our
             # MAX_MODEL_TURNS cap so long-tail tasks don't get killed
@@ -378,16 +422,36 @@ class PydanticAIAgent:
                 completion=getattr(run_usage, "output_tokens", 0) or 0,
                 cache_read=getattr(run_usage, "cache_read_tokens", 0) or 0,
             )
+            try:
+                n_agent_turns = sum(
+                    1 for m in agent_run.all_messages()
+                    if type(m).__name__ == "ModelResponse"
+                )
+            except Exception:  # noqa: BLE001 — best-effort metric
+                n_agent_turns = None
         except Exception as e:
             logger.error("Agent error on %s: %s", instance_id, e)
+            partial = deps.result or {}
             return finalize_result_row(
                 {
                     "task_id": instance_id, "instance_id": instance_id,
                     "database": db_name,
-                    "phase1_passed": False, "phase2_passed": False,
-                    "total_reward": 0.0, "trajectory": [],
+                    "phase1_passed": partial.get("phase1_passed", False),
+                    "phase2_passed": partial.get("phase2_passed", False),
+                    "total_reward": partial.get("total_reward", 0.0),
+                    "submitted_sql": partial.get("submitted_sql"),
+                    "submitted_query": partial.get("submitted_query"),
+                    "trajectory": [],
                     "error": str(e),
                     "usage": deps.usage.model_dump(),
+                    "submission_status": partial.get(
+                        "submission_status", "never_submitted",
+                    ),
+                    "phase1_observation": partial.get("phase1_observation"),
+                    "phase2_observation": partial.get("phase2_observation"),
+                    "predicted_result_json": partial.get("predicted_result_json"),
+                    "gold_result_json": partial.get("gold_result_json"),
+                    "n_agent_turns": n_agent_turns,
                 },
                 deleted_kb_ids=deleted_kb_ids,
                 slayer_storage_dir=slayer_storage_dir,
@@ -407,6 +471,14 @@ class PydanticAIAgent:
                 "trajectory": [{"final_output": output_text[:500]}],
                 "error": None,
                 "usage": deps.usage.model_dump(),
+                "submission_status": result.get(
+                    "submission_status", "never_submitted",
+                ),
+                "phase1_observation": result.get("phase1_observation"),
+                "phase2_observation": result.get("phase2_observation"),
+                "predicted_result_json": result.get("predicted_result_json"),
+                "gold_result_json": result.get("gold_result_json"),
+                "n_agent_turns": n_agent_turns,
             },
             deleted_kb_ids=deleted_kb_ids,
             slayer_storage_dir=slayer_storage_dir,

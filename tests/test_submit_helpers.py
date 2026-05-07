@@ -39,19 +39,28 @@ def test_submit_raw_sql_records_submitted_sql_on_state(monkeypatch):
         _submit, "execute_submit_action",
         lambda sql, status, dpb: ("ok", 1.0, True, False, True),
     )
+    # Skip the per-row snapshot — the fake DB path won't resolve.
+    monkeypatch.setattr(_submit, "capture_result_snapshot", lambda *a, **kw: None)
 
     state = _FakeState()
     out = _submit.submit_raw_sql(state, "SELECT 1")
 
     assert "ok" in out
-    assert state.result == {
+    # Stable submission shape: every key the harness consumes must be set.
+    # `state.result` also carries diagnostic keys (submission_status,
+    # phase1_observation, predicted/gold snapshots) — covered in
+    # test_submit_records_diagnostics.py; here we just lock the core
+    # fields the runner reads.
+    for k, v in {
         "phase1_passed": True,
         "phase2_passed": False,
         "total_reward": 1.0,
         "finished": True,
         "submitted_sql": "SELECT 1",
         "submitted_query": None,
-    }
+    }.items():
+        assert state.result[k] == v
+    assert state.result["submission_status"] == "passed_phase1"
 
 
 def test_submit_slayer_query_records_both_sql_and_dsl(monkeypatch):
@@ -61,6 +70,7 @@ def test_submit_slayer_query_records_both_sql_and_dsl(monkeypatch):
         _submit, "execute_submit_action",
         lambda sql, status, dpb: (f"obs of {sql}", 1.0, True, True, True),
     )
+    monkeypatch.setattr(_submit, "capture_result_snapshot", lambda *a, **kw: None)
 
     fake_client = SimpleNamespace(sql_sync=lambda d: f"-- generated\nSELECT * FROM {d['models'][0]}")
     state = _FakeState()
@@ -89,20 +99,26 @@ def test_submit_slayer_query_returns_error_on_bad_json():
         slayer_client_factory=lambda s: pytest.fail("must not be called"),
     )
     assert "Invalid JSON" in out
-    assert state.result is None
+    # Diagnostics now record the failure on `state.result` — earlier
+    # behaviour left it None, but offline analysis needs a row even for
+    # JSON errors.
+    assert state.result["submission_status"] == "json_error"
+    assert state.result["phase1_passed"] is False
+    assert state.result["submitted_sql"] is None
     # Failed submits must charge submit budget — prevents free retry loops.
     assert state.status.remaining_budget == start - ACTION_COSTS["submit_query"]
     assert "[Remaining budget:" in out
     assert out.count("[Remaining budget:") == 1
 
 
-def test_submit_slayer_query_returns_error_on_render_failure():
+def test_submit_slayer_query_returns_error_on_render_failure(monkeypatch):
     from bird_interact_agents.agents import _submit
 
     class _BoomClient:
         def sql_sync(self, _):
             raise RuntimeError("boom")
 
+    monkeypatch.setattr(_submit, "capture_result_snapshot", lambda *a, **kw: None)
     state = _FakeState()
     start = state.status.remaining_budget
     out = _submit.submit_slayer_query(
@@ -111,7 +127,8 @@ def test_submit_slayer_query_returns_error_on_render_failure():
         slayer_client_factory=lambda s: _BoomClient(),
     )
     assert "Could not generate SQL" in out
-    assert state.result is None
+    assert state.result["submission_status"] == "translation_error"
+    assert state.result["submitted_sql"] is None
     assert state.status.remaining_budget == start - ACTION_COSTS["submit_query"]
     assert "[Remaining budget:" in out
     assert out.count("[Remaining budget:") == 1
@@ -124,6 +141,7 @@ def test_submit_slayer_query_charges_budget_on_success(monkeypatch):
         _submit, "execute_submit_action",
         lambda sql, status, dpb: ("ok", 1.0, True, True, True),
     )
+    monkeypatch.setattr(_submit, "capture_result_snapshot", lambda *a, **kw: None)
     fake_client = SimpleNamespace(sql_sync=lambda d: "SELECT 1")
 
     state = _FakeState()
@@ -144,6 +162,7 @@ def test_submit_raw_sql_charges_budget_once(monkeypatch):
         _submit, "execute_submit_action",
         lambda sql, status, dpb: ("ok", 1.0, True, False, True),
     )
+    monkeypatch.setattr(_submit, "capture_result_snapshot", lambda *a, **kw: None)
 
     state = _FakeState()
     start = state.status.remaining_budget

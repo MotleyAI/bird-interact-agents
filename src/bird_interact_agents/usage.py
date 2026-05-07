@@ -11,8 +11,10 @@ accumulators in `run.py` to produce the eval-level total.
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from typing import Any
+import random
+from typing import Any, Awaitable, Callable
 
 import litellm
 from pydantic import BaseModel, Field
@@ -21,6 +23,102 @@ logger = logging.getLogger(__name__)
 
 # Indirection seams so tests can monkey-patch without touching litellm.
 _acompletion = litellm.acompletion
+
+
+# ---------------------------------------------------------------------------
+# Rate-limit retry shell. Used by the user-simulator path.
+#
+# Anthropic returns 429 with a `retry-after` header (seconds) when ITPM/OTPM
+# is breached. LiteLLM's default no-op retry policy means a concurrent burst
+# can surface those as hard failures. We wrap each call with our own retry
+# loop honouring `retry-after` first, falling back to jittered exp backoff.
+# ---------------------------------------------------------------------------
+
+_MAX_RETRY_ATTEMPTS = 6
+_BASE_BACKOFF_S = 1.0
+_MAX_BACKOFF_S = 30.0
+
+
+def _extract_retry_after(exc: BaseException) -> float | None:
+    """Best-effort: pull a numeric `retry-after` (seconds) off a litellm
+    rate-limit exception. Different providers attach the header in
+    different shapes (`response.headers`, `headers`, plain attribute) —
+    try them in order and return None when nothing parses."""
+    for attr in ("response", "raw_response", "http_response"):
+        resp = getattr(exc, attr, None)
+        if resp is None:
+            continue
+        headers = getattr(resp, "headers", None)
+        if headers is None:
+            continue
+        try:
+            value = headers.get("retry-after") or headers.get("Retry-After")
+        except AttributeError:
+            value = None
+        if value is None:
+            continue
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            continue
+    direct = getattr(exc, "retry_after", None)
+    if direct is not None:
+        try:
+            return float(direct)
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    """Treat rate-limit, transient API, timeout and connection errors as
+    retryable. LiteLLM exposes provider exceptions through its own
+    typed wrappers (`litellm.exceptions`)."""
+    le = litellm.exceptions
+    retryable_types: tuple[type[BaseException], ...] = tuple(
+        t for t in (
+            getattr(le, "RateLimitError", None),
+            getattr(le, "APIConnectionError", None),
+            getattr(le, "APIError", None),
+            getattr(le, "Timeout", None),
+            getattr(le, "ServiceUnavailableError", None),
+            getattr(le, "InternalServerError", None),
+        ) if t is not None
+    )
+    return isinstance(exc, retryable_types)
+
+
+async def _retry_litellm(
+    coro_factory: Callable[[], Awaitable[Any]],
+    *,
+    max_attempts: int = _MAX_RETRY_ATTEMPTS,
+) -> Any:
+    """Call `coro_factory()` and await the result, retrying transient
+    failures. `coro_factory` must return a fresh coroutine on each call so
+    we can re-await without reusing an exhausted coroutine.
+    """
+    last_exc: BaseException | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return await coro_factory()
+        except Exception as exc:  # noqa: BLE001 — we re-raise non-retryable
+            if not _is_retryable(exc) or attempt == max_attempts:
+                raise
+            last_exc = exc
+            wait = _extract_retry_after(exc)
+            if wait is None:
+                wait = min(
+                    _MAX_BACKOFF_S,
+                    _BASE_BACKOFF_S * (2 ** (attempt - 1)),
+                )
+                wait += random.uniform(0, wait * 0.25)
+            logger.warning(
+                "LiteLLM transient error (%s); retry %d/%d after %.1fs",
+                type(exc).__name__, attempt, max_attempts - 1, wait,
+            )
+            await asyncio.sleep(wait)
+    if last_exc is not None:  # pragma: no cover — defensive
+        raise last_exc
 
 
 def _cost_per_token(
@@ -182,8 +280,13 @@ async def acompletion_tracked(
 
     Returns the raw response object (so callers can read `.choices[0]`,
     `.usage`, etc. as before).
+
+    Wrapped with `_retry_litellm` so transient rate-limit and connection
+    errors don't surface as hard failures during concurrent benchmark runs.
     """
-    response = await _acompletion(model=model, **kwargs)
+    response = await _retry_litellm(
+        lambda: _acompletion(model=model, **kwargs),
+    )
     usage_obj = getattr(response, "usage", None)
     if usage_obj is not None:
         prompt = getattr(usage_obj, "prompt_tokens", 0) or 0
