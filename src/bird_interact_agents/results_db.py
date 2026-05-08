@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS task_results (
     predicted_result_json TEXT,
     gold_result_json TEXT,
     n_agent_turns  INTEGER,
+    tool_call_stats_json TEXT,
     PRIMARY KEY (run_id, framework, mode, query_mode, instance_id)
 )
 """
@@ -60,6 +61,13 @@ _DIAGNOSTIC_COLUMNS: list[tuple[str, str]] = [
     ("predicted_result_json", "TEXT"),
     ("gold_result_json", "TEXT"),
     ("n_agent_turns", "INTEGER"),
+    # Per-task tool-call statistics extracted from the agent's message
+    # history: per-tool call/error counts plus a bounded sample of
+    # validation-error / missing-tool messages. Shape:
+    #   {"per_tool": [{"tool": str, "n_calls": int, "n_errors": int}, ...],
+    #    "total_calls": int, "total_errors": int,
+    #    "error_samples": [{"tool": str, "error": str}, ...]}
+    ("tool_call_stats_json", "TEXT"),
 ]
 
 _RUN_METADATA_DDL = """
@@ -104,6 +112,7 @@ class TaskResultRow(BaseModel):
     predicted_result_json: str | None = None
     gold_result_json: str | None = None
     n_agent_turns: int | None = None
+    tool_call_stats_json: str | None = None
 
 
 def open_db(path: Path | str) -> sqlite3.Connection:
@@ -137,8 +146,8 @@ def insert_task_result(conn: sqlite3.Connection, row: TaskResultRow) -> None:
          error, usage_json,
          user_query, submission_status, phase1_observation,
          phase2_observation, predicted_result_json, gold_result_json,
-         n_agent_turns)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         n_agent_turns, tool_call_stats_json)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
         (
             row.run_id, row.framework, row.mode, row.query_mode,
@@ -149,6 +158,7 @@ def insert_task_result(conn: sqlite3.Connection, row: TaskResultRow) -> None:
             row.user_query, row.submission_status, row.phase1_observation,
             row.phase2_observation, row.predicted_result_json,
             row.gold_result_json, row.n_agent_turns,
+            row.tool_call_stats_json,
         ),
     )
     conn.commit()

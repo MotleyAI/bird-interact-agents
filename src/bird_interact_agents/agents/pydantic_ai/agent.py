@@ -61,6 +61,68 @@ _BY_NAME = {t.name: t for t in BIRD_INTERACT_TOOLS}
 # we just want a higher ceiling for concurrent benchmark bursts.
 _ANTHROPIC_CLIENT_RETRIES = 8
 
+# Cap on the number of error-sample blobs persisted per task. The samples
+# are for ad-hoc inspection; full error history can always be reconstructed
+# from the live run logs if needed.
+_TOOL_ERROR_SAMPLES_PER_TASK = 10
+_TOOL_ERROR_SAMPLE_CHARS = 400
+
+
+def _extract_tool_stats(agent_run: Any) -> dict | None:
+    """Walk PydanticAI's recorded message history and produce per-tool
+    call/error statistics for offline failure-mode analysis.
+
+    Counts:
+    - `ToolCallPart` instances per `tool_name` → successful tool invocations
+      (from the agent's POV — the tool was found, args parsed, body ran).
+    - `RetryPromptPart` instances per `tool_name` → erroring invocations the
+      runtime asked the model to retry (Pydantic validation errors on tool
+      args, missing tool name, `ModelRetry` raised inside a tool body, plain
+      text where structured output was expected). This is the harness's
+      cleanest signal that *something went wrong inside the tool layer*,
+      separate from the submit_status path that records evaluator outcomes.
+
+    Returns `None` if the trajectory can't be walked — best-effort metric,
+    must not block the run.
+    """
+    try:
+        messages = list(agent_run.all_messages())
+    except Exception:  # noqa: BLE001 — defensive
+        return None
+
+    calls: dict[str, int] = {}
+    errors: dict[str, int] = {}
+    error_samples: list[dict[str, str]] = []
+
+    for msg in messages:
+        for part in getattr(msg, "parts", None) or []:
+            kind = getattr(part, "part_kind", None)
+            if kind == "tool-call":
+                name = getattr(part, "tool_name", None) or "<unknown>"
+                calls[name] = calls.get(name, 0) + 1
+            elif kind == "retry-prompt":
+                name = getattr(part, "tool_name", None) or "<unknown>"
+                errors[name] = errors.get(name, 0) + 1
+                if len(error_samples) < _TOOL_ERROR_SAMPLES_PER_TASK:
+                    content = getattr(part, "content", None)
+                    text = (
+                        content if isinstance(content, str) else str(content)
+                    )[:_TOOL_ERROR_SAMPLE_CHARS]
+                    error_samples.append({"tool": name, "error": text})
+
+    seen = set(calls) | set(errors)
+    per_tool = sorted(
+        ({"tool": t, "n_calls": calls.get(t, 0), "n_errors": errors.get(t, 0)}
+         for t in seen),
+        key=lambda x: (-x["n_calls"], x["tool"]),
+    )
+    return {
+        "per_tool": per_tool,
+        "total_calls": sum(calls.values()),
+        "total_errors": sum(errors.values()),
+        "error_samples": error_samples,
+    }
+
 
 def _build_anthropic_model_with_retries(model_id: str):
     """Construct a PydanticAI `AnthropicModel` whose underlying SDK client
@@ -400,6 +462,7 @@ class PydanticAIAgent:
         prompt = await self._build_prompt(query_mode, eval_mode, task_data, budget, deps)
 
         n_agent_turns: int | None = None
+        tool_stats: dict | None = None
         try:
             # Lift PydanticAI's default request_limit (50) above our
             # MAX_MODEL_TURNS cap so long-tail tasks don't get killed
@@ -429,6 +492,7 @@ class PydanticAIAgent:
                 )
             except Exception:  # noqa: BLE001 — best-effort metric
                 n_agent_turns = None
+            tool_stats = _extract_tool_stats(agent_run)
         except Exception as e:
             logger.error("Agent error on %s: %s", instance_id, e)
             partial = deps.result or {}
@@ -452,6 +516,7 @@ class PydanticAIAgent:
                     "predicted_result_json": partial.get("predicted_result_json"),
                     "gold_result_json": partial.get("gold_result_json"),
                     "n_agent_turns": n_agent_turns,
+                    "tool_call_stats": tool_stats,
                 },
                 deleted_kb_ids=deleted_kb_ids,
                 slayer_storage_dir=slayer_storage_dir,
@@ -479,6 +544,7 @@ class PydanticAIAgent:
                 "predicted_result_json": result.get("predicted_result_json"),
                 "gold_result_json": result.get("gold_result_json"),
                 "n_agent_turns": n_agent_turns,
+                "tool_call_stats": tool_stats,
             },
             deleted_kb_ids=deleted_kb_ids,
             slayer_storage_dir=slayer_storage_dir,

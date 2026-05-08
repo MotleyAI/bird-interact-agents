@@ -251,6 +251,7 @@ def test_open_db_migrates_pre_diagnostic_table(tmp_path):
     assert "gold_result_json" in cols
     assert "n_agent_turns" in cols
     assert "user_query" in cols
+    assert "tool_call_stats_json" in cols
 
     # Pre-existing row survives intact, with diagnostic columns NULL.
     rows = list(conn.execute(

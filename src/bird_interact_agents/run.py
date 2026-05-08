@@ -229,6 +229,10 @@ async def run_evaluation(
         else:
             ground_truth = None
         n_turns = r.get("n_agent_turns")
+        stats_blob = r.get("tool_call_stats")
+        tool_call_stats_json = (
+            json.dumps(stats_blob) if stats_blob is not None else None
+        )
         insert_task_result(db_conn, TaskResultRow(
             run_id=run_id,
             framework=framework,
@@ -255,6 +259,7 @@ async def run_evaluation(
             predicted_result_json=r.get("predicted_result_json"),
             gold_result_json=r.get("gold_result_json"),
             n_agent_turns=int(n_turns) if isinstance(n_turns, int) else None,
+            tool_call_stats_json=tool_call_stats_json,
         ))
 
     # Run tasks with concurrency limiter
