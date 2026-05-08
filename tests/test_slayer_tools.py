@@ -22,7 +22,7 @@ async def test_submit_query_tool_with_valid_slayer_query():
     # hard-coded query below uses. Don't rely on `tasks[0]` — fixture order
     # is not part of the contract and the test would otherwise fail for
     # unrelated reasons if `mini_interact.jsonl` is reshuffled.
-    target_db = "alien"  # has the `observatories` SLayer model in slayer_storage
+    target_db = "alien"  # has the `observatories` SLayer model in slayer_models
     all_tasks = load_tasks(settings.data_path)
     task = next((t for t in all_tasks if t["selected_database"] == target_db), None)
     assert task is not None, f"No task found for db={target_db}"
@@ -32,7 +32,7 @@ async def test_submit_query_tool_with_valid_slayer_query():
     agent_mod._ctx_var.set({
         "status": SampleStatus(idx=0, original_data=task),
         "data_path_base": settings.db_path,
-        "slayer_storage_dir": f"./slayer_storage/{db_name}",
+        "slayer_storage_dir": f"./slayer_models/{db_name}",
         "_slayer_client": None,
         "_slayer_storage": None,
         "result": None,
@@ -70,7 +70,7 @@ async def test_submit_query_tool_with_invalid_json():
     agent_mod._ctx_var.set({
         "status": SampleStatus(idx=0, original_data=task_data),
         "data_path_base": settings.db_path,
-        "slayer_storage_dir": "./slayer_storage/alien",
+        "slayer_storage_dir": "./slayer_models/alien",
         "_slayer_client": None,
         "_slayer_storage": None,
         "result": None,

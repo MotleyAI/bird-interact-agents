@@ -134,7 +134,7 @@ uv run bird-interact \
   --mode a-interact \
   --agent-model "$AGENT_MODEL" \
   --user-sim-model "$USER_SIM_MODEL" \
-  --slayer-storage-root "$REPO_ROOT/slayer_storage" \
+  --slayer-storage-root "$REPO_ROOT/slayer_models" \
   --data "$BIRD_DATA_PATH" \
   --db-path "$BIRD_DB_PATH" \
   --filter-ids "$OUT/instance_ids.txt" \

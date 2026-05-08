@@ -137,9 +137,51 @@ async def canonical_root(tmp_path: Path) -> Path:
 # build_task_variant_storage — behaviors
 # ---------------------------------------------------------------------------
 
-async def test_no_deletions_returns_canonical_path(
+async def test_two_tasks_get_isolated_copies(
     canonical_root: Path, tmp_path: Path
 ):
+    """Concurrent tasks on the same DB must not share storage. Each task's
+    `work_dir` produces an independent on-disk copy; mutating one (via the
+    SLayer storage API) leaves the other untouched."""
+    work_a = tmp_path / "task_a"
+    work_b = tmp_path / "task_b"
+    work_a.mkdir()
+    work_b.mkdir()
+
+    out_a = await build_task_variant_storage(
+        canonical_storage_root=canonical_root, db_name=DB_NAME,
+        deleted_kb_ids=set(), work_dir=work_a,
+    )
+    out_b = await build_task_variant_storage(
+        canonical_storage_root=canonical_root, db_name=DB_NAME,
+        deleted_kb_ids=set(), work_dir=work_b,
+    )
+    assert out_a != out_b
+    assert out_a.exists() and out_b.exists()
+
+    # Mutate task A's copy: drop a model. Task B's copy + the canonical
+    # reference must be unaffected.
+    storage_a = YAMLStorage(base_dir=str(out_a))
+    await storage_a.delete_model("alpha")
+
+    a_after = sorted(await storage_a.list_models())
+    b_after = sorted(await YAMLStorage(base_dir=str(out_b)).list_models())
+    canonical_after = sorted(
+        await YAMLStorage(base_dir=str(canonical_root / DB_NAME)).list_models()
+    )
+    assert "alpha" not in a_after
+    assert "alpha" in b_after
+    assert "alpha" in canonical_after
+
+
+async def test_no_deletions_still_materialises_per_task_copy(
+    canonical_root: Path, tmp_path: Path
+):
+    """Even with empty `deleted_kb_ids`, the function must materialise a
+    fresh per-task copy under `work_dir`. This isolation lets each task's
+    SLayer MCP server safely write back type-refinement metadata without
+    mutating the committed `slayer_models/` reference, and confines any
+    agent `create_model` / `edit_model` calls to the scratch dir."""
     work = tmp_path / "work"
     work.mkdir()
     out = await build_task_variant_storage(
@@ -148,9 +190,20 @@ async def test_no_deletions_returns_canonical_path(
         deleted_kb_ids=set(),
         work_dir=work,
     )
-    assert out == canonical_root / DB_NAME
-    # No variant files should have been created.
-    assert not (work / DB_NAME).exists()
+    # Output points at the per-task copy, not the canonical path.
+    assert out == work / DB_NAME
+    assert (work / DB_NAME).exists()
+
+    # The copy contains every model from the canonical store.
+    src = YAMLStorage(base_dir=str(canonical_root / DB_NAME))
+    dst = YAMLStorage(base_dir=str(out))
+    canonical_names = sorted(await src.list_models())
+    variant_names = sorted(await dst.list_models())
+    assert canonical_names == variant_names
+
+    # And the datasource carries through.
+    ds = await dst.get_datasource(DB_NAME)
+    assert ds is not None and ds.name == DB_NAME
 
 
 async def test_deletion_drops_model_by_kb_id(canonical_root: Path, tmp_path: Path):

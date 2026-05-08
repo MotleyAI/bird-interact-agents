@@ -94,7 +94,14 @@ async def build_task_variant_storage(
     deleted_kb_ids: set[int],
     work_dir: Path,
 ) -> Path:
-    """Build a per-task SLayer YAMLStorage with HARD-8 deletions applied.
+    """Build a per-task SLayer YAMLStorage, optionally with HARD-8
+    deletions applied.
+
+    Always materialises a fresh per-task copy of the canonical models
+    so the SLayer MCP server can safely write back type-refinement
+    metadata, and so any agent ``create_model`` / ``edit_model`` /
+    ``delete_model`` calls land in the temp dir rather than mutating
+    the committed canonical reference.
 
     Parameters
     ----------
@@ -103,8 +110,8 @@ async def build_task_variant_storage(
     db_name
         The DB name (folder name under ``canonical_storage_root``).
     deleted_kb_ids
-        KB ids to mask. Empty set short-circuits and returns the
-        canonical ``<root>/<db_name>`` path with no copy.
+        KB ids to mask. Empty set means "copy everything verbatim";
+        non-empty means "copy minus the matching entities".
     work_dir
         Task-scoped scratch directory. The variant is written to
         ``<work_dir>/<db_name>/``.
@@ -116,8 +123,6 @@ async def build_task_variant_storage(
         this task.
     """
     canonical = canonical_storage_root / db_name
-    if not deleted_kb_ids:
-        return canonical
     src = YAMLStorage(base_dir=str(canonical))
     variant_root = work_dir / db_name
     variant_root.mkdir(parents=True, exist_ok=True)
@@ -131,7 +136,11 @@ async def build_task_variant_storage(
         model = await src.get_model(name)
         if model is None:
             continue
-        kept = _apply_deletions(model, deleted_kb_ids)
-        if kept is not None:
+        if deleted_kb_ids:
+            kept = _apply_deletions(model, deleted_kb_ids)
+            if kept is None:
+                continue
             await dst.save_model(kept)
+        else:
+            await dst.save_model(model)
     return variant_root
