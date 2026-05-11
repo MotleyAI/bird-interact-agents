@@ -168,7 +168,7 @@ def test_skip_when_already_typed(tmp_path: Path) -> None:
     )
     model = _model_with(col)
     client = _FakeAnthropic(json.dumps({"is_date": True, "source_format": "%d/%m/%Y", "confidence": 0.9}))
-    retyped, warns = detect_and_apply(model, sqlite_path, client, "claude-haiku-4-5")
+    retyped, _warns = detect_and_apply(model, sqlite_path, client, "claude-haiku-4-5")
     assert retyped == 0
     # The fake client was never called.
     assert client.messages.calls == []
