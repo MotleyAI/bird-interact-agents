@@ -66,6 +66,22 @@ def test_type_token_no_match_returns_none() -> None:
     assert parse_leading_type_token(None) is None
 
 
+def test_type_token_rejects_mixed_case_prose() -> None:
+    """Prose like 'Date stored as TEXT in ...' (DEV-1381 annotation
+    leader) must NOT infer DATE from the leading 'Date' word — only
+    all-uppercase tokens or explicit `_enum` suffixes count."""
+    assert parse_leading_type_token(
+        "Date stored as TEXT in '%Y-%m-%d'. Cast to TIMESTAMP."
+    ) is None
+    assert parse_leading_type_token("Time spent on task.") is None
+    # All-uppercase DATE / TIMESTAMP still match.
+    assert parse_leading_type_token("DATE representing the date.")[0] == DataType.DATE
+    assert (
+        parse_leading_type_token("TIMESTAMP noting the moment.")[0]
+        == DataType.TIMESTAMP
+    )
+
+
 # ---------- jsonb walker ----------
 
 
@@ -84,6 +100,21 @@ def test_walker_flat() -> None:
     assert bath.label == "Bath Count"
     assert "CAST" not in bath.sql
     assert bath.no_type_token is False
+
+
+def test_walker_array_index_emits_bracket_path() -> None:
+    """Numeric segments must become `[N]` array indexes, not `.N`
+    (which would target a JSON object key with that name)."""
+    fields = {
+        "irradiance_types": {"3": "NUMERIC(7,3) plane-of-array irradiance."}
+    }
+    leaves = list(walk_fields_meaning("irradiance_conditions", fields))
+    assert len(leaves) == 1
+    assert (
+        leaves[0].sql
+        == "JSON_EXTRACT(irradiance_conditions, '$.irradiance_types[3]')"
+    )
+    assert "." + "3" not in leaves[0].sql
 
 
 def test_walker_nested_three_levels() -> None:
@@ -212,6 +243,27 @@ def test_overlay_dev1381_dd_mm_yyyy_emits_reformat_sql() -> None:
     assert "SUBSTR(beginday, 4, 2)" in col.sql
     assert "SUBSTR(beginday, 1, 2)" in col.sql
     assert col.meta["date_source_format"] == "%d/%m/%Y"
+
+
+def test_overlay_dev1381_unsupported_format_keeps_text() -> None:
+    """Annotation with a format that has no SQLite rewrite path AND
+    isn't ISO-passthrough must leave the column TEXT and warn,
+    rather than promote to TIMESTAMP with a broken Column.sql."""
+    col = Column(name="d", sql="d", type=DataType.TEXT)
+    model = _model([col])
+    by_table = {
+        "orders": {
+            "d": (
+                "Date stored as TEXT in '%d.%m.%Y'. "
+                "Cast at encode time to TIMESTAMP."
+            )
+        }
+    }
+    _touched, warns = apply_overlay(model, by_table)
+    assert col.type == DataType.TEXT
+    assert col.sql == "d"
+    assert (col.meta or {}).get("date_source_format") is None
+    assert any("unsupported source_format '%d.%m.%Y'" in w for w in warns)
 
 
 def test_overlay_handles_jsonb_dict_entry() -> None:

@@ -96,9 +96,9 @@ def main() -> int:
     args = _build_parser().parse_args()
     return run(
         db=args.db,
-        mini_interact_root=Path(args.mini_interact_root).resolve(),
-        slayer_storage=Path(args.slayer_storage).resolve(),
-        results_root=Path(args.results_root).resolve(),
+        mini_interact_root=Path(args.mini_interact_root).expanduser().resolve(),
+        slayer_storage=Path(args.slayer_storage).expanduser().resolve(),
+        results_root=Path(args.results_root).expanduser().resolve(),
         llm_model=args.model,
         wipe=not args.no_wipe,
         skip_phase1=args.skip_phase1,

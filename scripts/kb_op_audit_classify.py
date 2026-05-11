@@ -33,11 +33,11 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Optional
 
-from anthropic import AsyncAnthropic
-from anthropic._exceptions import (
+from anthropic import (
     APIConnectionError,
     APIStatusError,
     APITimeoutError,
+    AsyncAnthropic,
 )
 
 
@@ -263,6 +263,7 @@ async def classify_one(
     user_prompt = build_user_prompt(row)
     last_exc: Optional[BaseException] = None
     for attempt in range(1, max_attempts + 1):
+        retry_delay: Optional[int] = None
         async with semaphore:
             try:
                 response = await client.messages.create(
@@ -279,15 +280,21 @@ async def classify_one(
                 )
             except (APIStatusError, APIConnectionError, APITimeoutError) as exc:
                 last_exc = exc
-                # Exponential backoff for transient errors (429, 5xx, network).
-                await asyncio.sleep(2 ** attempt)
-                continue
+                # Defer the sleep until after the semaphore releases so
+                # a burst of 429/5xx/timeouts doesn't tie up concurrency
+                # slots with sleeping coroutines.
+                retry_delay = 2 ** attempt
+        if retry_delay is not None:
+            await asyncio.sleep(retry_delay)
+            continue
         text = "".join(
             block.text for block in response.content
             if getattr(block, "type", None) == "text"
         )
         try:
             verdict = parse_verdict_json(text)
+            if verdict.get("verdict") not in {"aware", "silent"}:
+                raise ValueError(f"invalid verdict payload: {verdict!r}")
         except (ValueError, json.JSONDecodeError) as exc:
             last_exc = exc
             await asyncio.sleep(1)

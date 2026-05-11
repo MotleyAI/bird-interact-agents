@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field
 
 from slayer.core.models import DataType, SlayerModel
 
-from .overlay import _sqlite_reformat_sql
+from .overlay import ISO_TEXT_DATE_FORMATS, _sqlite_reformat_sql
 
 SAMPLE_VALUES_PER_COLUMN = 20
 CONFIDENCE_THRESHOLD = 0.8
@@ -232,8 +232,13 @@ def detect_and_apply(
                 f"failed strptime on at least one sample; column left TEXT."
             )
             continue
-        # Apply.
         new_sql = _sqlite_reformat_sql(column.name, fmt)
+        if new_sql is None and fmt not in ISO_TEXT_DATE_FORMATS:
+            warnings.append(
+                f"{table}.{column.name}: LLM-proposed format '{fmt}' is "
+                f"not supported by the SQLite rewrite path; column left TEXT."
+            )
+            continue
         column.type = DataType.TIMESTAMP
         if new_sql is not None:
             column.sql = new_sql

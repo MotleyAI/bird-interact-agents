@@ -47,6 +47,19 @@ def walk_fields_meaning(
     yield from _walk(json_col, [], fields_meaning)
 
 
+def _json_path(path: list[str]) -> str:
+    """Build a JSON-path expression for `JSON_EXTRACT`.
+
+    Numeric segments become array indexes (`[N]`); everything else is
+    dotted. `["foo", "3"]` → `$.foo[3]` (SQLite's array indexing),
+    not `$.foo.3` (which targets the object key "3" instead).
+    """
+    out = "$"
+    for segment in path:
+        out += f"[{segment}]" if segment.isdigit() else f".{segment}"
+    return out
+
+
 def _walk(
     json_col: str, path: list[str], node: object
 ) -> Iterable[LeafInfo]:
@@ -54,7 +67,7 @@ def _walk(
         leaf_key = path[-1]
         full_path = [*path]
         column_name = json_col + "__" + "__".join(full_path)
-        json_path = "$." + ".".join(full_path)
+        json_path = _json_path(full_path)
         parsed = parse_leading_type_token(node)
         if parsed is None:
             data_type = DataType.TEXT

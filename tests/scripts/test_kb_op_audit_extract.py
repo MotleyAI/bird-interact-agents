@@ -284,10 +284,13 @@ def test_no_operators_returns_empty():
 
 
 def test_malformed_sql_raises():
-    """The function itself raises; the caller (run) is responsible for
-    logging to parse_failures.txt and continuing.
+    """The function itself raises ``sqlglot.errors.ParseError``; the
+    caller (run) is responsible for logging to parse_failures.txt and
+    continuing.
     """
-    with pytest.raises(Exception):
+    from sqlglot.errors import ParseError
+
+    with pytest.raises(ParseError):
         _extract("SELECT FROM WHERE GARBAGE )(")
 
 

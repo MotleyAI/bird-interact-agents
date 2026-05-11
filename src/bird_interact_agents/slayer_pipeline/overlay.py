@@ -15,6 +15,7 @@ type is still ``TEXT`` after phase 2.
 
 from __future__ import annotations
 
+import copy
 import json
 import re
 from pathlib import Path
@@ -31,6 +32,19 @@ DATE_ANNOTATION_RE = re.compile(
     r"Cast\s+at\s+encode\s+time\s+to\s+TIMESTAMP",
     re.IGNORECASE,
 )
+
+# Formats that SQLite's date functions parse natively — Column.sql can
+# stay as the bare column name (passthrough) and `Column.type=TIMESTAMP`
+# is safe. Anything outside this set requires a reformat from
+# ``_sqlite_reformat_sql`` to be usable; if neither matches, leave the
+# column as TEXT.
+ISO_TEXT_DATE_FORMATS = frozenset({
+    "%Y-%m-%d",
+    "%Y-%m-%d %H:%M:%S",
+    "%Y-%m-%dT%H:%M:%S",
+    "%Y-%m-%d %H:%M:%S.%f",
+    "%Y-%m-%dT%H:%M:%S.%f",
+})
 
 
 def load_meanings(meanings_path: Path) -> dict[str, dict[str, dict | str]]:
@@ -67,14 +81,16 @@ def _sqlite_reformat_sql(col_name: str, fmt: str) -> Optional[str]:
     an ISO ``YYYY-MM-DD[ HH:MM:SS]`` form parseable by SQLite's date
     functions and by SLayer's TIMESTAMP-typed column path.
 
-    ISO-already formats return ``None`` (caller leaves ``Column.sql``
-    as the bare column name — passthrough).
+    Returns ``None`` for two distinct cases — callers must disambiguate
+    via ``ISO_TEXT_DATE_FORMATS``:
+
+    - ISO-already format: ``Column.sql`` stays as the bare column name
+      (passthrough). Caller still promotes ``Column.type=TIMESTAMP``.
+    - Unsupported format: caller must leave the column as ``TEXT`` and
+      log a warning; promoting the type without a rewrite produces a
+      column SLayer can't actually parse.
     """
-    iso_formats = {
-        "%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S",
-        "%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S.%f",
-    }
-    if fmt in iso_formats:
+    if fmt in ISO_TEXT_DATE_FORMATS:
         return None
 
     # Simple substring-based reformatters for the common non-ISO patterns
@@ -114,6 +130,11 @@ def _apply_meaning_to_column(col: Column, meaning_text: str) -> None:
     if annot is not None:
         fmt = annot.group(1)
         new_sql = _sqlite_reformat_sql(col.name, fmt)
+        if new_sql is None and fmt not in ISO_TEXT_DATE_FORMATS:
+            # No SQLite rewrite path and not an ISO passthrough — leave
+            # the column TEXT so phase 4 can still try, and surface the
+            # unsupported format via the apply_overlay warning path.
+            return
         col.type = DataType.TIMESTAMP
         if new_sql is not None:
             col.sql = new_sql
@@ -157,26 +178,27 @@ def apply_overlay(
         text = _column_meaning_text(meaning_entry)
         if text is None:
             continue
+        before_description = column.description
         before_type = column.type
         before_sql = column.sql
+        before_meta = copy.deepcopy(column.meta)
         _apply_meaning_to_column(column, text)
         if (
-            column.description == text
+            column.description != before_description
             or column.type != before_type
             or column.sql != before_sql
+            or column.meta != before_meta
         ):
             touched += 1
         annot = DATE_ANNOTATION_RE.search(text)
-        if annot and column.sql == before_sql and column.type == DataType.TIMESTAMP:
-            fmt = annot.group(1)
-            if _sqlite_reformat_sql(column.name, fmt) is None and fmt not in {
-                "%Y-%m-%d", "%Y-%m-%d %H:%M:%S",
-                "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S.%f",
-                "%Y-%m-%dT%H:%M:%S.%f",
-            }:
-                warnings.append(
-                    f"{table}.{column.name}: DEV-1381 annotation has "
-                    f"unsupported source_format '{fmt}'; Column.sql "
-                    f"left unchanged."
-                )
+        if (
+            annot is not None
+            and _sqlite_reformat_sql(column.name, annot.group(1)) is None
+            and annot.group(1) not in ISO_TEXT_DATE_FORMATS
+        ):
+            warnings.append(
+                f"{table}.{column.name}: DEV-1381 annotation has "
+                f"unsupported source_format '{annot.group(1)}'; column "
+                f"left as TEXT."
+            )
     return touched, warnings

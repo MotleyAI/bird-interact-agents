@@ -189,6 +189,27 @@ def test_skip_jsonb_derived_leaves(tmp_path: Path) -> None:
     assert client.messages.calls == []
 
 
+def test_unsupported_format_leaves_text_and_warns(tmp_path: Path) -> None:
+    """If the LLM proposes a format that passes strptime against the
+    samples but our SQLite rewrite table can't translate, leave the
+    column TEXT — do NOT cache it as TIMESTAMP under a non-functional
+    Column.sql."""
+    sqlite_path = _make_sqlite(
+        tmp_path, "orders", "d",
+        ["31.12.2024", "01.01.2025", "15.06.2025"],
+    )
+    col = Column(name="d", sql="d", type=DataType.TEXT)
+    model = _model_with(col)
+    client = _FakeAnthropic(
+        json.dumps({"is_date": True, "source_format": "%d.%m.%Y", "confidence": 0.99})
+    )
+    retyped, warns = detect_and_apply(model, sqlite_path, client, "claude-haiku-4-5")
+    assert retyped == 0
+    assert col.type == DataType.TEXT
+    assert (col.meta or {}).get("date_source_format") is None
+    assert any("not supported by the SQLite rewrite path" in w for w in warns)
+
+
 def test_is_date_false_leaves_text(tmp_path: Path) -> None:
     sqlite_path = _make_sqlite(tmp_path, "orders", "name", ["alice", "bob", "carol"])
     col = Column(name="name", sql="name", type=DataType.TEXT)

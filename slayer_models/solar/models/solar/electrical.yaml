@@ -96,12 +96,12 @@ columns:
   sql: ffactorinit
   type: DOUBLE
   primary_key: false
-  description: "[kb=24]\nA dimensionless value between 0 and 1 representing the ratio\
-    \ of maximum power point (Vmp \xD7 Imp) to open-circuit voltage times short-circuit\
-    \ current (Voc \xD7 Isc). High-quality commercial panels typically have fill factors\
-    \ between 0.75 and 0.85. \u2014 Illustrates a key indicator of solar cell quality.\
-    \ (Initial fill factor at panel commissioning; current fill factor is in ffactorcurr.)\n\
-    [/kb=24]"
+  description: "Initial fill factor at panel commissioning; current fill factor\
+    \ is in ffactorcurr.\n\n[kb=24]\nA dimensionless value between 0 and 1 representing\
+    \ the ratio of maximum power point (Vmp \xD7 Imp) to open-circuit voltage times\
+    \ short-circuit current (Voc \xD7 Isc). High-quality commercial panels typically\
+    \ have fill factors between 0.75 and 0.85. \u2014 Illustrates a key indicator\
+    \ of solar cell quality.\n[/kb=24]"
   label: FillFactor (Fill Factor)
   hidden: false
   format:
@@ -112,11 +112,11 @@ columns:
   sql: ffactorcurr
   type: DOUBLE
   primary_key: false
-  description: "[kb=24]\nA dimensionless value between 0 and 1 representing the ratio\
-    \ of maximum power point (Vmp \xD7 Imp) to open-circuit voltage times short-circuit\
-    \ current (Voc \xD7 Isc). High-quality commercial panels typically have fill factors\
-    \ between 0.75 and 0.85. \u2014 Illustrates a key indicator of solar cell quality.\
-    \ (Current snapshot; initial fill factor is in ffactorinit.)\n[/kb=24]"
+  description: "Current snapshot; initial fill factor is in ffactorinit.\n\n[kb=24]\n\
+    A dimensionless value between 0 and 1 representing the ratio of maximum power\
+    \ point (Vmp \xD7 Imp) to open-circuit voltage times short-circuit current (Voc\
+    \ \xD7 Isc). High-quality commercial panels typically have fill factors between\
+    \ 0.75 and 0.85. \u2014 Illustrates a key indicator of solar cell quality.\n[/kb=24]"
   label: "FillFactor (Fill Factor) \u2014 current snapshot"
   hidden: false
   format:

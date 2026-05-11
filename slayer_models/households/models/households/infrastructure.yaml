@@ -92,11 +92,10 @@ columns:
   type: DOUBLE
   primary_key: false
   description: "Composite score: average of `water_access_score`, `road_surface_score`,\
-    \ `parking_availability_score`. Each input is 4 or 1, so the composite ranges\
-    \ over {1.0, 2.0, 3.0, 4.0} and intermediate thirds.\n\n[kb=13]\nCalculated as\
-    \ the average of the individual scores for Water Access, Road Surface, and Parking\
-    \ Availability. \u2014 Calculates a composite score for infrastructure quality.\n\
-    [/kb=13]"
+    \ `parking_availability_score`. Each input is 4 or 1, so the composite takes\
+    \ exactly one of {1.0, 2.0, 3.0, 4.0}.\n\n[kb=13]\nCalculated as the average\
+    \ of the individual scores for Water Access, Road Surface, and Parking Availability.\
+    \ \u2014 Calculates a composite score for infrastructure quality.\n[/kb=13]"
   label: Infrastructure Quality Score
   hidden: false
   meta:

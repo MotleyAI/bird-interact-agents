@@ -150,7 +150,7 @@ Before encoding any KB entries, prepare the live SLayer storage with
 the schema-derived models, deterministic typing, JSONB-leaf expansion
 (DEV-1379), and LLM TEXT-as-date detection (DEV-1381):
 
-```
+```bash
 python bird-interact-agents/scripts/regenerate_slayer_model.py --db <db>
 ```
 

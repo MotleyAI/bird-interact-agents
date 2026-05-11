@@ -49,10 +49,17 @@ def parse_leading_type_token(
     match = LEADING_TYPE_RE.match(description)
     if not match:
         return None
-    raw = match.group(1).strip().upper()
+    captured = match.group(1).strip()
+    # Case discipline: only accept all-uppercase tokens (REAL, JSONB,
+    # DATE, ...) or explicit `_enum` suffixes. Rejects prose-leading
+    # capitalised words like "Date stored as TEXT in '%Y-%m-%d'..." that
+    # otherwise spuriously infer DATE.
+    if not captured.isupper() and not captured.endswith("_enum"):
+        return None
+    raw = captured.upper()
 
     if raw.endswith("_ENUM"):
-        return DataType.TEXT, {"enum_name": match.group(1).strip()}
+        return DataType.TEXT, {"enum_name": captured}
     if raw == "JSONB":
         return DataType.TEXT, {"jsonb": True}
     if raw in _NUMERIC_TOKENS:

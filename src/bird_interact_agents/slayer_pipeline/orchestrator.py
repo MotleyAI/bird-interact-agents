@@ -125,27 +125,41 @@ async def _phase3_jsonb(
                 f"no matching model in storage; skipped."
             )
             continue
-        existing_names = {c.name for c in model.columns}
+        existing_by_name = {c.name: c for c in model.columns}
         new_cols, warns = expand_one_column(json_col, entry)
         typing_warnings.extend(warns)
         added_here = 0
+        changed_here = False
         for col in new_cols:
-            if col.name in existing_names:
-                # Update only the description/type/sql if derived_from
-                # already matches; otherwise leave the user's column
-                # alone. (Conservative; user can re-wipe and re-run.)
+            existing = existing_by_name.get(col.name)
+            if existing is not None:
+                # Refresh fields when derived_from matches — lets reruns
+                # propagate fields_meaning edits to already-emitted
+                # leaves. Hand-written columns (no derived_from match)
+                # are left alone.
+                if (existing.meta or {}).get("derived_from") == (
+                    col.meta or {}
+                ).get("derived_from"):
+                    existing.description = col.description
+                    existing.type = col.type
+                    existing.sql = col.sql
+                    existing.label = col.label
+                    existing.meta = col.meta
+                    changed_here = True
                 continue
             model.columns.append(col)
-            existing_names.add(col.name)
+            existing_by_name[col.name] = col
             added_here += 1
         # Top-level JSONB column gets a meta.jsonb=True flag so future
         # passes can find it without re-sniffing the description.
+        jsonb_flagged = False
         for col in model.columns:
             if col.name.lower() == json_col.lower():
                 meta = col.meta or {}
                 if not meta.get("jsonb"):
                     meta["jsonb"] = True
                     col.meta = meta
+                    jsonb_flagged = True
                 break
         # Drift detection (top-level keys only, first cut).
         documented_keys = set(entry.get("fields_meaning", {}).keys())
@@ -160,7 +174,7 @@ async def _phase3_jsonb(
             drift_warnings.append(
                 f"{table}.{json_col}: documented key absent from sampled rows: '{key}'"
             )
-        if added_here:
+        if added_here or changed_here or jsonb_flagged:
             await storage.save_model(model)
             added_total += added_here
     return added_total, typing_warnings, drift_warnings

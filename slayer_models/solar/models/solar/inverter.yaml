@@ -155,13 +155,13 @@ columns:
   sql: pwrqualidx
   type: DOUBLE
   primary_key: false
-  description: "[kb=19]\nA metric determined by the combination of Power Quality Index,\
-    \ Harmonic Distortion Percentage, and Power Factor, where values closer to 1.0\
-    \ indicate better contribution to grid stability. \u2014 A composite metric quantifying\
-    \ solar system contribution to grid stability. NOTE: the KB names the inputs but\
-    \ does not pin a single canonical formula; the operational composite is encoded\
-    \ as `grid_integration_quality` (KB 37). This column anchors KB 19's metadata\
-    \ to the underlying PWRQualIDX.\n[/kb=19]"
+  description: "NOTE: the KB names the inputs but does not pin a single canonical\
+    \ formula; the operational composite is encoded as `grid_integration_quality`\
+    \ (KB 37). This column anchors KB 19's metadata to the underlying PWRQualIDX.\n\
+    \n[kb=19]\nA metric determined by the combination of Power Quality Index, Harmonic\
+    \ Distortion Percentage, and Power Factor, where values closer to 1.0 indicate\
+    \ better contribution to grid stability. \u2014 A composite metric quantifying solar\
+    \ system contribution to grid stability.\n[/kb=19]"
   label: Grid Stability Factor
   hidden: false
   meta:
