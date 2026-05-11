@@ -144,6 +144,53 @@ standard steps below.
 Load `<db>_kb.jsonl`, `<db>_column_meaning_base.json`, and
 `<db>_schema.txt`. Build a working list of KB entries to process.
 
+### 1b. Regenerate the SLayer base model (deterministic + LLM date typing)
+
+Before encoding any KB entries, prepare the live SLayer storage with
+the schema-derived models, deterministic typing, JSONB-leaf expansion
+(DEV-1379), and LLM TEXT-as-date detection (DEV-1381):
+
+```
+python bird-interact-agents/scripts/regenerate_slayer_model.py --db <db>
+```
+
+This subsumes the old `ingest_slayer_models.py` path for a single DB.
+It runs four phases:
+
+1. `slayer datasources create` + `slayer ingest` (schema → one Column
+   per source column).
+2. `column_meaning` overlay — descriptions, leading-type-token typing,
+   and DEV-1381 date-format annotations (`"Date stored as TEXT in
+   '<strftime>'. Cast at encode time to TIMESTAMP."`).
+3. JSONB-leaf expansion — for every JSONB column with a
+   `fields_meaning` sidecar, append one Column per terminal leaf with
+   full-path `__` naming, `JSON_EXTRACT` sql (no CAST), copied
+   description, and `meta.derived_from` for idempotency.
+4. LLM TEXT-as-date detection — sample up to 20 distinct values from
+   each remaining `string`-typed column, classify via the Anthropic
+   API, and retype confident matches to TIMESTAMP with a SQLite-native
+   parse expression (cached in `meta.date_source_format`).
+
+Review the warning files before continuing to step 2:
+
+- `bird-interact-agents/results/<db>/column_typing_warnings.txt` —
+  leaves whose `fields_meaning` text had no leading type token
+  (defaulted to TEXT). Consider enriching `column_meaning_base.json`.
+- `bird-interact-agents/results/<db>/jsonb_drift_warnings.txt` —
+  top-level keys present in JSON data but absent from
+  `fields_meaning`, and vice versa.
+- `bird-interact-agents/results/<db>/date_detection_warnings.txt` —
+  LLM-uncertain TEXT columns left untyped.
+
+Sandboxing note: the script writes to `$SLAYER_STORAGE` (default
+`~/.local/share/slayer`); ensure your sandbox allows writes there
+or run the script unsandboxed. SQLite reads of `mini-interact/<db>/`
+use `immutable=1` URI so the data dir doesn't need write access.
+
+Global LLM model override (applies to phase 4 and any future LLM
+step in the pipeline): `BIRD_AGENTS_LLM_MODEL=claude-sonnet-4-6`.
+Default: `claude-haiku-4-5`.
+
 ### 2. Encode each entry
 
 Invoke `kb-to-slayer-models` recipes per entry. Pick the recipe whose

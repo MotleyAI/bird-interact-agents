@@ -118,6 +118,105 @@ computes), NOT on the data carrier (a JSON blob column that holds
 the raw values). If both exist, the helper carries the kb_id and
 the JSON blob stays untagged.
 
+## NULL handling — be explicit, never implicit
+
+Whenever you author a Column or ModelMeasure that references a column
+that may carry NULLs (i.e. its `NOT NULL` constraint is absent in the
+schema, or `fields_meaning` text says "Contains NULL when..."), make
+a deliberate choice rather than letting defensive habits diverge from
+the gold encoding.
+
+1. **Numeric columns used in aggregations** (`SUM`, `AVG`, `COUNT
+   DISTINCT`, ratios):
+   - If "missing" semantically equals zero (a count of events, a fee,
+     a tax-paid), wrap `COALESCE(<col>, 0)` in `Column.sql` or in the
+     measure formula. State the reason in the description: `"NULL
+     means 'no events'; coalesced to 0 so SUM is well-defined."`
+   - If "missing" semantically means "unknown / not measured" (an
+     optional rating, a sometimes-omitted score), DO NOT coalesce —
+     let NULL propagate so `AVG` correctly excludes unknowns. Note the
+     choice in the description.
+
+2. **Categorical / enum-like text columns** where `''`, `'NA'`,
+   `'N/A'`, `'-'`, `'Unknown'` appears as a sentinel for "no value":
+   - The `Column.sql` SHOULD do `NULLIF(<col>, '<sentinel>')` so
+     downstream `IS NULL` filters work uniformly. Document the
+     sentinel and its source.
+   - If multiple sentinels coexist (e.g. `''` and `'NA'`), chain
+     `NULLIF`s.
+
+3. **Row-level filters** on a column whose NULL-handling matters
+   (e.g. "exclude tasks that have not yet completed" → completion
+   date `IS NOT NULL`):
+   - Express the filter at the Filter level via `IS NOT NULL`, not
+     via a coalesce-then-compare pattern, so the filter's intent is
+     visible to downstream readers and the SLayer filter-tree.
+
+4. **Ratios / divisions:**
+   - Always `NULLIF(<denominator>, 0)` to make division-by-zero
+     yield NULL rather than throwing. Document the policy in the
+     measure description.
+
+**Default rule.** If the KB / `column_meaning` / schema do not state
+the NULL semantics for a column, pick the conservative reading (let
+NULL propagate in numeric aggregations; do not assume sentinels in
+text columns). Add a `description` line stating the assumption
+explicitly so reviewers can correct it if wrong.
+
+This convention exists because the KB-vs-data audit on BIRD-Interact
+mini found 36.3% of NULL-handling operators were KB-silent — gold SQL
+diverged from encoded models on coalesce/NULLIF choices that nobody
+had documented. Codified here (DEV-1380) so future encoding runs make
+the choice deliberately and visibly.
+
+## LLM TEXT-as-date detection (pipeline recipe)
+
+Not a per-KB recipe — a pipeline step run **before** KB encoding by
+`scripts/regenerate_slayer_model.py` (DEV-1381). Documented here so
+non-BIRD callers can reuse the same contract.
+
+**Trigger.** A `Column.type == TEXT` whose schema-derived name and
+sampled values suggest it holds dates or timestamps.
+
+**Mechanism.** For every TEXT column that lacks both
+`meta.date_source_format` (already inferred) and `meta.derived_from`
+(JSONB leaf — sampling via `JSON_EXTRACT` is deferred), sample up to
+20 distinct non-NULL values from the live datasource and ask the LLM
+(default `claude-haiku-4-5`, override via `$BIRD_AGENTS_LLM_MODEL`)
+to classify with this contract:
+
+Return JSON only:
+
+```json
+{"is_date": true|false, "source_format": "<strftime>", "confidence": 0.0-1.0, "notes": "..."}
+```
+
+- `is_date=false` → leave the column alone.
+- `is_date=true` with `confidence >= 0.8` AND `source_format` valid
+  under `datetime.strptime` for EVERY sampled value → retype to
+  `TIMESTAMP`; rewrite `Column.sql` to the SQLite-native parse
+  expression for the source format (passthrough for ISO; `SUBSTR`
+  concatenation for `%d/%m/%Y`, `%m/%d/%Y`, `%d-%m-%Y`; `REPLACE`
+  for `%Y/%m/%d`); cache the inference in
+  `meta.date_source_format=<strftime>` plus `meta.detected_by='llm'`
+  for idempotency on re-run.
+- `is_date=true` with `confidence < 0.8` OR a format that fails the
+  strptime gate on at least one sample → leave the column TEXT and
+  log to `results/<db>/date_detection_warnings.txt`.
+
+**Why deterministic-first.** The pipeline phase 2 already retypes
+columns whose `column_meaning` description starts with a recognised
+SQL-type token (`DATE`, `TIMESTAMP`, `JSONB`, etc.) or carries the
+DEV-1381 annotation grammar (`"Date stored as TEXT in '<strftime>'.
+Cast at encode time to TIMESTAMP."`). LLM detection runs only on
+what's left, so the typing is cheap and replayable.
+
+**Why dialect-agnostic in spirit only.** The committed `Column.sql`
+is dialect-native (SQLite for BIRD). `meta.date_source_format`
+preserves the format string so a future Postgres re-emit can
+regenerate the SQL — the SLayer model carries enough information to
+round-trip without an LLM call.
+
 ## Peer-join via shared parent
 
 A common shape: child A and child B both FK→same parent P. Auto-FK
