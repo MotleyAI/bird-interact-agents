@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: infrastructure
 sql_table: infrastructure
 query_variables: {}
@@ -8,6 +8,8 @@ columns:
   sql: infraref
   type: INT
   primary_key: true
+  description: A SERIAL primary key uniquely identifying each infrastructure configuration
+    record in the database. EX. 1,2,3
   hidden: false
   format:
     type: integer
@@ -15,47 +17,35 @@ columns:
   sql: wateraccess
   type: TEXT
   primary_key: false
-  description: "Piped water supply access type (KB #3). 'Yes' (or 'available...')\
-    \ indicates piped access; other values are non-piped statuses.\n\n[kb=3]\nValues\
-    \ based on schema include 'Yes' and other non-piped statuses. \u2014 Illustrates\
-    \ water supply types. For scoring, 'Yes' (piped access) is assigned 4 points,\
-    \ while other statuses are assigned 1 point.\n[/kb=3]"
-  label: Water Access Type
+  description: Piped water supply access type indicating the household's water infrastructure
+    connectivity. Part of unique constraint combination. ex.Yes, available at least
+    in one room
   hidden: false
-  meta:
-    kb_id: 3
 - name: roadsurface
   sql: roadsurface
   type: TEXT
   primary_key: false
-  description: "Road surface / pavement type around the household (KB #4). Examples:\
-    \ 'Asphalt', 'Concrete', 'Gravel'.\n\n[kb=4]\nValues based on schema include 'Asphalt',\
-    \ 'Concrete', 'Gravel', etc. \u2014 Illustrates road surface types. For scoring,\
-    \ 'Asphalt' and 'Concrete' surfaces are assigned 4 points, while others are 1\
-    \ point.\n[/kb=4]"
-  label: Road Surface Quality
+  description: Street pavement condition and type describing the road infrastructure
+    quality around the household location. Part of unique constraint combination.
+    EX. Asphalt, concrete;Gravel surface
   hidden: false
-  meta:
-    kb_id: 4
 - name: parkavail
   sql: parkavail
   type: TEXT
   primary_key: false
-  description: "Private parking availability (KB #5). 'Available' / 'not available'.\n\
-    \n[kb=5]\nValues based on schema include 'Available' and 'not available'. \u2014\
-    \ Illustrates parking options. For scoring, 'Available' status is assigned 4 points,\
-    \ while 'not available' is 1 point.\n[/kb=5]"
-  label: Parking Availability
+  description: Private parking space availability indicating whether households have
+    dedicated parking facilities. Part of unique constraint combination. EX.Available,
+    not available
   hidden: false
-  meta:
-    kb_id: 5
 - name: water_access_score
   sql: CASE WHEN LOWER(TRIM(wateraccess)) LIKE 'yes%' THEN 4 ELSE 1 END
-  type: DOUBLE
+  type: INT
   primary_key: false
-  description: "Score component of Infrastructure Quality (KB #13 / KB #3): 4 if 'Yes'\
-    \ (piped) water access, else 1.\n\n[kb=3]\nValues based on schema include 'Yes'\
-    \ and other non-piped statuses. \u2014 Illustrates water supply types. For scoring,\
+  description: "Water Access Type score per KB #3: 'Yes' (piped access) = 4, other\
+    \ = 1. Live data values all begin with 'Yes,'; assumption: any 'yes' prefix counts\
+    \ as piped access (interior + exterior taps both count). LOWER(TRIM(...)) normalizes\
+    \ case/whitespace variants.\n\n[kb=3]\nValues based on schema include 'Yes' and\
+    \ other non-piped statuses. \u2014 Illustrates water supply types. For scoring,\
     \ 'Yes' (piped access) is assigned 4 points, while other statuses are assigned\
     \ 1 point.\n[/kb=3]"
   label: Water Access Type
@@ -65,41 +55,48 @@ columns:
 - name: road_surface_score
   sql: CASE WHEN LOWER(TRIM(roadsurface)) LIKE '%asphalt%' OR LOWER(TRIM(roadsurface))
     LIKE '%concrete%' THEN 4 ELSE 1 END
-  type: DOUBLE
+  type: INT
   primary_key: false
-  description: "Score component of Infrastructure Quality (KB #13 / KB #4): 4 if 'Asphalt'\
-    \ or 'Concrete', else 1.\n\n[kb=4]\nValues based on schema include 'Asphalt',\
-    \ 'Concrete', 'Gravel', etc. \u2014 Illustrates road surface types. For scoring,\
-    \ 'Asphalt' and 'Concrete' surfaces are assigned 4 points, while others are 1\
-    \ point.\n[/kb=4]"
+  description: "Road Surface Quality score per KB #4: 'Asphalt' and 'Concrete' = 4,\
+    \ others = 1. Live data uses 'Asphalt, concrete' as a single label, with 'Gravel\
+    \ surface' as the only alternative. Pattern match catches either keyword anywhere\
+    \ in the string after LOWER(TRIM(...)) normalization.\n\n[kb=4]\nValues based\
+    \ on schema include 'Asphalt', 'Concrete', 'Gravel', etc. \u2014 Illustrates road\
+    \ surface types. For scoring, 'Asphalt' and 'Concrete' surfaces are assigned 4\
+    \ points, while others are 1 point.\n[/kb=4]"
   label: Road Surface Quality
   hidden: false
   meta:
     kb_id: 4
 - name: parking_availability_score
-  sql: CASE WHEN LOWER(TRIM(parkavail)) = 'available' THEN 4 ELSE 1 END
-  type: DOUBLE
+  sql: CASE WHEN LOWER(TRIM(parkavail)) NOT LIKE 'not%' AND LOWER(TRIM(parkavail))
+    LIKE 'available%' THEN 4 ELSE 1 END
+  type: INT
   primary_key: false
-  description: "Score component of Infrastructure Quality (KB #13 / KB #5): 4 if 'Available'\
-    \ parking, else 1.\n\n[kb=5]\nValues based on schema include 'Available' and 'not\
-    \ available'. \u2014 Illustrates parking options. For scoring, 'Available' status\
-    \ is assigned 4 points, while 'not available' is 1 point.\n[/kb=5]"
+  description: "Parking Availability score per KB #5: 'Available' = 4, 'not available'\
+    \ = 1. Pattern matches 'Available' but excludes 'Not available' / 'Not\\tavailable'\
+    \ / 'Not  available'. LOWER(TRIM(...)) handles case/whitespace variants.\n\n[kb=5]\n\
+    Values based on schema include 'Available' and 'not available'. \u2014 Illustrates\
+    \ parking options. For scoring, 'Available' status is assigned 4 points, while\
+    \ 'not available' is 1 point.\n[/kb=5]"
   label: Parking Availability
   hidden: false
   meta:
     kb_id: 5
 - name: infrastructure_quality_score
-  sql: (CASE WHEN LOWER(TRIM(wateraccess)) LIKE 'yes%' THEN 4 ELSE 1 END + CASE WHEN
-    LOWER(TRIM(roadsurface)) LIKE '%asphalt%' OR LOWER(TRIM(roadsurface)) LIKE '%concrete%'
-    THEN 4 ELSE 1 END + CASE WHEN LOWER(TRIM(parkavail)) = 'available' THEN 4 ELSE
-    1 END) / 3.0
+  sql: (CAST((CASE WHEN LOWER(TRIM(wateraccess)) LIKE 'yes%' THEN 4 ELSE 1 END) AS
+    REAL) + CAST((CASE WHEN LOWER(TRIM(roadsurface)) LIKE '%asphalt%' OR LOWER(TRIM(roadsurface))
+    LIKE '%concrete%' THEN 4 ELSE 1 END) AS REAL) + CAST((CASE WHEN LOWER(TRIM(parkavail))
+    NOT LIKE 'not%' AND LOWER(TRIM(parkavail)) LIKE 'available%' THEN 4 ELSE 1 END)
+    AS REAL)) / 3.0
   type: DOUBLE
   primary_key: false
-  description: "Infrastructure Quality Score (KB #13): mean of water-access, road-surface,\
-    \ parking-availability scores per KB #3/#4/#5 (Yes/Asphalt-Concrete/Available\
-    \ = 4, else 1). Range 1.0-4.0.\n\n[kb=13]\nCalculated as the average of the individual\
-    \ scores for Water Access, Road Surface, and Parking Availability. \u2014 Calculates\
-    \ a composite score for infrastructure quality.\n[/kb=13]"
+  description: "Composite score: average of `water_access_score`, `road_surface_score`,\
+    \ `parking_availability_score`. Each input is 4 or 1, so the composite ranges\
+    \ over {1.0, 2.0, 3.0, 4.0} and intermediate thirds.\n\n[kb=13]\nCalculated as\
+    \ the average of the individual scores for Water Access, Road Surface, and Parking\
+    \ Availability. \u2014 Calculates a composite score for infrastructure quality.\n\
+    [/kb=13]"
   label: Infrastructure Quality Score
   hidden: false
   meta:

@@ -1,146 +1,244 @@
-# solar - KB entries not encoded as model entities
+# Solar KB — unencoded entries
 
-The 8 auto-ingested tables (`alerts`, `electrical`, `environment`,
-`inverter`, `maintenance`, `panel`, `panel_performance`, `plant`)
-all share a single `growregistry`/`hubregistry`/`siteref`/`arearegistry`
-key in this dataset (1:1 alignment by plant), so most cross-table
-formulas (TPCI, IEL, EPE, TAPR, TSL, EEY, WCE, EDI, FFDR, etc.) can be
-inlined as `Column.sql` against `panel.environment.*` and
-`panel.inverter.*` peer-joins through `panel`. The composite domain
-predicates (KB#40 Advanced Performance Degradation Alert, KB#41
-Premium Maintenance Candidate, KB#50 Maintenance Urgency
-Classification, KB#42 Optimal Cleaning Schedule, KB#44 End-of-Warranty
-Optimization, KB#52 Degradation Severity, KB#10 Critical Performance
-Threshold, KB#15 Optimal Performance Window) are encoded directly on
-the host model whose grain matches the predicate.
+23 of 53 KB ids are encoded in `slayer_models/solar/` with `meta.kb_id`. The
+30 entries below are deferred for the reasons listed.
 
-One non-trivial bookkeeping note: the `solar` `performance` table
-collides with an already-existing `performance` model in the live
-SLayer storage owned by `exchange_traded_funds`. Auto-ingest skipped
-the solar copy. The solar version was therefore created under the
-unique name **`panel_performance`** (`sql_table=performance`,
-`data_source=solar`); FK joins from `electrical`, `alerts`, and
-`maintenance` were rewritten to point at `panel_performance` instead
-of the (wrong-data-source) `performance` model. This is a real
-ingestion bug surfaced by the cross-DB shared SLayer storage; in
-production the per-DB YAMLStorage layout written by
-`export_slayer_models.py` makes the issue moot.
+## KB 1 — Panel Efficiency Loss Rate (PELR)
 
-The 11 KB ids in this file are deferred because the schema is missing
-data the formula depends on, the formula is not algebraically pinned,
-or the predicate cascades from a deferred parent.
+Reason: PELR = (CurrentEfficiencyPercent − InitialEfficiencyPercent) /
+Years_Since_Installation × 100%. `InitialEfficiencyPercent` is not a column
+in any solar table (efficiency_profile only stores the current snapshot),
+and `Years_Since_Installation` requires an "as of" report date that is a
+query parameter, not data.
+
+Status: deferred — SCHEMA-GAP
+
+## KB 2 — Temperature Performance Coefficient Impact (TPCI)
+
+Reason: TPCI = PowerRatedW × TempCoef × (CellTempC − 25). Mixes columns
+from `panel` and `environment`, which share `plant` as their common
+ancestor in the FK graph. Default encoding is R-MULTISTAGE per the
+peer-join discipline — out of scope for this first cut.
+
+Status: deferred — AMBIGUOUS-PROSE
+
+## KB 3 — Energy Production Efficiency (EPE)
+
+Reason: EPE = PPR × (1 − SoilingLossPct/100) × (1 − CumDegPct/100). PPR
+lives on `performance`, SoilingLossPct on `environment`, CumDegPct on
+`performance.efficiency_profile__degradation__cumdegpct`. Cross-table
+composite via `plant` — R-MULTISTAGE.
+
+Status: deferred — AMBIGUOUS-PROSE
+
+## KB 4 — Inverter Efficiency Loss (IEL)
+
+Reason: IEL = MeasuredPowerW × (1 − InverterEfficiencyPercent/100).
+`performance.measpoww` × `inverter.power_metrics__inverteffpct` — both
+tables peer-join to `plant`. R-MULTISTAGE.
+
+Status: deferred — AMBIGUOUS-PROSE
+
+## KB 5 — Fill Factor Degradation Rate (FFDR)
+
+Reason: FFDR = (FillFactorInitial − FillFactorCurrent) /
+Years_Since_Installation × 100%. Years_Since_Installation needs an "as of"
+report date that is a query parameter, not data.
+
+Status: deferred — SCHEMA-GAP
 
 ## KB 9 — Irradiance Utilization Ratio (IUR)
 
-Reason: formula is `(MeasuredPowerW / PanelAreaM2) / POAIrradianceWM2`,
-but `PanelAreaM2` is not a column anywhere in the solar schema (panel
-table has `powratew`, `paneeffpct`, `nomtempc`, `tempcoef`, but no
-area). KB#28 description (POAIrradianceWM2) and KB#9's POA reference
-are encoded as `environment.poa_irradiance_wm2`, but the ratio itself
-can't be computed.
+Reason: IUR = (MeasuredPowerW / PanelAreaM2) / POAIrradianceWM2.
+`PanelAreaM2` is not a column on `panel` — the schema captures rated power
+and efficiency but not surface area.
 
-Status: deferred - missing input column (PanelAreaM2).
+Status: deferred — SCHEMA-GAP
+
+## KB 10 — Critical Performance Threshold
+
+Reason: "PPR below 80% of the expected value for its age, accounting for
+normal degradation." The "expected for age" curve is not pinned by the KB;
+it would require a manufacturer warranty curve or an explicit
+linear-degradation assumption.
+
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 11 — Hot Spot Risk
 
-Reason: predicate compares a panel's Voc/Isc against "other panels in
-the same string" with > 5% deviation. The schema has no "string"
-identifier - the only panel-grouping is via `panel.hubregistry`
-(plant), which is too coarse (1 panel per plant in this dataset). Plus
-the cell-temp branch needs ambient temperature from `environment` -
-that part is reachable through the `panel.environment` peer-join, but
-without a string membership the deviation comparison can't be
-expressed.
+Reason: "Voc or Isc deviations >5% compared to other panels in the same
+string" requires a cross-row stddev/mean over panels grouped by string,
+plus a `panel-to-string` mapping not modelled in the schema.
 
-Status: deferred - schema lacks "string" grouping identifier.
+Status: deferred — SCHEMA-GAP
+
+## KB 14 — End-of-Life Indicator
+
+Reason: "Cumulative degradation > 20% OR maintenance costs in a 12-month
+period > 30% of replacement value." The maintenance arm requires a rolling
+12-month window (R-WINDOW with an "as of" parameter) and a replacement-cost
+reference not in the schema.
+
+Status: deferred — SCHEMA-GAP
 
 ## KB 16 — Panel String Mismatch
 
-Reason: same root cause as KB#11. Stddev of Imp/Isc across panels in a
-"string" exceeds 3% of mean. No string identifier in the schema.
+Reason: "Standard deviation of current measurements across panels in the
+same string exceeds 3% of the mean under the same irradiance conditions."
+Requires a panel-to-string grouping not in the schema.
 
-Status: deferred - schema lacks "string" grouping identifier.
+Status: deferred — SCHEMA-GAP
 
 ## KB 17 — Warranty Claim Threshold
 
-Reason: requires the manufacturer's "warranty curve" (typical
-guarantee like 80% of nameplate at year 25) + 3 consecutive
-underperforming measurements. Neither the curve coefficients nor the
-"3 consecutive" temporal predicate are pinned in the KB or expressible
-without a manufacturer reference table that the schema doesn't
-provide.
+Reason: "EPE > 10% below the manufacturer's warranty curve for its age."
+Manufacturer warranty curve is not available as data; the KB does not
+specify a substitute parametric curve.
 
-Status: deferred - missing manufacturer warranty curve data.
+Status: deferred — SCHEMA-GAP
+
+## KB 30 — Temperature Adjusted Performance Ratio (TAPR)
+
+Reason: TAPR = PPR + (TPCI / PowerRatedW). Depends on KB 2 (TPCI),
+deferred R-MULTISTAGE.
+
+Status: deferred — AMBIGUOUS-PROSE
+
+## KB 31 — Total System Loss (TSL)
+
+Reason: TSL = (PowerRatedW × CumDegPct/100) + (MeasuredPowerW ×
+SoilingLossPct/100) + IEL. Aggregates losses across `panel`,
+`performance`, `environment`, and `inverter` — multi-peer R-MULTISTAGE.
+
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 33 — Effective Performance Index (EPI)
 
-Reason: formula is `PPR x (1 - TSL/PowerRatedW) x (IUR/PaneEffPct)`.
-PPR (KB#0), TSL (KB#31), PowerRatedW, and PaneEffPct are all encoded,
-but IUR (KB#9) is deferred because PanelAreaM2 is missing. EPI
-cascades.
+Reason: EPI = PPR × (1 − TSL/PowerRatedW) × (IUR/PaneEffPct). Depends on
+KB 31 (TSL, deferred) and KB 9 (IUR, SCHEMA-GAP).
 
-Status: deferred - cascades from KB#9 (IUR depends on missing
-PanelAreaM2).
+Status: deferred — SCHEMA-GAP
+
+## KB 34 — Normalized Degradation Index (NDI)
+
+Reason: NDI = PELR / AnnDegRate. PELR (KB 1) is deferred for needing an
+"as of" date / initial efficiency snapshot.
+
+Status: deferred — SCHEMA-GAP
+
+## KB 35 — Weather Corrected Efficiency (WCE)
+
+Reason: WCE = CurrentEfficiencyPercent × (1 + TempCoef × (25 − CellTempC)
+/ 100) × (1000 / POAIrradianceWM2). Mixes `performance`, `panel`, and
+`environment` — R-MULTISTAGE.
+
+Status: deferred — AMBIGUOUS-PROSE
+
+## KB 36 — Expected Energy Yield (EEY)
+
+Reason: EEY = PowerRatedW × EPE × SIF × POAIrradianceWM2 / 1000. Depends
+on EPE (KB 3, deferred) and reaches across `panel`, `environment`, and
+`performance`.
+
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 39 — Financial Impact of Degradation (FID)
 
-Reason: formula is
-`GenCapMW x 1000 x NDI x PELR x ElectricityPricePerKWh x 24 x 365`.
-The `ElectricityPricePerKWh` constant has no source in the solar
-schema (no pricing / tariff table). All other inputs (NDI, PELR,
-GenCapMW) are encoded.
+Reason: FID = GenCapMW × 1000 × NDI × PELR × ElectricityPricePerKWh × 24
+× 365. Depends on NDI/PELR (deferred) plus `ElectricityPricePerKWh` which
+is a query parameter, not data.
 
-Status: deferred - missing ElectricityPricePerKWh constant / pricing
-table.
+Status: deferred — SCHEMA-GAP
 
-## KB 43 — High-Risk Weather Condition
+## KB 40 — Advanced Performance Degradation Alert
 
-Reason: predicate is `WSI > 7.0 AND CellTempC > upper limit of Optimal
-Performance Window` (45 C). The cell-temp half is trivially
-encodable, but `WSI` (KB#18 Weather Severity Index) is itself a prose
-composite without a closed-form definition - encoded as a JSON bundle
-of inputs (`environment.weather_severity_inputs`) but not as a single
-scalar threshold.
+Reason: Predicate over NDI > 1.5 AND TAPR < Critical Performance
+Threshold. All inputs (KB 34, KB 30, KB 10) are deferred.
 
-Status: deferred - cascades from KB#18 (WSI is a prose-only composite).
+Status: deferred — AMBIGUOUS-PROSE
+
+## KB 41 — Premium Maintenance Candidate
+
+Reason: Predicate over MROI > 2.0 AND EPE between 75% and 90%. EPE (KB 3)
+is deferred R-MULTISTAGE.
+
+Status: deferred — AMBIGUOUS-PROSE
+
+## KB 42 — Optimal Cleaning Schedule
+
+Reason: "Schedule when SIF × DustDensity exceeds the Soiling Cleaning
+Threshold OR when EEY is reduced by more than 3% due to soiling." Second
+arm depends on KB 36 (EEY, multistage).
+
+Status: deferred — AMBIGUOUS-PROSE
+
+## KB 44 — End-of-Warranty Optimization
+
+Reason: "Evaluate for warranty claims when approaching warranty expiration
+if NDI > 0.9 or if the Warranty Claim Threshold is missed." Both NDI (KB
+34) and Warranty Claim Threshold (KB 17) are deferred.
+
+Status: deferred — SCHEMA-GAP
 
 ## KB 46 — System Upgrade Candidate
 
-Reason: predicate is
-`FID > 10% of replacement_cost AND EPI < 0.85 for 3 consecutive
-months`. Both FID (KB#39) and EPI (KB#33) are deferred, plus the
-"3 consecutive months" temporal aggregation across panel_performance.
+Reason: "FID > 10% of replacement cost AND EPI < 0.85 for three
+consecutive months." Depends on FID (KB 39, SCHEMA-GAP), EPI (KB 33,
+deferred), plus a 3-month windowed aggregation and a replacement-cost
+reference.
 
-Status: deferred - cascades from KB#39 and KB#33.
+Status: deferred — SCHEMA-GAP
 
 ## KB 47 — Inverter-Panel Compatibility Index
 
-Reason: condition is
-`WCE within 5% of manufacturer's specifications AND inverteffpct > 97%`.
-The "manufacturer's specifications" baseline is not in the schema (no
-mfr WCE-curve column on panel, no nameplate-WCE constant). The
-inverteffpct branch is encoded (KB#29) but the WCE-vs-mfr-spec branch
-can't be expressed.
+Reason: "WCE within 5% of manufacturer specs AND InverterEfficiencyPct
+> 97%." Manufacturer specs aren't in the schema; WCE itself is deferred.
 
-Status: deferred - missing manufacturer WCE specification baseline.
+Status: deferred — SCHEMA-GAP
 
 ## KB 48 — Environmental Stress Classification
 
-Reason: classifies based on combining WSI (KB#18, deferred composite)
-and "exposure time outside the Optimal Performance Window" - the
-latter requires a temporal aggregation of `environment.in_optimal_window`
-over an unspecified window (presumably trailing days/weeks). Neither
-the WSI scalar nor the exposure-time window length are pinned.
+Reason: "Combining Weather Severity Index and exposure time outside the
+Optimal Performance Window." Requires a time-windowed aggregation of
+out-of-window minutes per panel.
 
-Status: deferred - cascades from KB#18 plus undefined exposure-time
-window.
+Status: deferred — AMBIGUOUS-PROSE
 
 ## KB 49 — Total Economic Performance
 
-Reason: prose meta-metric "combining Maintenance Return on Investment
-(MROI), Financial Impact of Degradation (FID), and revenue generation
-adjusted by the Effective Performance Index (EPI)" without a closed-
-form aggregation rule. FID (KB#39) and EPI (KB#33) are themselves
-deferred.
+Reason: "Comprehensive economic evaluation combining MROI, FID, and
+revenue generation adjusted by EPI." Several inputs deferred; the KB
+doesn't pin the combining formula.
 
-Status: deferred - prose-only meta-metric; cascades from KB#39, #33.
+Status: deferred — AMBIGUOUS-PROSE
+
+## KB 50 — Maintenance Urgency Classification
+
+Reason: Classification depends on "critical alerts" (cross-table to
+`alerts` filtered by `alertstat = 'Critical'`) AND MROI > 2.0. Requires a
+peer-join / multistage encoding between `alerts` and `maintenance`.
+
+Status: deferred — AMBIGUOUS-PROSE
+
+## KB 51 — Cleaning Triggers
+
+Reason: "Meet Soiling Cleaning Threshold (KB 13) OR >30 days since last
+cleaning." First arm is encoded as `environment.needs_cleaning_threshold`
+(KB 13). The "30 days since" arm requires a non-deterministic `date('now')`
+reference whose result varies per run.
+
+Status: deferred — AMBIGUOUS-PROSE
+
+## KB 52 — Degradation Severity Classification
+
+Reason: Classes are bands of NDI (KB 34, deferred).
+
+Status: deferred — SCHEMA-GAP
+
+## KB 53 — Alert Specification Protocol
+
+Reason: Specifies a write operation (insert into `alerts` with a specific
+shape and id prefix) plus an update-within-30-days policy. The SLayer
+semantic layer is read-only by design.
+
+Status: deferred — DML

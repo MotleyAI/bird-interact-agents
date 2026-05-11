@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: inverter
 sql_table: inverter
 query_variables: {}
@@ -8,21 +8,28 @@ columns:
   sql: invertregistry
   type: TEXT
   primary_key: true
+  description: VARCHAR(50) PRIMARY KEY uniquely identifying each inverter record.
   hidden: false
 - name: siteref
   sql: siteref
   type: TEXT
   primary_key: false
+  description: "UUID REFERENCES Plant(GrowRegistry), indicating which plant\u2019\
+    s inverter we are tracking."
   hidden: false
 - name: invertmoment
   sql: invertmoment
-  type: TEXT
+  type: TIMESTAMP
   primary_key: false
+  description: TIMESTAMP noting when this inverter reading was taken (e.g., '2023-07-15
+    10:40:00').
   hidden: false
 - name: inverttempc
   sql: inverttempc
   type: DOUBLE
   primary_key: false
+  description: "DECIMAL(7,3) inverter operating temperature in \xB0C (was 'InverterOperatingTempC')\
+    \ (e.g., 45.250)."
   hidden: false
   format:
     type: float
@@ -30,6 +37,8 @@ columns:
   sql: gridvolt
   type: DOUBLE
   primary_key: false
+  description: NUMERIC(7,3) the AC grid voltage in volts (was 'GridVoltageV') (e.g.,
+    400.000).
   hidden: false
   format:
     type: float
@@ -37,6 +46,8 @@ columns:
   sql: gridfreqhz
   type: DOUBLE
   primary_key: false
+  description: DECIMAL(7,3) the AC grid frequency in Hz (was 'GridFrequencyHz') (e.g.,
+    50.050).
   hidden: false
   format:
     type: float
@@ -44,8 +55,7 @@ columns:
   sql: pwrqualidx
   type: DOUBLE
   primary_key: false
-  description: 'PWRQualIDX (Power Quality Index): the inverter''s power-quality score;
-    one input to the Grid Stability Factor (KB#19) and Grid Integration Quality (KB#37).'
+  description: DECIMAL(7,3) power quality index (was 'PowerQualityIndex') (e.g., 0.980).
   hidden: false
   format:
     type: float
@@ -53,102 +63,105 @@ columns:
   sql: power_metrics
   type: TEXT
   primary_key: false
-  description: "JSON: {inverteffpct (KB#29), invertpowfac, harmdistpct, reacpwrkvar}.\
-    \ Inputs to Inverter Efficiency Loss (KB#4), Grid Stability Factor (KB#19), Grid\
-    \ Integration Quality (KB#37).\n\n[kb=29]\nExpressed as a percentage, representing\
-    \ how much DC power from panels is successfully converted to AC power. Modern\
-    \ string inverters typically operate at 96-98% efficiency, while microinverters\
-    \ may range from 94-97% efficiency. \u2014 Illustrates the efficiency of inverters\
-    \ in converting DC to AC power.\n[/kb=29]"
-  label: InvertEffPct (Inverter Efficiency Percentage)
+  description: JSONB column. Stores key performance metrics related to the inverter's
+    power output and quality, including efficiency, power factor, and harmonic distortion.
   hidden: false
   meta:
-    kb_id: 29
-- name: inverteffpct
-  sql: CAST(json_extract(power_metrics, '$.inverteffpct') AS REAL)
+    jsonb: true
+- name: power_metrics__inverteffpct
+  sql: JSON_EXTRACT(power_metrics, '$.inverteffpct')
   type: DOUBLE
   primary_key: false
-  description: "InvertEffPct (KB#29): inverter efficiency % (DC-to-AC conversion).\
-    \ String inverters: 96-98%; microinverters: 94-97%. Extracted from power_metrics.inverteffpct.\n\
-    \n[kb=29]\nExpressed as a percentage, representing how much DC power from panels\
-    \ is successfully converted to AC power. Modern string inverters typically operate\
-    \ at 96-98% efficiency, while microinverters may range from 94-97% efficiency.\
+  description: "[kb=29]\nExpressed as a percentage, representing how much DC power\
+    \ from panels is successfully converted to AC power. Modern string inverters typically\
+    \ operate at 96-98% efficiency, while microinverters may range from 94-97% efficiency.\
     \ \u2014 Illustrates the efficiency of inverters in converting DC to AC power.\n\
     [/kb=29]"
   label: InvertEffPct (Inverter Efficiency Percentage)
   hidden: false
   meta:
     kb_id: 29
-- name: invertpowfac
-  sql: CAST(json_extract(power_metrics, '$.invertpowfac') AS REAL)
+    derived_from:
+      json_col: power_metrics
+      path:
+      - inverteffpct
+- name: power_metrics__invertpowfac
+  sql: JSON_EXTRACT(power_metrics, '$.invertpowfac')
   type: DOUBLE
   primary_key: false
-  description: Inverter power factor. Extracted from power_metrics.invertpowfac. Used
-    in Grid Integration Quality (KB#37) and Grid Stability Factor (KB#19).
+  description: "NUMERIC(7,3) the inverter\u2019s power factor (was 'InverterPowerFactor')\
+    \ (e.g., 0.990)."
+  label: Invertpowfac
   hidden: false
-- name: harmdistpct
-  sql: CAST(json_extract(power_metrics, '$.harmdistpct') AS REAL)
+  meta:
+    derived_from:
+      json_col: power_metrics
+      path:
+      - invertpowfac
+- name: power_metrics__harmdistpct
+  sql: JSON_EXTRACT(power_metrics, '$.harmdistpct')
   type: DOUBLE
   primary_key: false
-  description: Total harmonic distortion %. Extracted from power_metrics.harmdistpct.
-    Used in Grid Integration Quality (KB#37) and Grid Stability Factor (KB#19).
+  description: DECIMAL(7,3) total harmonic distortion in percent (was 'HarmonicDistortionPercent')
+    (e.g., 3.500).
+  label: Harmdistpct
   hidden: false
-- name: reacpwrkvar
-  sql: CAST(json_extract(power_metrics, '$.reacpwrkvar') AS REAL)
+  meta:
+    derived_from:
+      json_col: power_metrics
+      path:
+      - harmdistpct
+- name: power_metrics__reacpwrkvar
+  sql: JSON_EXTRACT(power_metrics, '$.reacpwrkvar')
   type: DOUBLE
   primary_key: false
-  description: Reactive power output in kVAR. Extracted from power_metrics.reacpwrkvar.
+  description: DECIMAL(7,2) reactive power output in kVAR (was 'ReactivePowerKVAR')
+    (e.g., 10.00).
+  label: Reacpwrkvar
   hidden: false
-- name: giq
-  sql: pwrqualidx * (1 - CAST(json_extract(power_metrics, '$.harmdistpct') AS REAL)
-    / 100.0) * CAST(json_extract(power_metrics, '$.invertpowfac') AS REAL)
+  meta:
+    derived_from:
+      json_col: power_metrics
+      path:
+      - reacpwrkvar
+- name: grid_integration_quality
+  sql: pwrqualidx * (1 - power_metrics__harmdistpct / 100.0) * power_metrics__invertpowfac
   type: DOUBLE
   primary_key: false
-  description: "Grid Integration Quality (GIQ, KB#37): PWRQualIDX \xD7 (1 - power_metrics.harmdistpct/100)\
-    \ \xD7 power_metrics.invertpowfac. Higher = better grid integration.\n\n[kb=37]\n\
-    GIQ = PWRQualIDX \xD7 (1 - power_metrics.harmdistpct/100) \xD7 power_metrics.invertpowfac,\
-    \ using PWRQualIDX from the inverter table. \u2014 Measures the overall quality\
-    \ of power delivered to the grid.\n[/kb=37]"
+  description: "[kb=37]\nGIQ = PWRQualIDX \xD7 (1 - power_metrics.harmdistpct/100)\
+    \ \xD7 power_metrics.invertpowfac, using PWRQualIDX from the inverter table. \u2014\
+    \ A composite measure of how well an inverter contributes to grid stability, combining\
+    \ power quality, harmonic distortion, and power factor.\n[/kb=37]"
   label: Grid Integration Quality (GIQ)
   hidden: false
   meta:
     kb_id: 37
-- name: grid_export_quality
-  sql: CASE WHEN pwrqualidx * (1 - CAST(json_extract(power_metrics, '$.harmdistpct')
-    AS REAL) / 100.0) * CAST(json_extract(power_metrics, '$.invertpowfac') AS REAL)
-    > 0.95 THEN 'Premium' WHEN pwrqualidx * (1 - CAST(json_extract(power_metrics,
-    '$.harmdistpct') AS REAL) / 100.0) * CAST(json_extract(power_metrics, '$.invertpowfac')
-    AS REAL) >= 0.90 THEN 'Standard' ELSE 'Substandard' END
+- name: grid_export_quality_class
+  sql: CASE WHEN pwrqualidx * (1 - power_metrics__harmdistpct / 100.0) * power_metrics__invertpowfac
+    > 0.95 THEN 'Premium' WHEN pwrqualidx * (1 - power_metrics__harmdistpct / 100.0)
+    * power_metrics__invertpowfac >= 0.90 THEN 'Standard' ELSE 'Substandard' END
   type: TEXT
   primary_key: false
-  description: "Grid Export Quality Classification (KB#45): 'Premium' when GIQ > 0.95;\
-    \ 'Standard' when 0.90 <= GIQ <= 0.95; 'Substandard' when GIQ < 0.90.\n\n[kb=45]\n\
-    Power export quality is classified as 'Premium' when Grid Integration Quality\
-    \ exceeds 0.95, 'Standard' when between 0.90 and 0.95, and 'Substandard' when\
-    \ below 0.90, with substandard exports potentially subject to utility penalties.\
-    \ \u2014 Classification system for the quality of power exported to the grid.\n\
-    [/kb=45]"
+  description: "[kb=45]\nPower export quality is classified as 'Premium' when Grid\
+    \ Integration Quality exceeds 0.95, 'Standard' when between 0.90 and 0.95, and\
+    \ 'Substandard' when below 0.90, with substandard exports potentially subject\
+    \ to utility penalties. \u2014 A classification system for grid export quality\
+    \ based on the Grid Integration Quality metric.\n[/kb=45]"
   label: Grid Export Quality Classification
   hidden: false
   meta:
     kb_id: 45
-- name: grid_stability_factor_inputs
-  sql: json_object('pwrqualidx', pwrqualidx, 'harmdistpct', CAST(json_extract(power_metrics,
-    '$.harmdistpct') AS REAL), 'invertpowfac', CAST(json_extract(power_metrics, '$.invertpowfac')
-    AS REAL))
-  type: TEXT
+- name: grid_stability_factor_desc
+  sql: pwrqualidx
+  type: DOUBLE
   primary_key: false
-  description: "Grid Stability Factor (KB#19): a metric determined by the combination\
-    \ of Power Quality Index (pwrqualidx), Harmonic Distortion Percentage (harmdistpct),\
-    \ and Power Factor (invertpowfac), where values closer to 1.0 indicate better\
-    \ grid contribution. KB#19 doesn't pin a closed-form composite; this column exposes\
-    \ the three inputs as a JSON bundle so query-side composites can pick a formulation.\
-    \ The closely-related Grid Integration Quality (KB#37) defines one specific composite:\
-    \ pwrqualidx \xD7 (1 - harmdistpct/100) \xD7 invertpowfac.\n\n[kb=19]\nA metric\
-    \ determined by the combination of Power Quality Index, Harmonic Distortion Percentage,\
-    \ and Power Factor, where values closer to 1.0 indicate better contribution to\
-    \ grid stability. \u2014 Measures the contribution of the inverter to grid stability.\n\
-    [/kb=19]"
+  description: "[kb=19]\nA metric determined by the combination of Power Quality Index,\
+    \ Harmonic Distortion Percentage, and Power Factor, where values closer to 1.0\
+    \ indicate better contribution to grid stability. \u2014 A composite metric quantifying\
+    \ solar system contribution to grid stability. NOTE: the KB names the inputs but\
+    \ does not pin a single canonical formula; the operational composite is encoded\
+    \ as `grid_integration_quality` (KB 37). This column anchors KB 19's metadata\
+    \ to the underlying PWRQualIDX.\n[/kb=19]"
   label: Grid Stability Factor
   hidden: false
   meta:
@@ -162,8 +175,4 @@ joins:
     - growregistry
   join_type: left
 filters: []
-description: Inverter readings at a moment in time, joined to `plant` via `siteref`.
-  The JSON `power_metrics` exposes `inverteffpct` (KB#29), `invertpowfac`, `harmdistpct`,
-  and `reacpwrkvar`. Combined with `pwrqualidx`, these drive the Grid Integration
-  Quality (GIQ, KB#37) and the Grid Stability Factor (KB#19).
 hidden: false

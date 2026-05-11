@@ -13,12 +13,55 @@ at query time.
 
 Reason: KB definition reads "A weighted score combining domestic help
 availability and social assistance participation status (Yes/No)" — the
-weights are not specified. Any specific weighting is a guess. Helper
-columns `service_types.domestic_help_score` (numeric tier mapping for
-domestichelp) and `service_types.soc_support_score` (1/0 for socsupport)
-remain available; the agent can compose any weighting at query time.
-A heuristic combination is also kept as
-`service_types.service_support_score` (without `kb_id`) for convenience.
+weights are not specified, and the domestic-help score is itself a
+guessed ordinal (the KB only enumerates categories, not numeric values).
+Any specific weighting would be a guess.
+
+Helpers available: `service_types.domestic_help_score` (ordinal 1..4
+helper for `domestichelp`) and `service_types.soc_support_score`
+(1/0 for `socsupport`). The agent can compose any weighting at query
+time.
+
+Status: deferred — AMBIGUOUS-PROSE
+
+## KB 18 — Mobility Score
+
+Reason: "The product of the vehicle count and a numeric mapping of the
+newest vehicle year." The numeric mapping for year ranges is not
+specified by KB #10 or KB #18. Any mapping (ordinal rank, midpoint of
+range, last year of range, etc.) would be a guess.
+
+Helpers available: `transportation_assets.vehicle_ownership_index`
+(KB #14), `transportation_assets.vehicleinventory__Newest_Year`
+(KB #10 raw text).
+
+Status: deferred — AMBIGUOUS-PROSE
+
+## KB 19 — Socioeconomic Index
+
+Reason: "Calculated as a weighted sum of income score, expenditure
+ratio, and tenure score." Weights are not specified, and the tenure
+score numeric mapping is not specified by KB #1.
+
+Helpers available: `households.income_bracket_score` (ordinal 0..11),
+`households.expenditure_ratio` (KB #12), and the raw tenure column
+`households.socioeconomic__Tenure_Type` (KB #1).
+
+Status: deferred — AMBIGUOUS-PROSE
+
+## KB 21 — Affluent Household
+
+Reason: "A household with a 'Tenure_Type' of 'OWNED' and an
+'Income_Bracket' of either 'High Income' or 'Very High Income'." The
+literal bracket labels 'High Income' / 'Very High Income' do not
+appear in the schema — `socioeconomic.Income_Bracket` carries
+currency-range strings ('More than R$ 880 and less than R$ 1,760',
+…). Mapping which currency brackets count as 'High' / 'Very High' is
+a guess.
+
+Helpers available: `households.income_bracket_score` and
+`households.socioeconomic__Tenure_Type` (raw text; tenure values
+normalize via `LOWER(TRIM(...))`).
 
 Status: deferred — AMBIGUOUS-PROSE
 
@@ -32,8 +75,8 @@ carries 'Yes, available at least in one room' and similar values.
 Asphalt/Concrete from others without using the word "high-quality"
 itself).
 
-Helpers available: `infrastructure.water_access_score`,
-`infrastructure.road_surface_score`.
+Helpers available: `infrastructure.water_access_score` (KB #3),
+`infrastructure.road_surface_score` (KB #4).
 
 Status: deferred — AMBIGUOUS-PROSE
 
@@ -43,9 +86,9 @@ Reason: "A household with a high Vehicle Ownership Index and a recent
 Vehicle Year Range." Neither "high" nor "recent" is given a numeric
 threshold or band list.
 
-Helpers available: `transportation_assets.vehicle_ownership_index`,
-`transportation_assets.newest_year_score`,
-`transportation_assets.newest_year_text`.
+Helpers available: `transportation_assets.vehicle_ownership_index`
+(KB #14), `transportation_assets.vehicleinventory__Newest_Year`
+(KB #10).
 
 Status: deferred — AMBIGUOUS-PROSE
 
@@ -54,7 +97,20 @@ Status: deferred — AMBIGUOUS-PROSE
 Reason: "A household with Household Density greater than a threshold."
 KB explicitly says "a threshold" without naming a number.
 
-Helper available: `properties.household_density`.
+Helper available: `properties.household_density` (KB #11).
+
+Status: deferred — AMBIGUOUS-PROSE
+
+## KB 26 — Modern Dwelling
+
+Reason: "A dwelling with specific Dwelling Type and active Cable TV
+Status." The "specific Dwelling Type" set is not enumerated — KB #6
+distinguishes 4-point/3-point/1-point dwelling types but the KB #26
+predicate does not pin which subset counts as "modern".
+
+Helpers available: `properties.dwelling_specs__Dwelling_Class`
+(raw text), `properties.dwelling_type_score` (KB #44),
+`amenities.cable_available` (boolean derived from KB #7).
 
 Status: deferred — AMBIGUOUS-PROSE
 
@@ -64,8 +120,9 @@ Reason: "A household with a high Infrastructure Quality Score and a
 high Service Support Score." Both thresholds are unspecified, and the
 Service Support Score itself (KB #16) has unspecified weights.
 
-Helpers available: `infrastructure.infrastructure_quality_score`,
-`service_types.domestic_help_score`, `service_types.soc_support_score`.
+Helpers available: `infrastructure.infrastructure_quality_score`
+(KB #13), `service_types.domestic_help_score`,
+`service_types.soc_support_score`.
 
 Status: deferred — AMBIGUOUS-PROSE
 
@@ -75,7 +132,7 @@ Reason: "A household with a high Socioeconomic Index and a low
 Expenditure Ratio." Depends on KB #19 (deferred — weights unspecified)
 and adds two more unspecified thresholds ("high" / "low").
 
-Helpers available: `households.expenditure_ratio`,
+Helpers available: `households.expenditure_ratio` (KB #12),
 `households.income_bracket_score`.
 
 Status: deferred — AMBIGUOUS-PROSE
@@ -87,8 +144,8 @@ support status of 'No', and high Vehicle Ownership Index." "Limited"
 and "high" are not pinned; only the social-support clause is concrete.
 
 Helpers available: `service_types.domestic_help_score`,
-`service_types.socsupport`,
-`transportation_assets.vehicle_ownership_index`.
+`service_types.socsupport` (KB #9),
+`transportation_assets.vehicle_ownership_index` (KB #14).
 
 Status: deferred — AMBIGUOUS-PROSE
 
@@ -136,15 +193,25 @@ composite indicator, and the KB does not pin the exact rule for
 mapping individual utility flags to the four levels.
 
 Helpers available: `infrastructure.water_access_score`,
-`amenities.cablestatus`.
+`amenities.cable_available`.
 
 Status: deferred — AMBIGUOUS-PROSE
+
+## KB 37 — Social Assistance Participation
+
+Reason: Verbatim restatement of KB 9; encoded entity is
+`service_types.socsupport` with `meta.kb_id = 9`. KB #9 and KB #37
+both describe the same Yes/No social-assistance column with the same
+"part of unique constraint combination" wording.
+
+Status: not-applicable — duplicate of KB 9
 
 ## KB 38 — Dwelling Condition Status
 
 Reason: KB describes value labels 'Excellent' / 'Good' / 'Fair' /
 'Poor'. No schema column tracks dwelling condition; `properties` only
-carries `Bath_Count`, `Room_Count`, `Dwelling_Class`.
+carries `Bath_Count`, `Room_Count`, `Dwelling_Class` (structural
+type, not condition).
 
 Status: deferred — SCHEMA-GAP
 
@@ -154,7 +221,7 @@ Reason: "A household with specific Dwelling Type and a small resident
 count." Neither the type list nor the "small" resident-count threshold
 is pinned by the KB.
 
-Helpers available: `properties.dwelling_class`,
+Helpers available: `properties.dwelling_specs__Dwelling_Class`,
 `properties.dwelling_type_score`, `households.residentcount`.
 
 Status: deferred — AMBIGUOUS-PROSE
@@ -168,10 +235,10 @@ KB #45's narrower `loczone = 1` rule. KB #36 (vehicle_counts) is
 encoded but the predicate side ("specific … Vehicle Type
 Distribution") is itself unpinned.
 
-Helpers available: `households.is_urban_zone`,
+Helpers available: `households.is_urban_zone` (KB #45),
 `transportation_assets.auto_count`, `transportation_assets.bike_count`,
 `transportation_assets.motor_count`,
-`transportation_assets.vehicle_ownership_index`.
+`transportation_assets.vehicle_ownership_index` (KB #14).
 
 Status: deferred — SCHEMA-GAP
 
@@ -183,7 +250,20 @@ The road-surface side resolves to KB #4 helpers, but the composite
 predicate is blocked on KB #35.
 
 Helpers available: `infrastructure.road_surface_score`,
-`infrastructure.water_access_score`, `amenities.cablestatus`.
+`infrastructure.water_access_score`, `amenities.cable_available`.
+
+Status: deferred — AMBIGUOUS-PROSE
+
+## KB 42 — Economically Independent Household
+
+Reason: "A household with high Income Classification and social
+support status of 'No'." "High Income Classification" is not pinned by
+KB #2 (the brackets are R$ ranges, not labels like 'High'); the
+socsupport='No' part is concrete but cannot be combined without a
+threshold.
+
+Helpers available: `households.income_bracket_score`,
+`service_types.socsupport` (KB #9).
 
 Status: deferred — AMBIGUOUS-PROSE
 
@@ -194,12 +274,6 @@ TV Status." Depends on KB #38 (Dwelling Condition Status — not in
 schema). Cable side resolves to KB #7 helpers, but the composite
 predicate is blocked on KB #38.
 
-Helper available: `amenities.cablestatus`.
+Helper available: `amenities.cable_available`.
 
 Status: deferred — SCHEMA-GAP
-
-## KB 37 — Social Assistance Participation
-
-Reason: Verbatim restatement of KB 9; encoded entity is `service_types.socsupport` with `meta.kb_id = 9`.
-
-Status: not-applicable — duplicate of KB 9

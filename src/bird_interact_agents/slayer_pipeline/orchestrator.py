@@ -204,6 +204,7 @@ async def regenerate(
     results_root: Path = DEFAULT_RESULTS_ROOT,
     llm_model: Optional[str] = None,
     wipe: bool = True,
+    skip_phase1: bool = False,
     skip_phase4: bool = False,
 ) -> int:
     sqlite_path = mini_interact_root / db / f"{db}.sqlite"
@@ -217,11 +218,14 @@ async def regenerate(
 
     results_dir = results_root / db
 
-    if wipe:
+    if wipe and not skip_phase1:
         _wipe_db_from_storage(slayer_storage, db)
 
-    print(f"[phase 1] slayer datasources create + ingest ({db})")
-    _phase1_ingest(db, sqlite_path, slayer_storage)
+    if skip_phase1:
+        print(f"[phase 1] skipped (--skip-phase1; assuming live storage already populated)")
+    else:
+        print(f"[phase 1] slayer datasources create + ingest ({db})")
+        _phase1_ingest(db, sqlite_path, slayer_storage)
 
     storage = YAMLStorage(base_dir=str(slayer_storage))
 
@@ -270,6 +274,7 @@ def run(
     results_root: Path = DEFAULT_RESULTS_ROOT,
     llm_model: Optional[str] = None,
     wipe: bool = True,
+    skip_phase1: bool = False,
     skip_phase4: bool = False,
 ) -> int:
     return asyncio.run(
@@ -280,6 +285,7 @@ def run(
             results_root=results_root,
             llm_model=llm_model,
             wipe=wipe,
+            skip_phase1=skip_phase1,
             skip_phase4=skip_phase4,
         )
     )

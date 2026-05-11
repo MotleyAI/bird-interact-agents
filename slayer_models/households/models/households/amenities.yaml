@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: amenities
 sql_table: amenities
 query_variables: {}
@@ -8,6 +8,8 @@ columns:
   sql: amenityref
   type: INT
   primary_key: true
+  description: A SERIAL primary key uniquely identifying each household amenities
+    and utilities record. EX. 1,2,3
   hidden: false
   format:
     type: integer
@@ -15,6 +17,8 @@ columns:
   sql: houseid
   type: INT
   primary_key: false
+  description: Foreign key referencing households.HouseNum with unique constraint,
+    ensuring 1:1 relationship for amenities configuration per household. Ex.3,4,7
   hidden: false
   format:
     type: integer
@@ -22,14 +26,29 @@ columns:
   sql: cablestatus
   type: TEXT
   primary_key: false
-  description: "Cable TV availability (KB #7). Truthy values: 'avail', 'available',\
-    \ 'yes' (case-insensitive).\n\n[kb=7]\nValues indicating availability, based on\
-    \ schema, are 'avail', 'available', and 'yes'. \u2014 Illustrates the availability\
-    \ of cable television.\n[/kb=7]"
+  description: "Cable television service availability and subscription status indicating\
+    \ the household's access to cable TV services.\n\nLive data is highly inconsistent\
+    \ \u2014 values include 'avail', 'available', 'yes', 'y', 'have' for availability\
+    \ and 'no', 'n', 'not available', 'unavailable', 'dont have' for non-availability,\
+    \ with many case/whitespace variants. Use LOWER(TRIM(...)) plus prefix tests when\
+    \ filtering.\n\n[kb=7]\nValues indicating availability, based on schema, are 'avail',\
+    \ 'available', and 'yes'. \u2014 Illustrates the availability of cable television.\n\
+    [/kb=7]"
   label: Cable TV Status
   hidden: false
   meta:
     kb_id: 7
+- name: cable_available
+  sql: CASE WHEN LOWER(TRIM(cablestatus)) IN ('avail', 'available', 'yes', 'y', 'have')
+    THEN 1 ELSE 0 END
+  type: BOOLEAN
+  primary_key: false
+  description: 'Boolean helper (1/0) for whether cable TV is available, per KB #7
+    list (''avail'', ''available'', ''yes''). Extended to also accept the equivalent
+    live-data tokens ''y'' and ''have'' so the predicate matches every positive case
+    in the data.'
+  label: Cable TV Available
+  hidden: false
 measures: []
 aggregations: []
 joins:

@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: panel
 sql_table: panel
 query_variables: {}
@@ -8,37 +8,46 @@ columns:
   sql: panemark
   type: TEXT
   primary_key: true
+  description: VARCHAR(50) PRIMARY KEY uniquely identifying each panel record.
   hidden: false
 - name: hubregistry
   sql: hubregistry
   type: TEXT
   primary_key: false
+  description: UUID REFERENCES Plant(GrowRegistry), linking this panel to a specific
+    plant.
   hidden: false
 - name: panemfr
   sql: panemfr
   type: TEXT
   primary_key: false
+  description: "VARCHAR(100) describing the manufacturer\u2019s name (was 'PanelManufacturer').\
+    \ Possible enumerations: 'Longi', 'Canadian Solar', 'JA Solar', 'JinkoSolar',\
+    \ 'Trina'."
   hidden: false
 - name: paneline
   sql: paneline
   type: TEXT
   primary_key: false
+  description: "VARCHAR(100) capturing the panel\u2019s model line or series (was\
+    \ 'PanelModel') (e.g., 'ModelX', 'CS6K-P')."
   hidden: false
 - name: panetype
   sql: panetype
   type: TEXT
   primary_key: false
+  description: 'VARCHAR(50) labeling the panel type (was ''PanelType''). Possible
+    enumerations: ''Mono-PERC'', ''HJT'', ''Poly-PERC'', ''Bifacial'', ''TOPCon''.'
   hidden: false
 - name: powratew
   sql: powratew
   type: INT
   primary_key: false
-  description: "PowerRatedW (KB#20): rated power in W under Standard Test Conditions.\
-    \ Modern panels: 250W (older) to 650W (high-efficiency).\n\n[kb=20]\nMeasured\
-    \ in watts (W), representing the maximum power output a panel can produce under\
-    \ Standard Test Conditions (STC). Values typically range from 250W for older models\
-    \ to 650W for newer high-efficiency panels. \u2014 Illustrates the rated power\
-    \ output of solar panels.\n[/kb=20]"
+  description: "[kb=20]\nMeasured in watts (W), representing the maximum power output\
+    \ a panel can produce under Standard Test Conditions (STC). Values typically range\
+    \ from 250W for older models to 650W for newer high-efficiency panels. \u2014\
+    \ Illustrates the rated power output of solar panels under standard testing conditions.\n\
+    [/kb=20]"
   label: PowerRatedW (Panel Rated Power)
   hidden: false
   format:
@@ -49,11 +58,9 @@ columns:
   sql: paneeffpct
   type: DOUBLE
   primary_key: false
-  description: "PaneEffPct (KB#21): nominal panel efficiency percentage at STC. Also\
-    \ serves as `InitialEfficiencyPercent` for the Panel Efficiency Loss Rate (KB#1).\n\
-    \n[kb=21]\nExpressed as a percentage, representing how much of the sun's energy\
-    \ hitting the panel is converted to electricity. Modern panels typically range\
-    \ from 15% to 23%, with premium models reaching up to 25%. \u2014 Illustrates\
+  description: "[kb=21]\nExpressed as a percentage, representing how much of the sun's\
+    \ energy hitting the panel is converted to electricity. Modern panels typically\
+    \ range from 15% to 23%, with premium models reaching up to 25%. \u2014 Illustrates\
     \ the efficiency of solar panels in converting sunlight to electricity.\n[/kb=21]"
   label: PaneEffPct (Panel Efficiency Percentage)
   hidden: false
@@ -65,6 +72,8 @@ columns:
   sql: nomtempc
   type: DOUBLE
   primary_key: false
+  description: "NUMERIC(7,3) indicating the panel\u2019s nominal operating temperature\
+    \ in \xB0C (was 'NominalOperatingTempC') (e.g., 45.000)."
   hidden: false
   format:
     type: float
@@ -72,13 +81,11 @@ columns:
   sql: tempcoef
   type: DOUBLE
   primary_key: false
-  description: "TempCoef (KB#22): temperature coefficient (% per C, usually negative).\
-    \ Each C above 25C reduces output by |tempcoef|%. Typical: -0.25% to -0.50% per\
-    \ C.\n\n[kb=22]\nExpressed as a percentage per degree Celsius (usually negative),\
+  description: "[kb=22]\nExpressed as a percentage per degree Celsius (usually negative),\
     \ indicating how much a panel's power output decreases for each degree above 25\xB0\
     C. Typical values range from -0.25% to -0.50% per \xB0C, with lower absolute values\
-    \ indicating better high-temperature performance. \u2014 Illustrates how panel\
-    \ performance changes with temperature.\n[/kb=22]"
+    \ indicating better high-temperature performance. \u2014 Illustrates how temperature\
+    \ affects solar panel performance.\n[/kb=22]"
   label: TempCoef (Temperature Coefficient)
   hidden: false
   format:
@@ -93,20 +100,5 @@ joins:
   - - hubregistry
     - growregistry
   join_type: left
-- target_model: environment
-  join_pairs:
-  - - hubregistry
-    - arearegistry
-  join_type: left
-- target_model: inverter
-  join_pairs:
-  - - hubregistry
-    - siteref
-  join_type: left
 filters: []
-description: 'A solar panel installed at a plant. `panemark` is its unique mark; `hubregistry`
-  joins to `plant.growregistry`. Holds nameplate / Standard Test Conditions parameters:
-  rated power (`powratew`, KB#20 PowerRatedW), nominal efficiency percentage (`paneeffpct`,
-  KB#21 PaneEffPct, also used as InitialEfficiencyPercent in PELR/KB#1), nominal operating
-  temperature in C (`nomtempc`), and temperature coefficient (`tempcoef`, KB#22 TempCoef).'
 hidden: false

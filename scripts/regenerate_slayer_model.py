@@ -76,6 +76,15 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Skip wiping the DB's existing models from SLAYER_STORAGE before phase 1.",
     )
     p.add_argument(
+        "--skip-phase1",
+        action="store_true",
+        help=(
+            "Skip `slayer datasources create` + `slayer ingest`. Use when live storage "
+            "already has the models (e.g. ported from slayer_models/<db>/ via cp) and "
+            "you only want to layer phases 2–4 on top."
+        ),
+    )
+    p.add_argument(
         "--skip-phase4",
         action="store_true",
         help="Skip the LLM TEXT-as-date detection step (useful when ANTHROPIC_API_KEY is unset).",
@@ -92,6 +101,7 @@ def main() -> int:
         results_root=Path(args.results_root).resolve(),
         llm_model=args.model,
         wipe=not args.no_wipe,
+        skip_phase1=args.skip_phase1,
         skip_phase4=args.skip_phase4,
     )
 
