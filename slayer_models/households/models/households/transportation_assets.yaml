@@ -27,17 +27,16 @@ columns:
   sql: vehicleinventory
   type: TEXT
   primary_key: false
-  description: "JSONB column. Aggregates transportation assets owned by household\
-    \ including counts of different vehicle types (`Auto_Count`, `Bike_Count`, `Motor_Count`\
-    \ inside `vehicle_counts`) and `Newest_Year` for mobility analysis. The full-path\
-    \ leaves are exposed as `auto_count`, `bike_count`, `motor_count`, and `vehicleinventory__Newest_Year`.\n\
-    \n[kb=36]\nAn array of counts representing vehicle types. Null indicates unknown\
-    \ or unverified ownership. \u2014 Illustrates the structure of vehicle ownership\
-    \ by type for a household.\n[/kb=36]"
+  description: "JSONB column aggregating transportation assets owned by household,\
+    \ including counts of different vehicle types (vehicle_counts.Auto_Count / Bike_Count\
+    \ / Motor_Count) and the newest-vehicle year range. The leaves are extracted as\
+    \ separate columns; KB 36's structural description lives here.\n\n[kb=36]\nAn\
+    \ array of counts representing vehicle types. Null indicates unknown or unverified\
+    \ ownership. \u2014 Illustrates the structure of vehicle ownership by type for\
+    \ a household.\n[/kb=36]"
   label: Vehicle Type Distribution
   hidden: false
   meta:
-    jsonb: true
     kb_id: 36
   sampled: '> 20 distinct'
 - name: vehicleinventory__vehicle_counts__Auto_Count
@@ -55,7 +54,6 @@ columns:
       path:
       - vehicle_counts
       - Auto_Count
-  sampled: 0, 1, 2, 3, 4, 5
 - name: vehicleinventory__vehicle_counts__Bike_Count
   sql: JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Bike_Count')
   type: TEXT
@@ -71,7 +69,6 @@ columns:
       path:
       - vehicle_counts
       - Bike_Count
-  sampled: 0, 1, 2, 3, 4, 5, 8
 - name: vehicleinventory__vehicle_counts__Motor_Count
   sql: JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Motor_Count')
   type: TEXT
@@ -87,74 +84,37 @@ columns:
       path:
       - vehicle_counts
       - Motor_Count
-  sampled: 0, 1, 2
 - name: vehicleinventory__Newest_Year
   sql: JSON_EXTRACT(vehicleinventory, '$.Newest_Year')
   type: TEXT
   primary_key: false
-  description: "Year of manufacture for the newest vehicle in the household's transportation\
-    \ fleet, stored as text to accommodate various date formats and null values. Contains\
-    \ NULL when no vehicles are owned, vehicle age information is not available, or\
-    \ vehicles are too old to have reliable manufacture date records.\n\nLive data\
-    \ uses ranges like '1989 or older', '1990 to 1994', '1995 to 1999', '2000 to 2004',\
-    \ '2005 to 2009', '2010 to 2013', '2014 or newer' (with many case/whitespace variants,\
-    \ plus aliases '2014+', 'after 2014', '2014 and newer', 'NA', 'n/a', 'Not applicable').\
-    \ Compare via LOWER(TRIM(...)) and tolerant pattern matching.\n\n[kb=10]\nText\
-    \ ranges like '1995 to 1999', '2005 to 2009', or '2010 to 2013'. Null indicates\
+  description: "Year of manufacture for the newest vehicle in the household's fleet,\
+    \ stored as a free-text range. Sample values are mixed case and informal ('2010\
+    \ TO 2013', 'after 2014', 'nOt apPLIcaBlE'). KB 18 (Mobility Score) cites this\
+    \ column but does not specify the numeric mapping for the ranges.\n\n[kb=10]\n\
+    Text ranges like '1995 to 1999', '2005 to 2009', or '2010 to 2013'. Null indicates\
     \ no vehicles or unknown age. \u2014 Illustrates the year ranges for the newest\
     \ vehicle owned by a household.\n[/kb=10]"
   label: Vehicle Year Range
   hidden: false
   meta:
-    derived_from:
-      json_col: vehicleinventory
-      path:
-      - Newest_Year
     kb_id: 10
   sampled: '> 20 distinct'
-- name: auto_count
-  sql: CAST(JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Auto_Count') AS INTEGER)
-  type: INT
-  primary_key: false
-  description: Auto_Count cast to INTEGER for arithmetic.
-  label: Auto Count (numeric)
-  hidden: false
-  sampled: 0 .. 5
-- name: bike_count
-  sql: CAST(JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Bike_Count') AS INTEGER)
-  type: INT
-  primary_key: false
-  description: Bike_Count cast to INTEGER for arithmetic.
-  label: Bike Count (numeric)
-  hidden: false
-  sampled: 0 .. 8
-- name: motor_count
-  sql: CAST(JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Motor_Count') AS INTEGER)
-  type: INT
-  primary_key: false
-  description: Motor_Count cast to INTEGER for arithmetic.
-  label: Motor Count (numeric)
-  hidden: false
-  sampled: 0 .. 2
 - name: vehicle_ownership_index
-  sql: COALESCE(CAST(JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Auto_Count')
-    AS INTEGER), 0) + COALESCE(CAST(JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Bike_Count')
-    AS INTEGER), 0) + COALESCE(CAST(JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Motor_Count')
-    AS INTEGER), 0)
-  type: INT
+  sql: COALESCE(CAST(vehicleinventory__vehicle_counts__Auto_Count AS REAL), 0) + COALESCE(CAST(vehicleinventory__vehicle_counts__Bike_Count
+    AS REAL), 0) + COALESCE(CAST(vehicleinventory__vehicle_counts__Motor_Count AS
+    REAL), 0)
+  type: DOUBLE
   primary_key: false
-  description: "Sum of car, bicycle, and motorcycle counts. Per `column_meaning`,\
-    \ each count defaults to 0 when 'no vehicles are owned'; NULL means ownership\
-    \ info is missing. Following the DEV-1380 'count of events' rule we COALESCE each\
-    \ leaf to 0 so the index stays well-defined even when one leaf is NULL (a household\
-    \ with only cars but missing motor count still gets a meaningful index).\n\n[kb=14]\n\
-    Calculated as the sum of car, bicycle, and motorcycle counts. \u2014 Calculates\
-    \ the total number of vehicles owned by a household.\n[/kb=14]"
+  description: "Per column meanings ('defaulting to 0 if no vehicles are owned'),\
+    \ the three counts coalesce to 0 before summing so the index is well-defined when\
+    \ a sub-field is missing.\n\n[kb=14]\nCalculated as the sum of car, bicycle, and\
+    \ motorcycle counts. \u2014 Calculates the total number of vehicles owned by a\
+    \ household.\n[/kb=14]"
   label: Vehicle Ownership Index
   hidden: false
   meta:
     kb_id: 14
-  sampled: 0 .. 10
 measures: []
 aggregations: []
 joins:

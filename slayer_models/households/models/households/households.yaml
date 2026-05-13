@@ -72,20 +72,14 @@ columns:
   primary_key: false
   description: "Household tenure classification indicating the ownership or occupancy\
     \ status. Contains NULL when tenure status is unknown, transitional, or under\
-    \ legal dispute. Ex. OWNED, RENTED, OCCUPIED\n\nNote: live data contains many\
-    \ case/whitespace variants (e.g. 'Owned', 'OWNED ', 'owned', 'rent', 'rented',\
-    \ 'living as a guest', 'in concession', 'guest', 'subsidized by work company').\
-    \ Compare via LOWER(TRIM(...)) when filtering.\n\n[kb=1]\nValues based on schema\
-    \ include 'OWNED', 'RENTED', 'OCCUPIED'. The 'OWNED' status corresponds to owner-occupied\
-    \ properties. \u2014 Illustrates the types of household tenure based on ownership\
-    \ or occupancy.\n[/kb=1]"
+    \ legal dispute. Sample values mix case ('OWNED', 'Owned', 'owned'); downstream\
+    \ callers should LOWER+TRIM before exact-equals matches.\n\n[kb=1]\nValues based\
+    \ on schema include 'OWNED', 'RENTED', 'OCCUPIED'. The 'OWNED' status corresponds\
+    \ to owner-occupied properties. \u2014 Illustrates the types of household tenure\
+    \ based on ownership or occupancy.\n[/kb=1]"
   label: Household Tenure Status
   hidden: false
   meta:
-    derived_from:
-      json_col: socioeconomic
-      path:
-      - Tenure_Type
     kb_id: 1
   sampled: '> 20 distinct'
 - name: socioeconomic__Income_Bracket
@@ -93,21 +87,18 @@ columns:
   type: TEXT
   primary_key: false
   description: "Income classification level representing the household's economic\
-    \ status and earning capacity. Contains NULL when income information is not disclosed,\
-    \ not available, or household income is irregular/informal.\n\nNote: live data\
-    \ contains case/whitespace variants of bracket labels (e.g. 'More than R$ 880\
-    \ and less than R$ 1,760', 'More\\than R$ 880 and less than R$ 1,760', leading/trailing\
-    \ spaces). The brackets range from 'R$ 440 or less' to 'More than R$ 26,400'.\
-    \ Null indicates undisclosed or irregular income.\n\n[kb=2]\nRanges from 'Low\
-    \ Income' to 'Very High Income'. Null indicates undisclosed or irregular income.\
-    \ \u2014 Illustrates the income brackets for household economic status.\n[/kb=2]"
+    \ status and earning capacity. Contains NULL when income information is not disclosed\
+    \ or irregular/informal.\n\nThe actual sample values are R$ amount ranges (e.g.\
+    \ 'More than R$ 1,760 and less than R$ 2,640'), not the KB-described ordinal labels\
+    \ ('Low Income' \u2026 'Very High Income'). Any encoding that needs to map this\
+    \ column to an ordinal score (KB 12, 19, 21, 28, 42) must define the bracket\u2192\
+    label mapping explicitly \u2014 the schema does not carry it.\n\n[kb=2]\nRanges\
+    \ from 'Low Income' to 'Very High Income'. Null indicates undisclosed or irregular\
+    \ income. \u2014 Illustrates the income brackets for household economic status.\n\
+    [/kb=2]"
   label: Income Classification
   hidden: false
   meta:
-    derived_from:
-      json_col: socioeconomic
-      path:
-      - Income_Bracket
     kb_id: 2
   sampled: '> 20 distinct'
 - name: socioeconomic__Expend_Coeff
@@ -125,85 +116,12 @@ columns:
       json_col: socioeconomic
       path:
       - Expend_Coeff
-  sampled: '> 20 distinct'
-- name: income_bracket_norm
-  sql: LOWER(TRIM(REPLACE(REPLACE(REPLACE(REPLACE(JSON_EXTRACT(socioeconomic, '$.Income_Bracket'),
-    CHAR(9), ' '), '  ', ' '), '  ', ' '), '  ', ' ')))
-  type: TEXT
-  primary_key: false
-  description: "LOWER(TRIM(...)) of the Income_Bracket leaf with tab \u2192 space\
-    \ and double-space \u2192 single-space normalization (applied 3\xD7 to collapse\
-    \ longer runs). Used as the comparable form for bracket-mapping CASE expressions;\
-    \ the raw `socioeconomic__Income_Bracket` column still carries the KB #2 description."
-  label: Income Bracket (normalized)
-  hidden: false
-  sampled: None, has no income, more than r$ 1,760 and less than r$ 2,640, more than
-    r$ 13,200 and less than r$ 17,600, more than r$ 17,600 and less than r$ 22,000,
-    more than r$ 2,640 and less than r$ 4,400, more than r$ 22,000 and less than r$
-    26,400, more than r$ 26,400, more than r$ 4,400 and less than r$ 8,800, more than
-    r$ 440 and less than r$ 880, more than r$ 8,800 and less than r$ 13,200, more
-    than r$ 880 and less than r$ 1,760, r$ 440 or less
-- name: income_bracket_score
-  sql: CASE LOWER(TRIM(REPLACE(REPLACE(REPLACE(REPLACE(JSON_EXTRACT(socioeconomic,
-    '$.Income_Bracket'), CHAR(9), ' '), '  ', ' '), '  ', ' '), '  ', ' '))) WHEN
-    'r$ 440 or less' THEN 1 WHEN 'more than r$ 440 and less than r$ 880' THEN 2 WHEN
-    'more than r$ 880 and less than r$ 1,760' THEN 3 WHEN 'more than r$ 1,760 and
-    less than r$ 2,640' THEN 4 WHEN 'more than r$ 2,640 and less than r$ 4,400' THEN
-    5 WHEN 'more than r$ 4,400 and less than r$ 8,800' THEN 6 WHEN 'more than r$ 8,800
-    and less than r$ 13,200' THEN 7 WHEN 'more than r$ 13,200 and less than r$ 17,600'
-    THEN 8 WHEN 'more than r$ 17,600 and less than r$ 22,000' THEN 9 WHEN 'more than
-    r$ 22,000 and less than r$ 26,400' THEN 10 WHEN 'more than r$ 26,400' THEN 11
-    WHEN 'has no income' THEN 0 ELSE NULL END
-  type: INT
-  primary_key: false
-  description: "Ordinal rank of the income bracket (1\u201311 from 'R$ 440 or less'\
-    \ to 'More than R$ 26,400'; 0 for 'Has no income'; NULL otherwise). Used as the\
-    \ numeric mapping for KB #12 (Expenditure Ratio) and KB #19 (Socioeconomic Index)."
-  label: Income Bracket Score
-  hidden: false
-  sampled: 0 .. 11
-- name: expend_coeff_num
-  sql: CAST(JSON_EXTRACT(socioeconomic, '$.Expend_Coeff') AS REAL)
-  type: DOUBLE
-  primary_key: false
-  description: Expend_Coeff JSON leaf cast to REAL for arithmetic.
-  label: Expend Coeff (numeric)
-  hidden: false
-  sampled: 21.2928 .. 97.5451
-- name: expenditure_ratio
-  sql: CAST(JSON_EXTRACT(socioeconomic, '$.Expend_Coeff') AS REAL) / NULLIF(CAST((CASE
-    LOWER(TRIM(REPLACE(REPLACE(REPLACE(REPLACE(JSON_EXTRACT(socioeconomic, '$.Income_Bracket'),
-    CHAR(9), ' '), '  ', ' '), '  ', ' '), '  ', ' '))) WHEN 'r$ 440 or less' THEN
-    1 WHEN 'more than r$ 440 and less than r$ 880' THEN 2 WHEN 'more than r$ 880 and
-    less than r$ 1,760' THEN 3 WHEN 'more than r$ 1,760 and less than r$ 2,640' THEN
-    4 WHEN 'more than r$ 2,640 and less than r$ 4,400' THEN 5 WHEN 'more than r$ 4,400
-    and less than r$ 8,800' THEN 6 WHEN 'more than r$ 8,800 and less than r$ 13,200'
-    THEN 7 WHEN 'more than r$ 13,200 and less than r$ 17,600' THEN 8 WHEN 'more than
-    r$ 17,600 and less than r$ 22,000' THEN 9 WHEN 'more than r$ 22,000 and less than
-    r$ 26,400' THEN 10 WHEN 'more than r$ 26,400' THEN 11 WHEN 'has no income' THEN
-    0 ELSE NULL END) AS REAL), 0)
-  type: DOUBLE
-  primary_key: false
-  description: "Household expenditure coefficient divided by a numeric mapping of\
-    \ the income bracket. Numerator: Expend_Coeff cast to REAL. Denominator: ordinal\
-    \ rank of the income bracket (see `income_bracket_score`). NULLIF on the denominator\
-    \ yields NULL when the bracket maps to 0 ('Has no income') or to NULL (unrecognised\
-    \ label) rather than dividing by zero.\n\n[kb=12]\nCalculated as the expenditure\
-    \ coefficient divided by a numeric mapping of income bracket. \u2014 Calculates\
-    \ the household\u2019s expenditure coefficient relative to its income bracket.\n\
-    [/kb=12]"
-  label: Expenditure Ratio
-  hidden: false
-  meta:
-    kb_id: 12
-  sampled: 3.5690222222222223 .. 79.7837
 - name: is_urban_zone
   sql: CASE WHEN loczone = 1 THEN 1 ELSE 0 END
   type: BOOLEAN
   primary_key: false
-  description: "Boolean (1/0): the household's zone is 1.\n\n[kb=45]\nA zone is considered\
-    \ urban if its `loczone` is 1. \u2014 Defines which zones are considered urban.\n\
-    [/kb=45]"
+  description: "[kb=45]\nA zone is considered urban if its `loczone` is 1. \u2014\
+    \ Defines which zones are considered urban.\n[/kb=45]"
   label: Urban Zone
   hidden: false
   meta:

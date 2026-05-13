@@ -4,10 +4,17 @@ storage to ``bird-interact-agents/slayer_models/<db>/``.
 
 Reads from the SLayer storage path the MCP server uses (default:
 ``~/.local/share/slayer``) and writes a YAMLStorage-shaped tree at
-``bird-interact-agents/slayer_models/<db>/`` containing only the models
-+ datasource for the named DB. The output tree is exactly what
-``YAMLStorage(base_dir=…)`` expects, so the verifier (and any future
-runner that loads the per-DB YAML) can pick it up directly.
+``bird-interact-agents/slayer_models/<db>/`` containing the
+datasource, every model whose ``data_source`` matches, AND every
+deferred-KB memory whose ``linked_entities`` resolves under the
+target DB (at least one canonical ref starting with ``<db>.``).
+The memory filter matches the verifier's own scope rule
+(``scripts/verify_kb_coverage.py``'s ``load_documented_ids``), so
+the committed per-DB tree never carries cross-DB memory noise.
+
+The output tree is exactly what ``YAMLStorage(base_dir=…)`` expects,
+so the verifier (and any future runner that loads the per-DB YAML)
+can pick it up directly.
 
 Usage:
     python scripts/export_slayer_models.py --db <db>
@@ -84,8 +91,38 @@ async def _export_async(db: str, source_path: Path) -> int:
         await dest.save_model(model)
         n_models += 1
 
-    print(f"[OK] exported {n_models} model(s) for '{db}' to {dest_dir}")
+    n_memories = await _export_memories(src=src, dest=dest, db=db)
+
+    print(
+        f"[OK] exported {n_models} model(s) and {n_memories} memory/memories "
+        f"for '{db}' to {dest_dir}"
+    )
     return 0
+
+
+async def _export_memories(*, src, dest, db: str) -> int:
+    """Re-save memories whose ``linked_entities`` resolves under ``db``.
+
+    A memory is in scope when at least one entry of its
+    ``entities`` list starts with ``"<db>."``. This matches the
+    verifier's scope rule in ``scripts/verify_kb_coverage.py``
+    (``load_documented_ids``) so the committed per-DB tree never
+    carries cross-DB noise.
+
+    Returns the number of memories exported.
+    """
+    db_prefix = f"{db}."
+    n = 0
+    for mem in await src.list_memories():
+        if not any(e.startswith(db_prefix) for e in mem.entities):
+            continue
+        await dest.save_memory(
+            learning=mem.learning,
+            entities=list(mem.entities),
+            query=mem.query,
+        )
+        n += 1
+    return n
 
 
 def main() -> int:

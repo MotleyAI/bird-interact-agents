@@ -17,14 +17,12 @@ columns:
   sql: domestichelp
   type: TEXT
   primary_key: false
-  description: "Domestic worker service availability indicating whether households\
-    \ have access to or utilize domestic help services.\n\nLive data values include\
-    \ 'No domestic workers', 'Yes, occasional', 'Yes, regular', 'Yes, living-in' (with\
-    \ case/whitespace variants). Use LOWER(TRIM(...)) when filtering.\n\n[kb=8]\n\
-    Includes 'Full-time' (daily), 'Part-time' (periodic), 'Occasional' (as-needed),\
-    \ 'None' (no help), and 'Live-in' (resident worker). Null indicates informal or\
-    \ undisclosed arrangements. \u2014 Illustrates the types of domestic worker services\
-    \ for households.\n[/kb=8]"
+  description: "Domestic worker service availability for households. Sample values\
+    \ include 'No domestic workers', 'Yes, occasional', and richer free-text variants.\
+    \ NULL indicates informal or undisclosed arrangements.\n\n[kb=8]\nIncludes 'Full-time'\
+    \ (daily), 'Part-time' (periodic), 'Occasional' (as-needed), 'None' (no help),\
+    \ and 'Live-in' (resident worker). Null indicates informal or undisclosed arrangements.\
+    \ \u2014 Illustrates the types of domestic worker services for households.\n[/kb=8]"
   label: Domestic Help Availability
   hidden: false
   meta:
@@ -37,48 +35,22 @@ columns:
   sql: socsupport
   type: TEXT
   primary_key: false
-  description: "Social assistance program participation indicating whether a household\
-    \ accepts social assistance. Part of unique constraint combination.\n\nLive data:\
-    \ 'Yes' and 'No' with case/whitespace variants. Use LOWER(TRIM(...)) when filtering.\n\
-    \n[kb=9]\nBinary indicator where 'Yes' means the household accepts social assistance\
-    \ and 'No' means it does not. Part of unique constraint combination. \u2014 Indicates\
-    \ whether a household participates in social assistance programs.\n[/kb=9]"
+  description: "Social assistance program participation indicator (binary Yes/No).\
+    \ Part of unique constraint combination.\n\n[kb=9]\nBinary indicator where 'Yes'\
+    \ means the household accepts social assistance and 'No' means it does not. Part\
+    \ of unique constraint combination. \u2014 Indicates whether a household participates\
+    \ in social assistance programs.\n[/kb=9]"
   label: Social Support Status
   hidden: false
   meta:
     kb_id: 9
   sampled: ' No,  Yes, No, No , Yes, Yes '
-- name: domestic_help_score
-  sql: CASE WHEN LOWER(TRIM(domestichelp)) LIKE 'yes, regular%' OR LOWER(TRIM(domestichelp))
-    LIKE 'yes, living-in%' THEN 4 WHEN LOWER(TRIM(domestichelp)) LIKE 'yes, occasional%'
-    THEN 3 WHEN LOWER(TRIM(domestichelp)) LIKE 'yes%' THEN 2 ELSE 1 END
-  type: INT
-  primary_key: false
-  description: 'Ordinal helper for service support: regular/live-in domestic help
-    = 4, occasional = 3, other ''yes'' = 2, no domestic workers = 1. Used as a building
-    block for KB #16 (Service Support Score) and KB #30. Not tagged with a KB id (KB
-    #16 leaves weights unspecified).'
-  label: Domestic Help Score
-  hidden: false
-  sampled: 1 .. 4
-- name: soc_support_score
-  sql: CASE WHEN LOWER(TRIM(socsupport)) = 'yes' THEN 1 ELSE 0 END
-  type: INT
-  primary_key: false
-  description: "Binary helper (1/0) for social-assistance participation: 'Yes' \u2192\
-    \ 1, otherwise 0. Used as a building block for KB #16 and KB #30. Not tagged with\
-    \ a KB id."
-  label: Social Support Score
-  hidden: false
-  sampled: 0 .. 1
 - name: is_supported_household
   sql: CASE WHEN LOWER(TRIM(socsupport)) = 'yes' THEN 1 ELSE 0 END
   type: BOOLEAN
   primary_key: false
-  description: "Boolean (1/0): household receives social assistance (socsupport =\
-    \ 'Yes', normalized via LOWER(TRIM)).\n\n[kb=24]\nA household with social support\
-    \ status marked as 'Yes'. \u2014 Defines a household receiving social assistance.\n\
-    [/kb=24]"
+  description: "[kb=24]\nA household with social support status marked as 'Yes'. \u2014\
+    \ Defines a household receiving social assistance.\n[/kb=24]"
   label: Supported Household
   hidden: false
   meta:

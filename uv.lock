@@ -345,8 +345,8 @@ requires-dist = [
     { name = "mcp-agent", marker = "extra == 'mcp-agent'", specifier = ">=0.0.16" },
     { name = "mini-interact-agent", marker = "extra == 'all'", editable = "../BIRD-Interact/mini_interact/knowledge_based/mini_interact_agent" },
     { name = "mini-interact-agent", marker = "extra == 'original'", editable = "../BIRD-Interact/mini_interact/knowledge_based/mini_interact_agent" },
-    { name = "motley-slayer", extras = ["embedding-search"], marker = "extra == 'all'", specifier = ">=0.6.1" },
-    { name = "motley-slayer", extras = ["embedding-search"], marker = "extra == 'slayer'", specifier = ">=0.6.1" },
+    { name = "motley-slayer", extras = ["embedding-search"], marker = "extra == 'all'", specifier = ">=0.6.4" },
+    { name = "motley-slayer", extras = ["embedding-search"], marker = "extra == 'slayer'", specifier = ">=0.6.4" },
     { name = "pydantic", specifier = ">=2.7" },
     { name = "pydantic-ai", marker = "extra == 'all'", specifier = ">=1.0" },
     { name = "pydantic-ai", marker = "extra == 'pydantic-ai'", specifier = ">=1.0" },
@@ -2224,7 +2224,7 @@ wheels = [
 
 [[package]]
 name = "motley-slayer"
-version = "0.6.1"
+version = "0.6.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "duckdb" },
@@ -2241,9 +2241,9 @@ dependencies = [
     { name = "tantivy" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/97/79/a84b6dea93364b7e36533e0f6df4d94ad8754be9afe73587ad9a57f2e647/motley_slayer-0.6.1.tar.gz", hash = "sha256:80496d23e144d5b6f49804e2999a8f0b09fab3ba75b03ada31871944549d879d", size = 301731, upload-time = "2026-05-13T09:22:45.867Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0f/15/611120c43a4a91d91899341c7c5f0e0e03664f708199d2d4c0690462ae3f/motley_slayer-0.6.4.tar.gz", hash = "sha256:ad818cc41cf01f0e839e47e2077980ae5bfc8853a5f6c6e5766d1a97de8d9877", size = 307909, upload-time = "2026-05-13T17:20:18.676Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2d/22/13816d0fbdde05f399089bf04f1e9e35d35224b8bc4347b775c0fee9b6e9/motley_slayer-0.6.1-py3-none-any.whl", hash = "sha256:a4e92ec756aacccc97612c7b68764744160592475ba7f6dd07b21b79fc3605ea", size = 339773, upload-time = "2026-05-13T09:22:43.8Z" },
+    { url = "https://files.pythonhosted.org/packages/66/dc/c910d55cedeedec5dfbc0c4fd813368be83543b5ad8d211aee6a327d5998/motley_slayer-0.6.4-py3-none-any.whl", hash = "sha256:07105107a2fa23c71458cae889e4eb398478cb508106ed946d15262d836e6f73", size = 347251, upload-time = "2026-05-13T17:20:17.15Z" },
 ]
 
 [package.optional-dependencies]
