@@ -1,6 +1,6 @@
 ---
 name: kb-to-slayer-models
-description: Translate a structured knowledge base (calculation entries, descriptions, enum bands, multistage formulas) into edits on a SLayer datasource via the v0.5.0+ MCP server. A recipe book — a caller picks the recipe whose trigger matches each KB entry and applies it. Domain-agnostic; downstream wrappers add domain bookkeeping.
+description: Translate a structured knowledge base (calculation entries, descriptions, enum bands, multistage formulas) into edits on a SLayer datasource via the v0.6.1+ MCP server. A recipe book — a caller picks the recipe whose trigger matches each KB entry and applies it. Domain-agnostic; downstream wrappers add domain bookkeeping. Deferred KBs are recorded as SLayer memories carrying the KB content, reason, clarifying questions, and linked entities.
 ---
 
 # Translate a KB into SLayer model enrichments via MCP
@@ -36,6 +36,30 @@ KB ids, notes files, or verifiers. Wrappers (e.g.
 `translate-mini-interact-kb`) layer that bookkeeping on top by passing
 their own `meta=…` payloads through the recipes.
 
+## Important rules (read first)
+
+- **`data_source=<db>` on every MCP call.** `models_summary`,
+  `inspect_model`, `edit_model`, `create_model`, `delete_model`,
+  `query`, `save_memory`, `recall_memories` all accept an explicit
+  `data_source` (or equivalent named arg) — pass it every time. This
+  is the no-restart-required substitute for per-DB MCP isolation; the
+  long-lived MCP server sees every datasource it has registered and
+  silently picks the wrong one otherwise.
+- **`mcp__slayer__search` is the only tool whose `question` channel
+  cannot be DB-scoped via an arg.** Use the wrapper script
+  `python scripts/slayer_search_for_db.py --db <db> --question "<text>"`
+  whenever the encoder needs free-text search; it boots a short-lived
+  `SearchService` against `slayer_models/<db>/` so cross-DB pollution
+  is impossible. Direct `mcp__slayer__search` is fine when the agent
+  is using the `entities=[...]` channel only (canonical refs already
+  carry the DB prefix).
+- **Verifier scope.** After this migration, `verify_kb_coverage --all`
+  fails for every DB that has not been re-encoded under the new
+  skill: it expects deferred KBs to live as SLayer memories, and DBs
+  whose previous `_notes/<db>.md` file is the only documenting source
+  will report all those ids as unaccounted. Use `--db <db>` per
+  re-encoded DB.
+
 ## MCP tools (in order of preference)
 
 1. `mcp__slayer__models_summary(datasource_name=<db>)` — list existing
@@ -70,6 +94,45 @@ semantics (KB ids, owner tags, source links, etc.).
 For each KB entry, scan `definition` (the formula / description) and
 `type`; pick the **first** recipe whose trigger matches; apply it; move
 on.
+
+### Search-first preamble (run before recipe selection)
+
+For every KB entry being processed, the FIRST action is to call the
+per-DB search wrapper with the KB content as the question:
+
+```bash
+python scripts/slayer_search_for_db.py --db <db> \
+    --question "KB <id> — <KB.knowledge>: <KB.definition>"
+```
+
+The wrapper returns a `SearchResponse` JSON with three channels —
+`memories`, `entities`, `example_queries`. Read them in this order:
+
+- **`memories`** — prior deferral memories from this DB. For each hit,
+  the first non-blank line of `text` matches `KB <n> — `:
+  - If `<n>` equals the **current** KB id, this is a refresh.
+    Re-read the existing reason / clarifying questions before
+    deciding. If you replace the memory, call
+    `mcp__slayer__forget_memory(identifier=<hit.id>, data_source=<db>)`
+    first; otherwise the corpus accumulates duplicates.
+  - If `<n>` is a **different** id, this is a related KB. Cite it
+    in the "Related KB ids" section of any new memory you save, and
+    reuse its operationalisation when picking a recipe (often you
+    can avoid creating a new entity by stamping `meta.kb_id=<current>`
+    on the existing one — see R-RESOLVE).
+- **`entities`** — existing columns / measures / aggregations that
+  already implement this KB or an adjacent one. Strongly prefer
+  `edit_model(data_source=<db>, ...)` to stamp `meta.kb_id` on those
+  rather than creating new entities. Use the entity's `id`
+  (`<db>.<model>[.<leaf>]`) directly.
+- **`example_queries`** — prior-saved `SlayerQuery` examples a future
+  agent could fire to answer this KB. If one already covers the KB
+  intent, the current encoder doesn't need to create a new query-
+  backed model; just stamp `meta.kb_id` on the underlying
+  contributing entities.
+
+Only after the search-first preamble do you proceed to recipe
+selection below.
 
 | Recipe | Trigger |
 |---|---|
@@ -852,15 +915,64 @@ target entity (recipe + new name + host model) — the agent should
 not invent the split shape from prose alone for these. For Bucket A
 / C / D the bucket label plus the KB texts are usually enough.
 
-## Notes-file regeneration
+## Deferred-KB memory recording
 
-When invoked under a "refresh" workflow (a wrapper signals this —
-e.g. `translate-mini-interact-kb`'s W4c override), **discard the
-existing per-DB notes file and regenerate it from scratch.** The
-new file lists *only* KB ids that could not be encoded after both
-passes above. Each section header is load-bearing for the wrapper's
-verifier (see the wrapper for the exact format); the body should
-include one of these canonical statuses:
+When a KB id cannot be encoded after both passes above — the recipe
+trigger needs information the schema does not carry, the prose
+underspecifies thresholds, or the KB describes DML rather than
+queryable shape — record it as a **SLayer memory** so the agent
+recovers it via `search` / `recall_memories` at query time.
+
+```python
+mcp__slayer__save_memory(
+    data_source=<db>,
+    learning=<learning_body>,           # see template below
+    linked_entities=[<canonical refs>], # ["<db>.<model>", "<db>.<model>.<leaf>", …]
+)
+```
+
+`<learning_body>` is Markdown. The **first non-blank line is
+load-bearing**: the verifier reads `KB <id> — ` off it to attribute
+the memory to a KB id. Use exactly an em-dash (`—`, U+2014), not a
+hyphen.
+
+```
+KB <id> — <KB.knowledge>
+
+KB item (verbatim from <db>_kb.jsonl):
+  id: <id>
+  knowledge: "<knowledge>"
+  description: "<description>"
+  definition: "<definition>"
+  type: <type>
+  children_knowledge: [<ids>]
+
+Reason: <one-paragraph schema-grounded explanation of why this KB
+couldn't be encoded as a normal column/measure/aggregation>
+
+Status: <one of the canonical statuses below>
+
+Clarifying questions (REQUIRED when Status is AMBIGUOUS-PROSE or
+SCHEMA-GAP; each is a single sentence the agent could pose to the
+user at query time to disambiguate or to point at the missing data):
+  Q1: <…>
+  Q2: <…>
+  …
+
+Related KB ids:
+  - KB <n> (<knowledge>) — <one-line note on the relationship>
+  …
+
+Relevant entities:
+  - <db>.<model>[.<leaf>]
+  …
+```
+
+`linked_entities` MUST be a non-empty list of canonical refs of the
+form `<db>.<model>[.<leaf>]` so the verifier can attribute the
+memory to a DB. At least one entry must start with `<db>.`.
+
+Canonical `Status:` values:
 
 | `Status:` value | Meaning |
 |---|---|
@@ -872,9 +984,66 @@ include one of these canonical statuses:
 | `not-applicable` | KB is descriptive metadata (a column-value enumeration, a table-purpose narrative) rather than a metric — captured via `description` on the host column / model rather than as an encoded entity. |
 | `not-applicable — duplicate of KB <primary>` | KB is a verbatim restatement of an already-encoded KB. The primary id stays on the entity; the secondary id is documented here. See R-SPLIT-DUP under "Splitting multi-KB entities". |
 
-If both passes leave zero ids deferred, the notes file should still
-exist with a one-line body ("All KB entries encoded.") so the
-verifier finds it.
+### Worked example — KB 16 "Service Support Score" (households)
+
+KB 16's definition is "a weighted score that combines a household's
+domestic-help service tier and its social-assistance participation
+into one ordinal index", with the **weights left unspecified**. The
+encoder builds helper columns (`domestic_help_score`,
+`soc_support_score`) but cannot pick canonical weights, so KB 16
+defers as `AMBIGUOUS-PROSE`:
+
+```python
+mcp__slayer__save_memory(
+    data_source="households",
+    learning=(
+        "KB 16 — Service Support Score\n"
+        "\n"
+        "KB item (verbatim from households_kb.jsonl):\n"
+        "  id: 16\n"
+        "  knowledge: \"Service Support Score\"\n"
+        "  description: \"Weighted ordinal score combining domestic-help "
+        "tier and social-assistance participation.\"\n"
+        "  definition: \"Score = w1*domestic_help_score + w2*soc_support_score "
+        "(weights unspecified).\"\n"
+        "  type: metric\n"
+        "  children_knowledge: [30]\n"
+        "\n"
+        "Reason: KB defines the score as a weighted sum of two helper "
+        "columns that ARE encoded (households.service_types.domestic_help_score "
+        "and households.service_types.soc_support_score), but does not "
+        "specify the weights w1 and w2. Picking weights silently would "
+        "burn-in an arbitrary policy. Helpers are exposed so the agent "
+        "can compose any specific weighting at query time.\n"
+        "\n"
+        "Status: deferred — AMBIGUOUS-PROSE\n"
+        "\n"
+        "Clarifying questions:\n"
+        "  Q1: What weights should the Service Support Score use? "
+        "(e.g. 1.0 and 1.0, or 0.7 and 0.3.)\n"
+        "  Q2: Should households with NULL `domestichelp` count as 0, "
+        "or be excluded from the score entirely?\n"
+        "\n"
+        "Related KB ids:\n"
+        "  - KB 30 (Self-Sufficient Household) — uses Service Support "
+        "Score's helpers under a different weighting scheme.\n"
+        "\n"
+        "Relevant entities:\n"
+        "  - households.service_types.domestic_help_score\n"
+        "  - households.service_types.soc_support_score\n"
+        "  - households.service_types.is_supported_household\n"
+    ),
+    linked_entities=[
+        "households.service_types.domestic_help_score",
+        "households.service_types.soc_support_score",
+        "households.service_types.is_supported_household",
+    ],
+)
+```
+
+If both passes leave zero ids deferred, no memories need to be
+written — every KB is encoded, the verifier picks them up via
+`meta.kb_id`.
 
 ## Constraints & gotchas
 

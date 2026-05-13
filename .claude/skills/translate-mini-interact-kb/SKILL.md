@@ -1,6 +1,6 @@
 ---
 name: translate-mini-interact-kb
-description: Translate one BIRD-Interact mini-interact database's `*_kb.jsonl` knowledge base into SLayer model enrichments via the SLayer MCP, then export the result to YAML at `bird-interact-agents/slayer_models/<db>/`. Wraps the domain-agnostic `kb-to-slayer-models` skill with mini-interact-specific bookkeeping (KB ids, per-DB notes file, verifier gate).
+description: Translate one BIRD-Interact mini-interact database's `*_kb.jsonl` knowledge base into SLayer model enrichments via the SLayer MCP, then export the result to YAML at `bird-interact-agents/slayer_models/<db>/`. Wraps the domain-agnostic `kb-to-slayer-models` skill with mini-interact-specific bookkeeping (KB ids, deferred-KB SLayer memories, verifier gate).
 ---
 
 # Translate one mini-interact KB into a SLayer model directory
@@ -32,25 +32,18 @@ the SLayer MCP. The user typically invokes by naming the DB
 
 - `bird-interact-agents/slayer_models/<db>/*.yaml` — exported SLayer
   models for the DB.
-- `bird-interact-agents/slayer_models/_notes/<db>.md` — per-DB problems
-  file. One Markdown section per KB entry left unencoded; section
-  header format is **load-bearing** (the verifier parses it):
-
-  ```
-  ## KB <id> — <KB.knowledge>
-
-  Reason: <why this entry isn't encoded — concrete, schema-grounded>
-
-  Status: <one of the canonical statuses from the generic skill's
-  "Notes-file regeneration" subsection — e.g. `deferred —
-  AMBIGUOUS-PROSE`, `deferred — SCHEMA-GAP`, `deferred — DML`,
-  `not-applicable`>
-  ```
-
-  Multiple sections in one file. The body of each section is free-form
-  Markdown; only the header is parsed by the verifier. The Status
-  values are *not* parsed but should be one of the canonical set so
-  downstream tooling (and humans) can categorise mechanically.
+- **One SLayer memory per KB entry left unencoded.** Saved via
+  `mcp__slayer__save_memory(data_source=<db>, learning=…, linked_entities=…)`.
+  The memory's `learning` body's first non-blank line is
+  **load-bearing**: it must match `^KB (\d+) — ` (em-dash, U+2014).
+  `linked_entities` must be a non-empty list of canonical refs of
+  the form `<db>.<model>[.<leaf>]`; the verifier requires at least
+  one entry starting with `<db>.`. See the **"Deferred-KB memory
+  recording"** section in `kb-to-slayer-models` for the full body
+  template and a fully-worked example using KB 16 (households).
+- **The legacy `_notes/<db>.md` file is no longer written or read.**
+  Pre-existing files for unmigrated DBs stay in place (orphaned)
+  until each is re-encoded under the new skill.
 
 ## The mandatory `meta.kb_id` annotation
 
@@ -91,13 +84,17 @@ the same `kb_id`. The verifier deduplicates.
 ### W4c refresh override (use when re-running on a partially-encoded DB)
 
 When you're refreshing an already-translated DB — the storage already
-contains entities with `meta.kb_id` set from a prior pass — follow the
-generic skill's two-pass "Working from a partially-encoded model"
-discipline:
+contains entities with `meta.kb_id` set from a prior pass and may
+already have deferred-KB memories saved — follow the generic skill's
+two-pass "Working from a partially-encoded model" discipline:
 
-1. **Discard the existing notes file** at
-   `bird-interact-agents/slayer_models/_notes/<db>.md` and regenerate
-   it from scratch in step 4 below.
+1. **Surface prior deferral memories** before re-encoding. Call
+   `mcp__slayer__recall_memories(data_source=<db>)` (or
+   `mcp__slayer__search` if you want a question-scoped recall) and
+   list each `KB <n> — …` learning. These are the load-bearing
+   context for any KB id that previously deferred; the encoder may
+   either preserve the memory or update it via
+   `forget_memory(identifier=<id>, data_source=<db>) + save_memory(…)`.
 2. **Verify-then-fill**: walk the KB jsonl. For each id, look up the
    matching entity (any `meta.kb_id`, or — on legacy entities not
    yet split — any `meta.kb_ids` list covering that id) via
@@ -107,8 +104,9 @@ discipline:
    still-unencoded.
 3. **No gold-SQL grounding.** The encoding decisions come from KB
    text (`definition`, `type`, `children_knowledge`), the schema,
-   the column meanings, and the recipes in the generic skill. Do
-   not consult `mini_interact.jsonl` task `sol_sql` fields.
+   the column meanings, the recipes in the generic skill, and the
+   search-first preamble output. Do not consult
+   `mini_interact.jsonl` task `sol_sql` fields.
 
 ### W4d refresh override (multi-KB-entity splitting pass)
 
@@ -125,9 +123,10 @@ When the planner gives you a per-DB instruction file at
    `meta.kb_id`. Existing single-KB entities on the same model are
    load-bearing — don't disturb them.
 3. **Don't re-run the W4c verify-then-fill.** W4d is purely a
-   splitting pass; coverage is already complete. The notes file
-   gets *appended to* (not regenerated) only for Bucket-F secondary
-   ids: `Status: not-applicable — duplicate of KB <primary>`.
+   splitting pass; coverage is already complete. For Bucket-F
+   secondary ids, save a new memory with
+   `Status: not-applicable — duplicate of KB <primary>` per the
+   generic skill's "Deferred-KB memory recording" template.
 4. After splitting: re-export YAML (step 5 below), then run BOTH
    gates:
    - `scripts/verify_kb_coverage.py --db <db>` (exit 0 — coverage
@@ -212,13 +211,28 @@ dimensions + filters — with no per-task formula derivation. If a task
 needs derivation, that's a sign the relevant KB entry didn't get
 encoded; loop back to step 2.
 
-### 4. Write the per-DB notes file
+### 4. Record a memory per deferred KB entry
 
-For every KB entry queued in step 2, create a section in
-`bird-interact-agents/slayer_models/_notes/<db>.md` with the header
-format above. If no entries were skipped, the file should still exist
-with a one-line body ("All KB entries encoded.") so the verifier finds
-it.
+For every KB entry queued in step 2, call
+`mcp__slayer__save_memory(data_source=<db>, learning=…, linked_entities=…)`
+following the **"Deferred-KB memory recording"** section in
+`kb-to-slayer-models`. Load-bearing contract:
+
+- First non-blank line of `learning` is exactly `KB <id> — <KB.knowledge>`
+  (em-dash, U+2014).
+- `linked_entities` is non-empty; at least one entry starts with
+  `<db>.`.
+- The body covers: verbatim KB item, reason, status (one of the
+  canonical values), clarifying questions (REQUIRED for AMBIGUOUS-
+  PROSE / SCHEMA-GAP), related KB ids, relevant entities.
+
+If no entries were skipped, no memories need to be written — the
+verifier reads `meta.kb_id` directly off the encoded entities.
+
+After every `save_memory` call, sanity-check with
+`mcp__slayer__search(question="KB <id>", data_source=<db>)` (or the
+wrapper at `scripts/slayer_search_for_db.py`) and confirm the memory
+comes back at rank 1.
 
 ### 5. Export to YAML
 
@@ -262,11 +276,21 @@ The verifier reads:
 - The KB JSONL → set of all `id` values.
 - The exported YAML directory → every `meta.kb_id` value across
   Columns, ModelMeasures, Aggregations, and SlayerModels.
-- The notes file → KB ids parsed from `## KB <id> — …` headers.
+- The per-DB SLayer memories at `slayer_models/<db>/memories.yaml`
+  → for each KB id not already in the encoded set, search for
+  `KB <id> — <knowledge>` via the per-DB SearchService and accept
+  any hit whose first non-blank line matches `KB <id> — ` AND
+  whose linked entities contain at least one ref starting with
+  `<db>.`.
 
 Pass condition: every KB id is in **exactly one** of {encoded,
 documented}. The verifier exits 1 (with a list of offending ids) if
 any id is in zero or both sets.
+
+`--all` mode iterates every `slayer_models/<db>/` directory. After
+the kb-notes-to-slayer-memories migration, only DBs that have been
+re-encoded under the new skill will pass; the legacy notes files for
+unmigrated DBs are ignored. Use `--db <db>` for the day-to-day gate.
 
 ## Constraints & gotchas
 
@@ -287,13 +311,18 @@ any id is in zero or both sets.
   correctness. If a sanity-query produces nonsense values
   (negative scores, exploded ranges), the encoding has a
   KB-interpretation bug — fix the formula, but the verifier will
-  still pass either way. Flag the issue in the notes file under
-  the KB id with `Status: encoded but value range is suspect; see
-  …` if you can't immediately resolve.
+  still pass either way. If you can't immediately resolve, save an
+  additional memory with the encoded entity in `linked_entities`,
+  body status `Status: encoded but value range is suspect; see …`,
+  so the agent surfaces the caveat at query time.
 - **Datasource name = DB name.** `mcp__slayer__create_datasource(name="<db>", …)`.
   The W4 fan-out depends on this — parallel agents pick distinct names
   this way.
-- **Notes file always exists.** Even if zero KB entries were skipped.
-  Empty body is fine; presence is what the verifier looks at.
+- **`data_source=<db>` on every MCP call.** See the "Important rules"
+  banner in `kb-to-slayer-models`; the long-lived MCP server sees
+  every datasource it has registered and silently picks the wrong
+  one otherwise.
 - **Re-runnable.** `edit_model` upserts by name; re-running the skill
-  on a DB updates the YAML in place. Diff-review-friendly.
+  on a DB updates the YAML in place. Deferred-KB memory refreshes
+  go through `forget_memory(identifier=<old>) + save_memory(…)` to
+  avoid duplicates.
