@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: loyaltyandachievements
 sql_table: loyaltyandachievements
 query_variables: {}

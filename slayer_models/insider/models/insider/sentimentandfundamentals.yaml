@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: sentimentandfundamentals
 sql_table: sentimentandfundamentals
 query_variables: {}

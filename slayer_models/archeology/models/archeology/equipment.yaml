@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: equipment
 sql_table: equipment
 query_variables: {}

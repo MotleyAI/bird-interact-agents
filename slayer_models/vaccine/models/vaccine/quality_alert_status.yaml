@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: quality_alert_status
 source_queries:
 - version: 3

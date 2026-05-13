@@ -29,6 +29,10 @@ columns:
   hidden: false
   meta:
     kb_id: 8
+  sampled: " No domestic workers,  Yes, occasional,  Yes, regular, No\tdomestic workers,\
+    \ No  domestic workers, No domestic workers, No domestic workers , Yes,\toccasional,\
+    \ Yes,\tregular, Yes,  occasional, Yes, living-in, Yes, occasional, Yes, occasional\
+    \ , Yes, regular, Yes, regular "
 - name: socsupport
   sql: socsupport
   type: TEXT
@@ -43,6 +47,7 @@ columns:
   hidden: false
   meta:
     kb_id: 9
+  sampled: ' No,  Yes, No, No , Yes, Yes '
 - name: domestic_help_score
   sql: CASE WHEN LOWER(TRIM(domestichelp)) LIKE 'yes, regular%' OR LOWER(TRIM(domestichelp))
     LIKE 'yes, living-in%' THEN 4 WHEN LOWER(TRIM(domestichelp)) LIKE 'yes, occasional%'
@@ -55,6 +60,7 @@ columns:
     #16 leaves weights unspecified).'
   label: Domestic Help Score
   hidden: false
+  sampled: 1 .. 4
 - name: soc_support_score
   sql: CASE WHEN LOWER(TRIM(socsupport)) = 'yes' THEN 1 ELSE 0 END
   type: INT
@@ -64,6 +70,7 @@ columns:
     \ a KB id."
   label: Social Support Score
   hidden: false
+  sampled: 0 .. 1
 - name: is_supported_household
   sql: CASE WHEN LOWER(TRIM(socsupport)) = 'yes' THEN 1 ELSE 0 END
   type: BOOLEAN
@@ -76,6 +83,7 @@ columns:
   hidden: false
   meta:
     kb_id: 24
+  sampled: 0, 1
 measures: []
 aggregations: []
 joins: []

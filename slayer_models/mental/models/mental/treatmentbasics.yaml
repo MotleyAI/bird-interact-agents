@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: treatmentbasics
 sql_table: treatmentbasics
 query_variables: {}

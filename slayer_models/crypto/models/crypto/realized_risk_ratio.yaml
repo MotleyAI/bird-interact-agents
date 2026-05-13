@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: realized_risk_ratio
 source_queries:
 - version: 3

@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: scanregistration
 sql_table: scanregistration
 query_variables: {}

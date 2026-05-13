@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: pit_stops
 sql_table: pit_stops
 query_variables: {}

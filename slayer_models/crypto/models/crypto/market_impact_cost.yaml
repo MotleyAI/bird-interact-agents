@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: market_impact_cost
 source_queries:
 - version: 3

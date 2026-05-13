@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: route_risk_factor
 source_queries:
 - version: 3

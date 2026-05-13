@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: performance_and_safety
 sql_table: performance_and_safety
 query_variables: {}

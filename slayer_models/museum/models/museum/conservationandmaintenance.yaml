@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: conservationandmaintenance
 sql_table: conservationandmaintenance
 query_variables: {}

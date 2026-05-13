@@ -22,6 +22,7 @@ columns:
   hidden: false
   format:
     type: integer
+  sampled: 3 .. 6507
 - name: infralink
   sql: infralink
   type: INT
@@ -31,6 +32,7 @@ columns:
   hidden: false
   format:
     type: integer
+  sampled: 1 .. 1342
 - name: dwelling_specs
   sql: dwelling_specs
   type: TEXT
@@ -40,6 +42,7 @@ columns:
   hidden: false
   meta:
     jsonb: true
+  sampled: '> 20 distinct'
 - name: dwelling_specs__Dwelling_Class
   sql: JSON_EXTRACT(dwelling_specs, '$.Dwelling_Class')
   type: TEXT
@@ -61,6 +64,7 @@ columns:
       path:
       - Dwelling_Class
     kb_id: 6
+  sampled: '> 20 distinct'
 - name: dwelling_specs__Bath_Count
   sql: JSON_EXTRACT(dwelling_specs, '$.Bath_Count')
   type: TEXT
@@ -76,6 +80,7 @@ columns:
       json_col: dwelling_specs
       path:
       - Bath_Count
+  sampled: 1, 2, 3, 4, 5, 6, 7, 9, 12
 - name: dwelling_specs__Room_Count
   sql: JSON_EXTRACT(dwelling_specs, '$.Room_Count')
   type: TEXT
@@ -91,6 +96,7 @@ columns:
       json_col: dwelling_specs
       path:
       - Room_Count
+  sampled: 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 31
 - name: dwelling_type_score
   sql: CASE WHEN LOWER(TRIM(JSON_EXTRACT(dwelling_specs, '$.Dwelling_Class'))) LIKE
     'brickwork%' THEN 4 WHEN LOWER(TRIM(JSON_EXTRACT(dwelling_specs, '$.Dwelling_Class')))
@@ -109,6 +115,7 @@ columns:
   hidden: false
   meta:
     kb_id: 44
+  sampled: 1 .. 4
 - name: bath_count_num
   sql: CAST(JSON_EXTRACT(dwelling_specs, '$.Bath_Count') AS INTEGER)
   type: INT
@@ -117,6 +124,7 @@ columns:
     when Bath_Count is missing (see KB DEV-1380: ''unknown'' semantics).'
   label: Bath Count (numeric)
   hidden: false
+  sampled: 1 .. 12
 - name: room_count_num
   sql: CAST(JSON_EXTRACT(dwelling_specs, '$.Room_Count') AS INTEGER)
   type: INT
@@ -125,6 +133,7 @@ columns:
     when Room_Count is missing.
   label: Room Count (numeric)
   hidden: false
+  sampled: 0 .. 31
 - name: household_density
   sql: CAST(households.residentcount AS REAL) / NULLIF(CAST(JSON_EXTRACT(dwelling_specs,
     '$.Room_Count') AS REAL), 0)
@@ -139,6 +148,7 @@ columns:
   hidden: false
   meta:
     kb_id: 11
+  sampled: 0.0967741935483871 .. 6.0
 - name: bathroom_ratio
   sql: CAST(JSON_EXTRACT(dwelling_specs, '$.Bath_Count') AS REAL) / NULLIF(CAST(households.residentcount
     AS REAL), 0)
@@ -152,6 +162,7 @@ columns:
   hidden: false
   meta:
     kb_id: 15
+  sampled: 0.1111111111111111 .. 6.0
 - name: dwelling_capacity
   sql: 2 * CAST(JSON_EXTRACT(dwelling_specs, '$.Room_Count') AS INTEGER) + CAST(JSON_EXTRACT(dwelling_specs,
     '$.Bath_Count') AS INTEGER)
@@ -165,6 +176,7 @@ columns:
   hidden: false
   meta:
     kb_id: 17
+  sampled: 1 .. 65
 - name: living_condition_score
   sql: 0.5 * CAST((CASE WHEN LOWER(TRIM(JSON_EXTRACT(dwelling_specs, '$.Dwelling_Class')))
     LIKE 'brickwork%' THEN 4 WHEN LOWER(TRIM(JSON_EXTRACT(dwelling_specs, '$.Dwelling_Class')))
@@ -181,6 +193,7 @@ columns:
   hidden: false
   meta:
     kb_id: 20
+  sampled: 2.0 .. 4.0
 - name: is_comfortable_living_household
   sql: CASE WHEN (0.5 * CAST((CASE WHEN LOWER(TRIM(JSON_EXTRACT(dwelling_specs, '$.Dwelling_Class')))
     LIKE 'brickwork%' THEN 4 WHEN LOWER(TRIM(JSON_EXTRACT(dwelling_specs, '$.Dwelling_Class')))
@@ -200,6 +213,7 @@ columns:
   hidden: false
   meta:
     kb_id: 29
+  sampled: 0, 1
 measures: []
 aggregations: []
 joins:

@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: instruments_surveys
 sql_table: instruments_surveys
 query_variables: {}

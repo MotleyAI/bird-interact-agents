@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: etf_performance
 sql_table: performance
 query_variables: {}

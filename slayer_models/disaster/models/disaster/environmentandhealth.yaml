@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: environmentandhealth
 sql_table: environmentandhealth
 query_variables: {}

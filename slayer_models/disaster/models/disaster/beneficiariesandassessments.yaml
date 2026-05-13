@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: beneficiariesandassessments
 sql_table: beneficiariesandassessments
 query_variables: {}

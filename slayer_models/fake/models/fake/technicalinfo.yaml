@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: technicalinfo
 sql_table: technicalinfo
 query_variables: {}

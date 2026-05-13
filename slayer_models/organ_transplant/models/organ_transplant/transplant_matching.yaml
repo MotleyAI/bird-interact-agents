@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: transplant_matching
 sql_table: transplant_matching
 query_variables: {}

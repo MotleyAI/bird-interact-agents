@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: scanprocessing
 sql_table: scanprocessing
 query_variables: {}

@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: driver_standings
 sql_table: driver_standings
 query_variables: {}

@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: joint_performance
 sql_table: joint_performance
 query_variables: {}

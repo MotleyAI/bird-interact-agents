@@ -22,6 +22,7 @@ columns:
   hidden: false
   format:
     type: integer
+  sampled: 3 .. 6507
 - name: vehicleinventory
   sql: vehicleinventory
   type: TEXT
@@ -38,6 +39,7 @@ columns:
   meta:
     jsonb: true
     kb_id: 36
+  sampled: '> 20 distinct'
 - name: vehicleinventory__vehicle_counts__Auto_Count
   sql: JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Auto_Count')
   type: TEXT
@@ -53,6 +55,7 @@ columns:
       path:
       - vehicle_counts
       - Auto_Count
+  sampled: 0, 1, 2, 3, 4, 5
 - name: vehicleinventory__vehicle_counts__Bike_Count
   sql: JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Bike_Count')
   type: TEXT
@@ -68,6 +71,7 @@ columns:
       path:
       - vehicle_counts
       - Bike_Count
+  sampled: 0, 1, 2, 3, 4, 5, 8
 - name: vehicleinventory__vehicle_counts__Motor_Count
   sql: JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Motor_Count')
   type: TEXT
@@ -83,6 +87,7 @@ columns:
       path:
       - vehicle_counts
       - Motor_Count
+  sampled: 0, 1, 2
 - name: vehicleinventory__Newest_Year
   sql: JSON_EXTRACT(vehicleinventory, '$.Newest_Year')
   type: TEXT
@@ -106,6 +111,7 @@ columns:
       path:
       - Newest_Year
     kb_id: 10
+  sampled: '> 20 distinct'
 - name: auto_count
   sql: CAST(JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Auto_Count') AS INTEGER)
   type: INT
@@ -113,6 +119,7 @@ columns:
   description: Auto_Count cast to INTEGER for arithmetic.
   label: Auto Count (numeric)
   hidden: false
+  sampled: 0 .. 5
 - name: bike_count
   sql: CAST(JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Bike_Count') AS INTEGER)
   type: INT
@@ -120,6 +127,7 @@ columns:
   description: Bike_Count cast to INTEGER for arithmetic.
   label: Bike Count (numeric)
   hidden: false
+  sampled: 0 .. 8
 - name: motor_count
   sql: CAST(JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Motor_Count') AS INTEGER)
   type: INT
@@ -127,6 +135,7 @@ columns:
   description: Motor_Count cast to INTEGER for arithmetic.
   label: Motor Count (numeric)
   hidden: false
+  sampled: 0 .. 2
 - name: vehicle_ownership_index
   sql: COALESCE(CAST(JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Auto_Count')
     AS INTEGER), 0) + COALESCE(CAST(JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Bike_Count')
@@ -145,6 +154,7 @@ columns:
   hidden: false
   meta:
     kb_id: 14
+  sampled: 0 .. 10
 measures: []
 aggregations: []
 joins:

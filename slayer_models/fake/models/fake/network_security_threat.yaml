@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: network_security_threat
 source_queries:
 - version: 3

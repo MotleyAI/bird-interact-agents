@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: visa_dependent_industry
 source_queries:
 - version: 3

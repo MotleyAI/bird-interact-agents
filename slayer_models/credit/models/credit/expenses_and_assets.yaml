@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: expenses_and_assets
 sql_table: expenses_and_assets
 query_variables: {}

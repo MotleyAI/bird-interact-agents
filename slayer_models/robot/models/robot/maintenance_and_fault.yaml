@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: maintenance_and_fault
 sql_table: maintenance_and_fault
 query_variables: {}

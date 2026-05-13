@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: registration_confidence_level
 source_queries:
 - version: 3

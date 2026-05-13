@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: tei_risk_category_per_account
 source_queries:
 - version: 3

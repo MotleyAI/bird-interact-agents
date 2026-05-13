@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: hla_info
 sql_table: hla_info
 query_variables: {}

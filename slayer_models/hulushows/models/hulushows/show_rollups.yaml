@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: show_rollups
 sql_table: show_rollups
 query_variables: {}

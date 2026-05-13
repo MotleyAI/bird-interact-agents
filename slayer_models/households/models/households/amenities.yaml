@@ -22,6 +22,7 @@ columns:
   hidden: false
   format:
     type: integer
+  sampled: 3 .. 6507
 - name: cablestatus
   sql: cablestatus
   type: TEXT
@@ -38,6 +39,7 @@ columns:
   hidden: false
   meta:
     kb_id: 7
+  sampled: '> 20 distinct'
 - name: cable_available
   sql: CASE WHEN LOWER(TRIM(cablestatus)) IN ('avail', 'available', 'yes', 'y', 'have')
     THEN 1 ELSE 0 END
@@ -49,6 +51,7 @@ columns:
     in the data.'
   label: Cable TV Available
   hidden: false
+  sampled: 0, 1
 measures: []
 aggregations: []
 joins:

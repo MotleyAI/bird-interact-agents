@@ -14,9 +14,9 @@ By the time this skill runs:
   `auto_ingest=True`, or `mcp__slayer__ingest_datasource_models`.
 - One SLayer model per table already exists, with **FK joins**, **column
   types**, and one **Column** per source column populated.
-- **SLayer 0.5.0+ MCP** is the runtime. `edit_model` and `create_model`
+- **SLayer 0.6.1+ MCP** is the runtime. `edit_model` and `create_model`
   expose the v3 unified `columns` list and the v3 named-formula
-  `measures` list with `formula` (not `sql`). The rank-family
+  `measures` list with `formula` . The rank-family
   transforms (`rank`, `percent_rank`, `dense_rank`, `row_number`,
   `ntile`) and `covar_pop` / `covar_samp` / `corr` aggregations are
   available as ModelMeasure formulas.

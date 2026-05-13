@@ -22,6 +22,7 @@ columns:
   hidden: false
   format:
     type: integer
+  sampled: 1 .. 12
 - name: locregion
   sql: locregion
   type: TEXT
@@ -30,6 +31,7 @@ columns:
     region where this household is located. Part of composite foreign key constraint.
     EX.Taguatinga,Samambaia
   hidden: false
+  sampled: '> 20 distinct'
 - name: loczone
   sql: loczone
   type: INT
@@ -40,6 +42,7 @@ columns:
   hidden: false
   format:
     type: integer
+  sampled: 121 .. 414
 - name: serviceplan
   sql: serviceplan
   type: INT
@@ -51,6 +54,7 @@ columns:
   hidden: false
   format:
     type: integer
+  sampled: 1 .. 1539
 - name: socioeconomic
   sql: socioeconomic
   type: TEXT
@@ -61,6 +65,7 @@ columns:
   hidden: false
   meta:
     jsonb: true
+  sampled: '> 20 distinct'
 - name: socioeconomic__Tenure_Type
   sql: JSON_EXTRACT(socioeconomic, '$.Tenure_Type')
   type: TEXT
@@ -82,6 +87,7 @@ columns:
       path:
       - Tenure_Type
     kb_id: 1
+  sampled: '> 20 distinct'
 - name: socioeconomic__Income_Bracket
   sql: JSON_EXTRACT(socioeconomic, '$.Income_Bracket')
   type: TEXT
@@ -103,6 +109,7 @@ columns:
       path:
       - Income_Bracket
     kb_id: 2
+  sampled: '> 20 distinct'
 - name: socioeconomic__Expend_Coeff
   sql: JSON_EXTRACT(socioeconomic, '$.Expend_Coeff')
   type: TEXT
@@ -118,6 +125,7 @@ columns:
       json_col: socioeconomic
       path:
       - Expend_Coeff
+  sampled: '> 20 distinct'
 - name: income_bracket_norm
   sql: LOWER(TRIM(REPLACE(REPLACE(REPLACE(REPLACE(JSON_EXTRACT(socioeconomic, '$.Income_Bracket'),
     CHAR(9), ' '), '  ', ' '), '  ', ' '), '  ', ' ')))
@@ -129,6 +137,12 @@ columns:
     \ the raw `socioeconomic__Income_Bracket` column still carries the KB #2 description."
   label: Income Bracket (normalized)
   hidden: false
+  sampled: None, has no income, more than r$ 1,760 and less than r$ 2,640, more than
+    r$ 13,200 and less than r$ 17,600, more than r$ 17,600 and less than r$ 22,000,
+    more than r$ 2,640 and less than r$ 4,400, more than r$ 22,000 and less than r$
+    26,400, more than r$ 26,400, more than r$ 4,400 and less than r$ 8,800, more than
+    r$ 440 and less than r$ 880, more than r$ 8,800 and less than r$ 13,200, more
+    than r$ 880 and less than r$ 1,760, r$ 440 or less
 - name: income_bracket_score
   sql: CASE LOWER(TRIM(REPLACE(REPLACE(REPLACE(REPLACE(JSON_EXTRACT(socioeconomic,
     '$.Income_Bracket'), CHAR(9), ' '), '  ', ' '), '  ', ' '), '  ', ' '))) WHEN
@@ -147,6 +161,7 @@ columns:
     \ numeric mapping for KB #12 (Expenditure Ratio) and KB #19 (Socioeconomic Index)."
   label: Income Bracket Score
   hidden: false
+  sampled: 0 .. 11
 - name: expend_coeff_num
   sql: CAST(JSON_EXTRACT(socioeconomic, '$.Expend_Coeff') AS REAL)
   type: DOUBLE
@@ -154,6 +169,7 @@ columns:
   description: Expend_Coeff JSON leaf cast to REAL for arithmetic.
   label: Expend Coeff (numeric)
   hidden: false
+  sampled: 21.2928 .. 97.5451
 - name: expenditure_ratio
   sql: CAST(JSON_EXTRACT(socioeconomic, '$.Expend_Coeff') AS REAL) / NULLIF(CAST((CASE
     LOWER(TRIM(REPLACE(REPLACE(REPLACE(REPLACE(JSON_EXTRACT(socioeconomic, '$.Income_Bracket'),
@@ -180,6 +196,7 @@ columns:
   hidden: false
   meta:
     kb_id: 12
+  sampled: 3.5690222222222223 .. 79.7837
 - name: is_urban_zone
   sql: CASE WHEN loczone = 1 THEN 1 ELSE 0 END
   type: BOOLEAN
@@ -191,6 +208,7 @@ columns:
   hidden: false
   meta:
     kb_id: 45
+  sampled: '0'
 measures: []
 aggregations: []
 joins:

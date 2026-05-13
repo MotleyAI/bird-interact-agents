@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: customer_with_clv_quartile
 source_queries:
 - version: 3

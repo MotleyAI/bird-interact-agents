@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: exhibitionhalls
 sql_table: exhibitionhalls
 query_variables: {}

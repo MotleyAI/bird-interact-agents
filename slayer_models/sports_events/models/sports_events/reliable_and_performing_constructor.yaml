@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: reliable_and_performing_constructor
 sql: "WITH season_metrics AS (\n  SELECT\n    cr.unitnode AS unitnode,\n    r.yr AS\
   \ yr,\n    SUM(cr.scoreval) AS season_total_points,\n    SUM(CASE WHEN cr.st_mark\

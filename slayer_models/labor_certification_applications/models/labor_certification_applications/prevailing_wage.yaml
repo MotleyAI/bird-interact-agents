@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: prevailing_wage
 sql_table: prevailing_wage
 query_variables: {}

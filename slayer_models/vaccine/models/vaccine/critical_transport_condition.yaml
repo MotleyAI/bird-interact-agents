@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: critical_transport_condition
 source_queries:
 - version: 3

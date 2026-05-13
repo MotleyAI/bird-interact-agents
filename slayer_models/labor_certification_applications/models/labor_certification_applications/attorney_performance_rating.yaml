@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: attorney_performance_rating
 source_queries:
 - version: 3

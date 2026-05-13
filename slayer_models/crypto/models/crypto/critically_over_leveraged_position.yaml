@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: critically_over_leveraged_position
 source_queries:
 - version: 3

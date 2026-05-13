@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: driver_points_per_race
 sql: "SELECT\n  ds.drive_link AS drive_link,\n  r.yr AS yr,\n  MAX(ds.acc_pt) AS season_total_points,\n\
   \  COUNT(*) AS races_completed,\n  CAST(MAX(ds.acc_pt) AS REAL) / NULLIF(COUNT(*),\

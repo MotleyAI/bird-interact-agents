@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: allocation_details
 sql_table: allocation_details
 query_variables: {}

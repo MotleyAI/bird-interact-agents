@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: workflow_efficiency_classification
 source_queries:
 - version: 3

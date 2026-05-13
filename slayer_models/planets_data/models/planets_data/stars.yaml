@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: stars
 sql_table: stars
 query_variables: {}

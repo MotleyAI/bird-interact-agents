@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: artifact_value_categories
 sql: SELECT s.artref AS artref, s.insvalueusd AS insvalueusd, r.histsignrating AS
   histsignrating, r.cultscore AS cultscore, NTILE(10) OVER (ORDER BY r.histsignrating

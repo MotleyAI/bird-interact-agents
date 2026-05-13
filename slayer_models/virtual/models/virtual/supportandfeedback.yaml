@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: supportandfeedback
 sql_table: supportandfeedback
 query_variables: {}

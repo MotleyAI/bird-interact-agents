@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: preparer
 sql_table: preparer
 query_variables: {}

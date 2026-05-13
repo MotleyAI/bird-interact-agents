@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: employer_dependency_level
 source_queries:
 - version: 3

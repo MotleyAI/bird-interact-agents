@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: credit_and_compliance
 sql_table: credit_and_compliance
 query_variables: {}

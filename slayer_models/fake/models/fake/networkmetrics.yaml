@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: networkmetrics
 sql_table: networkmetrics
 query_variables: {}

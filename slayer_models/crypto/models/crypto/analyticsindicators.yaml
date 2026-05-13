@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: analyticsindicators
 sql_table: analyticsindicators
 query_variables: {}

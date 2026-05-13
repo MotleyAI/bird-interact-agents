@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: treatmentoutcomes
 sql_table: treatmentoutcomes
 query_variables: {}

@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: medical_history
 sql_table: medical_history
 query_variables: {}

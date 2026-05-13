@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: constructor_standings
 sql_table: constructor_standings
 query_variables: {}

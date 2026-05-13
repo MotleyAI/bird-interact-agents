@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: environmental_challenge_scan
 source_queries:
 - version: 3

@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: orbital_characteristics
 sql_table: orbital_characteristics
 query_variables: {}

@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: vaccine_safety_index
 source_queries:
 - version: 3

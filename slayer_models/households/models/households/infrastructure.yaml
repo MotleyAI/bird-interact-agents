@@ -21,6 +21,14 @@ columns:
     connectivity. Part of unique constraint combination. ex.Yes, available at least
     in one room
   hidden: false
+  sampled: " Yes, available at least in one room,  Yes, but only connected to a tap\
+    \ outside of the house (in the property), Yes,\tavailable at least in one room,\
+    \ Yes,\tbut only connected to a tap outside of the house (in the property), Yes,\
+    \  available at least in one room, Yes,  but only connected to a tap outside of\
+    \ the house (in the property), Yes, available at least in one room, Yes, available\
+    \ at least in one room , Yes, but only connected to a tap outside of the house\
+    \ (in the property), Yes, but only connected to a tap outside of the house (in\
+    \ the property) "
 - name: roadsurface
   sql: roadsurface
   type: TEXT
@@ -29,6 +37,8 @@ columns:
     quality around the household location. Part of unique constraint combination.
     EX. Asphalt, concrete;Gravel surface
   hidden: false
+  sampled: " Asphalt, concrete,  Gravel surface, Asphalt,\tconcrete, Asphalt,  concrete,\
+    \ Asphalt, concrete, Asphalt, concrete , Gravel surface"
 - name: parkavail
   sql: parkavail
   type: TEXT
@@ -37,6 +47,8 @@ columns:
     dedicated parking facilities. Part of unique constraint combination. EX.Available,
     not available
   hidden: false
+  sampled: " Available,  Not available, Available, Available , Not\tavailable, Not\
+    \  available, Not available, Not available "
 - name: water_access_score
   sql: CASE WHEN LOWER(TRIM(wateraccess)) LIKE 'yes%' THEN 4 ELSE 1 END
   type: INT
@@ -52,6 +64,7 @@ columns:
   hidden: false
   meta:
     kb_id: 3
+  sampled: 4 .. 4
 - name: road_surface_score
   sql: CASE WHEN LOWER(TRIM(roadsurface)) LIKE '%asphalt%' OR LOWER(TRIM(roadsurface))
     LIKE '%concrete%' THEN 4 ELSE 1 END
@@ -68,6 +81,7 @@ columns:
   hidden: false
   meta:
     kb_id: 4
+  sampled: 1 .. 4
 - name: parking_availability_score
   sql: CASE WHEN LOWER(TRIM(parkavail)) NOT LIKE 'not%' AND LOWER(TRIM(parkavail))
     LIKE 'available%' THEN 4 ELSE 1 END
@@ -83,6 +97,7 @@ columns:
   hidden: false
   meta:
     kb_id: 5
+  sampled: 1 .. 4
 - name: infrastructure_quality_score
   sql: (CAST((CASE WHEN LOWER(TRIM(wateraccess)) LIKE 'yes%' THEN 4 ELSE 1 END) AS
     REAL) + CAST((CASE WHEN LOWER(TRIM(roadsurface)) LIKE '%asphalt%' OR LOWER(TRIM(roadsurface))
@@ -92,14 +107,15 @@ columns:
   type: DOUBLE
   primary_key: false
   description: "Composite score: average of `water_access_score`, `road_surface_score`,\
-    \ `parking_availability_score`. Each input is 4 or 1, so the composite takes\
-    \ exactly one of {1.0, 2.0, 3.0, 4.0}.\n\n[kb=13]\nCalculated as the average\
-    \ of the individual scores for Water Access, Road Surface, and Parking Availability.\
-    \ \u2014 Calculates a composite score for infrastructure quality.\n[/kb=13]"
+    \ `parking_availability_score`. Each input is 4 or 1, so the composite takes exactly\
+    \ one of {1.0, 2.0, 3.0, 4.0}.\n\n[kb=13]\nCalculated as the average of the individual\
+    \ scores for Water Access, Road Surface, and Parking Availability. \u2014 Calculates\
+    \ a composite score for infrastructure quality.\n[/kb=13]"
   label: Infrastructure Quality Score
   hidden: false
   meta:
     kb_id: 13
+  sampled: 2.0 .. 4.0
 measures: []
 aggregations: []
 joins: []

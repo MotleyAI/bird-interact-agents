@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: over_leveraged_position
 source_queries:
 - version: 3

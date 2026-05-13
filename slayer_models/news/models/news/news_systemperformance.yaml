@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: news_systemperformance
 sql_table: systemperformance
 query_variables: {}

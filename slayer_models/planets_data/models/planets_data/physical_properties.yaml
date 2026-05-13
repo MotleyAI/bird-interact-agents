@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: physical_properties
 sql_table: physical_properties
 query_variables: {}

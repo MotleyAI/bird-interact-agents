@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: funds
 sql_table: funds
 query_variables: {}

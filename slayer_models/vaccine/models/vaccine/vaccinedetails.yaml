@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: vaccinedetails
 sql_table: vaccinedetails
 query_variables: {}

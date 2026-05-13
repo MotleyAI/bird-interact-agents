@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: employment_and_income
 sql_table: employment_and_income
 query_variables: {}

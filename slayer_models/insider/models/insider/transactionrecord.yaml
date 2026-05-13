@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: transactionrecord
 sql_table: transactionrecord
 query_variables: {}

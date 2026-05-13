@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: transportation
 sql_table: transportation
 query_variables: {}

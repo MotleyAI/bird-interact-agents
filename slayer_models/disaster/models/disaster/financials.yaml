@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: financials
 sql_table: financials
 query_variables: {}

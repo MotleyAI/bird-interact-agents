@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: monitoringdevices
 sql_table: monitoringdevices
 query_variables: {}

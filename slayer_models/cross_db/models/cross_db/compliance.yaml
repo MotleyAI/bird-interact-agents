@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: compliance
 sql_table: compliance
 query_variables: {}

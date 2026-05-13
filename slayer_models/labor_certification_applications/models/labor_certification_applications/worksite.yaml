@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: worksite
 sql_table: worksite
 query_variables: {}

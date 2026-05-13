@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: driver_performance_value
 sql: "SELECT\n  ds.drive_link AS drive_link,\n  r.yr AS yr,\n  CAST(MAX(ds.acc_pt)\
   \ AS REAL) / NULLIF(COUNT(*), 0) AS ppr,\n  CAST(strftime('%Y', 'now') - strftime('%Y',\

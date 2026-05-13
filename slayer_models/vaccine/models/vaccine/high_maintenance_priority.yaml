@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: high_maintenance_priority
 source_queries:
 - version: 3

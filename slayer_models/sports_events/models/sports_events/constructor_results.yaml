@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: constructor_results
 sql_table: constructor_results
 query_variables: {}

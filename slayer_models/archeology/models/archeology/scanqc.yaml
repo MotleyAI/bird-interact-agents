@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: scanqc
 sql_table: scanqc
 query_variables: {}

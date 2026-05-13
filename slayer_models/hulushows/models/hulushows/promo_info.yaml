@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: promo_info
 sql_table: promo_info
 query_variables: {}

@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: qualifying
 sql_table: qualifying
 query_variables: {}

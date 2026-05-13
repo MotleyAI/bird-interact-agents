@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: regulatoryandmaintenance
 sql_table: regulatoryandmaintenance
 query_variables: {}

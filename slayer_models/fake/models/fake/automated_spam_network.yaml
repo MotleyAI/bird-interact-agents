@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: automated_spam_network
 source_queries:
 - version: 3

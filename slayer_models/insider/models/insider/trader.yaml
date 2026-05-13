@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: trader
 sql_table: trader
 query_variables: {}

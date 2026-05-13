@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: worksite_diversity_index
 source_queries:
 - version: 3

@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: trader_cancel_mod_profile
 sql: "SELECT\n  trdref AS tradereg,\n  AVG(cancelpct) AS avg_cancelpct,\n  AVG(CASE\
   \ WHEN cancelpct >= 1.0 THEN NULL ELSE modfreq * 1.0 / (1.0 - cancelpct) END) AS\
