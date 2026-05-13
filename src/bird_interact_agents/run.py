@@ -440,6 +440,15 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--instance-id",
+        default=None,
+        help=(
+            "Run a single task by its instance_id. Mutually exclusive with "
+            "--filter-ids and --limit. Use for one-shot debugging with full "
+            "transcript capture."
+        ),
+    )
+    parser.add_argument(
         "--strict",
         action=argparse.BooleanOptionalAction,
         default=False,
@@ -464,11 +473,16 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    if args.instance_id is not None and (args.filter_ids or args.limit is not None):
+        parser.error("--instance-id cannot be combined with --filter-ids or --limit")
+
     if args.price_overrides:
         _apply_price_overrides(args.price_overrides)
 
     filter_ids: list[str] | None = None
-    if args.filter_ids:
+    if args.instance_id:
+        filter_ids = [args.instance_id]
+    elif args.filter_ids:
         with open(args.filter_ids) as f:
             filter_ids = [line.strip() for line in f if line.strip()]
 

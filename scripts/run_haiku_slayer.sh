@@ -24,6 +24,7 @@ set -euo pipefail
 
 DB="households"
 LIMIT=""
+INSTANCE_ID=""
 CONCURRENCY=5
 PATIENCE=3
 AGENT_MODEL="anthropic/claude-haiku-4-5-20251001"
@@ -31,10 +32,12 @@ USER_SIM_MODEL="anthropic/claude-haiku-4-5-20251001"
 
 usage() {
   cat <<EOF
-Usage: $0 [--db NAME] [--limit N] [--concurrency K] [--patience P]
+Usage: $0 [--db NAME] [--limit N | --instance-id ID] [--concurrency K] [--patience P]
           [--agent-model PROVIDER/MODEL] [--user-sim-model PROVIDER/MODEL]
   --db NAME             target database (default: households)
   --limit N             cap on tasks to run from the filtered list
+  --instance-id ID      run a single task by instance_id (debug mode; suffixes
+                        the output dir with __task-<id>)
   --concurrency K       concurrent task workers (default: 5)
   --patience P          user_patience_budget (default: 3, matches canonical)
   --agent-model M       LiteLLM-style model id for the system agent
@@ -48,6 +51,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --db) DB="$2"; shift 2 ;;
     --limit) LIMIT="$2"; shift 2 ;;
+    --instance-id) INSTANCE_ID="$2"; shift 2 ;;
     --concurrency) CONCURRENCY="$2"; shift 2 ;;
     --patience) PATIENCE="$2"; shift 2 ;;
     --agent-model) AGENT_MODEL="$2"; shift 2 ;;
@@ -56,6 +60,10 @@ while [[ $# -gt 0 ]]; do
     *) echo "Unknown flag: $1" >&2; usage; exit 1 ;;
   esac
 done
+
+if [[ -n "$INSTANCE_ID" && -n "$LIMIT" ]]; then
+  echo "--instance-id and --limit are mutually exclusive" >&2; exit 1
+fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
@@ -81,11 +89,20 @@ MODEL_TAG="$(printf '%s' "$AGENT_MODEL" \
   | sed -E 's|^[^/]+/||; s|^claude-||; s|-202[0-9]{5,}$||')"
 
 TS=$(date +%Y%m%d-%H%M)
-OUT="$REPO_ROOT/results/${TS}_pa_${MODEL_TAG}_${DB}_slayer_a"
+OUT_SUFFIX=""
+if [[ -n "$INSTANCE_ID" ]]; then
+  # Sanitise instance id for filesystem use (underscores already common).
+  OUT_SUFFIX="__task-${INSTANCE_ID//\//_}"
+fi
+OUT="$REPO_ROOT/results/${TS}_pa_${MODEL_TAG}_${DB}_slayer_a${OUT_SUFFIX}"
 mkdir -p "$OUT"
 
-# Filter the dataset to the chosen DB.
-python3 - "$BIRD_DATA_PATH" "$DB" "$OUT/instance_ids.txt" <<'PY'
+if [[ -n "$INSTANCE_ID" ]]; then
+  printf '%s\n' "$INSTANCE_ID" > "$OUT/instance_ids.txt"
+  echo "single-task mode: instance_id=$INSTANCE_ID -> $OUT/instance_ids.txt"
+else
+  # Filter the dataset to the chosen DB.
+  python3 - "$BIRD_DATA_PATH" "$DB" "$OUT/instance_ids.txt" <<'PY'
 import json, sys
 data, db, out = sys.argv[1], sys.argv[2], sys.argv[3]
 n = 0
@@ -100,24 +117,26 @@ with open(data) as f, open(out, "w") as g:
 print(f"selected {n} tasks for db={db!r} -> {out}")
 PY
 
-if [[ ! -s "$OUT/instance_ids.txt" ]]; then
-  echo "No tasks matched db=$DB; aborting." >&2; exit 1
-fi
+  if [[ ! -s "$OUT/instance_ids.txt" ]]; then
+    echo "No tasks matched db=$DB; aborting." >&2; exit 1
+  fi
 
-# `--limit` is a CLI-side post-filter: it truncates AFTER --filter-ids
-# would normally apply. Applying it via the bird-interact CLI takes the
-# first N rows of the dataset (across all DBs) before --filter-ids runs,
-# which usually matches zero tasks. Instead, truncate our per-DB id list
-# ourselves so the CLI sees only the IDs we actually want to run.
-if [[ -n "$LIMIT" ]]; then
-  head -n "$LIMIT" "$OUT/instance_ids.txt" > "$OUT/instance_ids.txt.tmp"
-  mv "$OUT/instance_ids.txt.tmp" "$OUT/instance_ids.txt"
+  # `--limit` is a CLI-side post-filter: it truncates AFTER --filter-ids
+  # would normally apply. Applying it via the bird-interact CLI takes the
+  # first N rows of the dataset (across all DBs) before --filter-ids runs,
+  # which usually matches zero tasks. Instead, truncate our per-DB id list
+  # ourselves so the CLI sees only the IDs we actually want to run.
+  if [[ -n "$LIMIT" ]]; then
+    head -n "$LIMIT" "$OUT/instance_ids.txt" > "$OUT/instance_ids.txt.tmp"
+    mv "$OUT/instance_ids.txt.tmp" "$OUT/instance_ids.txt"
+  fi
 fi
 
 # Stash the invocation for replay.
 {
   echo "DB=$DB"
   echo "LIMIT=$LIMIT"
+  echo "INSTANCE_ID=$INSTANCE_ID"
   echo "CONCURRENCY=$CONCURRENCY"
   echo "PATIENCE=$PATIENCE"
   echo "BIRD_DATA_PATH=$BIRD_DATA_PATH"

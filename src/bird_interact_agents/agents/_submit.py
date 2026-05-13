@@ -439,9 +439,17 @@ async def ask_user_impl(
         model=state.user_sim_model,
         messages=[{"role": "user", "content": encoder_prompt}],
     )
-    encoder_action = parse_encoder_response(
-        encoder_resp.choices[0].message.content or ""
-    )
+    encoder_text = encoder_resp.choices[0].message.content or ""
+    encoder_action = parse_encoder_response(encoder_text)
+
+    transcript = getattr(state, "user_sim_transcript", None)
+    if transcript is not None:
+        transcript.append({
+            "phase": "encoder",
+            "agent_question": question,
+            "prompt": encoder_prompt,
+            "response": encoder_text,
+        })
 
     decoder_prompt = build_user_decoder_prompt(
         question, encoder_action, state.status, schema, state.user_sim_prompt_version,
@@ -453,6 +461,14 @@ async def ask_user_impl(
         messages=[{"role": "user", "content": decoder_prompt}],
     )
     raw_response = decoder_resp.choices[0].message.content or ""
+
+    if transcript is not None:
+        transcript.append({
+            "phase": "decoder",
+            "agent_question": question,
+            "prompt": decoder_prompt,
+            "response": raw_response,
+        })
 
     match = re.search(r"<s>(.*?)</s>", raw_response, re.DOTALL)
     answer = match.group(1).strip() if match else raw_response.strip()

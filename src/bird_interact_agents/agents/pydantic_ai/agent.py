@@ -16,6 +16,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStdio
+from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.usage import UsageLimits
 
@@ -66,6 +67,28 @@ _ANTHROPIC_CLIENT_RETRIES = 8
 # from the live run logs if needed.
 _TOOL_ERROR_SAMPLES_PER_TASK = 10
 _TOOL_ERROR_SAMPLE_CHARS = 400
+
+
+def _serialize_messages(agent_run: Any) -> list[dict]:
+    """Serialize a full PydanticAI message history to JSON-safe dicts.
+
+    Returns `[]` if the messages can't be retrieved or serialized — this
+    is a best-effort debug channel and must not block the run.
+    """
+    try:
+        messages = list(agent_run.all_messages())
+    except Exception:  # noqa: BLE001 — defensive
+        return []
+    try:
+        return ModelMessagesTypeAdapter.dump_python(messages, mode="json")
+    except Exception:  # noqa: BLE001 — fall back to part-by-part dump
+        out: list[dict] = []
+        for m in messages:
+            try:
+                out.append(m.model_dump(mode="json"))
+            except Exception:  # noqa: BLE001
+                out.append({"_repr": repr(m)})
+        return out
 
 
 def _extract_tool_stats(agent_run: Any) -> dict | None:
@@ -190,6 +213,10 @@ class TaskDeps(BaseModel):
     # Token usage accumulator — written by the user-sim wrapper and the
     # post-run capture in run_task.
     usage: TokenUsage = Field(default_factory=TokenUsage)
+    # Full user-sim LLM exchange transcript (encoder + decoder calls per
+    # ask_user invocation). Each entry: {"phase": "encoder"|"decoder",
+    # "agent_question": str, "prompt": str, "response": str}.
+    user_sim_transcript: list[dict] = Field(default_factory=list)
     # SLayer client/storage cache (initialised lazily)
     _slayer_client: Any = None
     _slayer_storage: Any = None
@@ -493,6 +520,7 @@ class PydanticAIAgent:
             except Exception:  # noqa: BLE001 — best-effort metric
                 n_agent_turns = None
             tool_stats = _extract_tool_stats(agent_run)
+            agent_messages = _serialize_messages(agent_run)
         except Exception as e:
             logger.error("Agent error on %s: %s", instance_id, e)
             partial = deps.result or {}
@@ -505,7 +533,11 @@ class PydanticAIAgent:
                     "total_reward": partial.get("total_reward", 0.0),
                     "submitted_sql": partial.get("submitted_sql"),
                     "submitted_query": partial.get("submitted_query"),
-                    "trajectory": [],
+                    "trajectory": {
+                        "final_output_excerpt": "",
+                        "messages": [],
+                        "user_sim_transcript": list(deps.user_sim_transcript),
+                    },
                     "error": str(e),
                     "usage": deps.usage.model_dump(),
                     "submission_status": partial.get(
@@ -533,7 +565,11 @@ class PydanticAIAgent:
                 "total_reward": result.get("total_reward", 0.0),
                 "submitted_sql": result.get("submitted_sql"),
                 "submitted_query": result.get("submitted_query"),
-                "trajectory": [{"final_output": output_text[:500]}],
+                "trajectory": {
+                    "final_output_excerpt": output_text[:500],
+                    "messages": agent_messages,
+                    "user_sim_transcript": list(deps.user_sim_transcript),
+                },
                 "error": None,
                 "usage": deps.usage.model_dump(),
                 "submission_status": result.get(
