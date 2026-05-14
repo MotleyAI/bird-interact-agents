@@ -251,6 +251,7 @@ Layout:
 bird-interact-agents/slayer_models/<db>/
 ├── datasources/
 │   └── <db>.yaml
+├── memories.yaml
 └── models/
     ├── <model_a>.yaml
     └── <model_b>.yaml
