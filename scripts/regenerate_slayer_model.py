@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Regenerate the SLayer datasource + models for one BIRD-Interact mini DB.
 
-Runs phases 1–4 of the rework pipeline against the live SLayer storage
+Runs phases 1-4 of the rework pipeline against the live SLayer storage
 pointed to by ``$SLAYER_STORAGE`` (default ``~/.local/share/slayer``):
 
 1. ``slayer datasources create`` + ``slayer ingest``
@@ -81,7 +81,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Skip `slayer datasources create` + `slayer ingest`. Use when live storage "
             "already has the models (e.g. ported from slayer_models/<db>/ via cp) and "
-            "you only want to layer phases 2–4 on top."
+            "you only want to layer phases 2-4 on top."
         ),
     )
     p.add_argument(

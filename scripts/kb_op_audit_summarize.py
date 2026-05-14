@@ -391,6 +391,13 @@ def run(*, output_dir: Path) -> int:
         return 2
 
     rows = join_tuples_with_judgments(tuples, judgments)
+    if not rows:
+        print(
+            "ERROR: no rows after joining operator_tuples.jsonl with "
+            "judgments.jsonl; check classifier completeness / key compatibility.",
+            file=sys.stderr,
+        )
+        return 2
     md = build_markdown(rows)
     audit_md_path.write_text(md)
     n_silent = _write_kb_silent_csv(rows, csv_path)

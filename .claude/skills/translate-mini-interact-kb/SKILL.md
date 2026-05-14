@@ -35,7 +35,7 @@ the SLayer MCP. The user typically invokes by naming the DB
 - **One SLayer memory per KB entry left unencoded.** Saved via
   `mcp__slayer__save_memory(data_source=<db>, learning=…, linked_entities=…)`.
   The memory's `learning` body's first non-blank line is
-  **load-bearing**: it must match `^KB (\d+) — ` (em-dash, U+2014).
+  **load-bearing**: it must match `^KB (\d+) —` (em-dash, U+2014).
   `linked_entities` must be a non-empty list of canonical refs of
   the form `<db>.<model>[.<leaf>]`; the verifier requires at least
   one entry starting with `<db>.`. See the **"Deferred-KB memory
@@ -279,7 +279,7 @@ The verifier reads:
 - The per-DB SLayer memories at `slayer_models/<db>/memories.yaml`
   → for each KB id not already in the encoded set, search for
   `KB <id> — <knowledge>` via the per-DB SearchService and accept
-  any hit whose first non-blank line matches `KB <id> — ` AND
+  any hit whose first non-blank line matches `KB <id> —` AND
   whose linked entities contain at least one ref starting with
   `<db>.`.
 

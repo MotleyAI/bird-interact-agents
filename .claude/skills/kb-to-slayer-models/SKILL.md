@@ -109,7 +109,7 @@ The wrapper returns a `SearchResponse` JSON with three channels —
 `memories`, `entities`, `example_queries`. Read them in this order:
 
 - **`memories`** — prior deferral memories from this DB. For each hit,
-  the first non-blank line of `text` matches `KB <n> — `:
+  the first non-blank line of `text` matches `KB <n> —`:
   - If `<n>` equals the **current** KB id, this is a refresh.
     Re-read the existing reason / clarifying questions before
     deciding. If you replace the memory, call
@@ -932,11 +932,11 @@ mcp__slayer__save_memory(
 ```
 
 `<learning_body>` is Markdown. The **first non-blank line is
-load-bearing**: the verifier reads `KB <id> — ` off it to attribute
+load-bearing**: the verifier reads `KB <id> —` off it to attribute
 the memory to a KB id. Use exactly an em-dash (`—`, U+2014), not a
 hyphen.
 
-```
+```text
 KB <id> — <KB.knowledge>
 
 KB item (verbatim from <db>_kb.jsonl):

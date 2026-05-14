@@ -32,7 +32,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from slayer.storage.sqlite_storage import SQLiteStorage
+from slayer.storage.base import resolve_storage
 from slayer.storage.yaml_storage import YAMLStorage
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -42,20 +42,35 @@ DEFAULT_SLAYER_STORAGE = Path(os.environ.get(
     str(Path.home() / ".local" / "share" / "slayer"),
 ))
 
+# Mini-interact root sits next to the repo by default. We pass it to
+# the portable-connection-string helper so the committed YAML doesn't
+# carry a per-machine absolute SQLite path.
+SRC = REPO_ROOT / "src"
+if SRC.is_dir() and str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+from bird_interact_agents.slayer_pipeline.portable_connection import (  # noqa: E402
+    to_portable_connection_string,
+)
 
-def _open_source(path: Path):
-    """Open the right storage backend for *path*.
+DEFAULT_MINI_INTERACT_ROOT = REPO_ROOT.parent / "mini-interact"
 
-    YAMLStorage wraps a directory; SQLiteStorage wraps a .db / .sqlite
-    file. Mirrors the precedence in ``slayer.cli._resolve_storage``.
+_SQLITE_URI_PREFIXES = ("sqlite://", "yaml://")
+
+
+def _open_source(path_or_uri: str):
+    """Open the right storage backend for *path_or_uri*.
+
+    Delegates to ``slayer.storage.base.resolve_storage`` so we pick up
+    every backend SLayer's own CLI accepts: ``.db`` / ``.sqlite`` /
+    ``.sqlite3`` files, ``sqlite://`` / ``yaml://`` URIs, third-party
+    schemes registered via ``register_storage``, and YAMLStorage for
+    directories.
     """
-    if path.is_file() and path.suffix in (".db", ".sqlite"):
-        return SQLiteStorage(db_path=str(path))
-    return YAMLStorage(base_dir=str(path))
+    return resolve_storage(path_or_uri)
 
 
-async def _export_async(db: str, source_path: Path) -> int:
-    src = _open_source(source_path)
+async def _export_async(db: str, source: str) -> int:
+    src = _open_source(source)
     dest_dir = DEST_ROOT / db
 
     if dest_dir.exists():
@@ -66,10 +81,17 @@ async def _export_async(db: str, source_path: Path) -> int:
     ds = await src.get_datasource(db)
     if ds is None:
         print(
-            f"[ERROR] Datasource '{db}' not found in {source_path}.",
+            f"[ERROR] Datasource '{db}' not found in {source}.",
             file=sys.stderr,
         )
         return 1
+    # Strip the absolute mini-interact path from the connection_string
+    # so the committed YAML doesn't bake in `/home/<user>/...`.
+    portable = to_portable_connection_string(
+        ds.connection_string or "", DEFAULT_MINI_INTERACT_ROOT
+    )
+    if portable != ds.connection_string:
+        ds = ds.model_copy(update={"connection_string": portable})
     await dest.save_datasource(ds)
 
     n_models = 0
@@ -101,7 +123,7 @@ async def _export_async(db: str, source_path: Path) -> int:
 
 
 async def _export_memories(*, src, dest, db: str) -> int:
-    """Re-save memories whose ``linked_entities`` resolves under ``db``.
+    """Copy memories whose ``linked_entities`` resolves under ``db``.
 
     A memory is in scope when at least one entry of its
     ``entities`` list starts with ``"<db>."``. This matches the
@@ -109,18 +131,18 @@ async def _export_memories(*, src, dest, db: str) -> int:
     (``load_documented_ids``) so the committed per-DB tree never
     carries cross-DB noise.
 
-    Returns the number of memories exported.
+    Preserves ``id`` and ``created_at`` from the source so re-exports
+    are bit-identical when source memories are unchanged
+    (``dest.save_memory`` would otherwise allocate fresh values).
+
+    Returns the number of memories copied.
     """
     db_prefix = f"{db}."
     n = 0
     for mem in await src.list_memories():
         if not any(e.startswith(db_prefix) for e in mem.entities):
             continue
-        await dest.save_memory(
-            learning=mem.learning,
-            entities=list(mem.entities),
-            query=mem.query,
-        )
+        await dest._save_memory_row(mem)
         n += 1
     return n
 
@@ -139,7 +161,13 @@ def main() -> int:
         ),
     )
     args = p.parse_args()
-    return asyncio.run(_export_async(args.db, Path(args.source).resolve()))
+    # Resolve filesystem paths to absolute; pass URIs straight through.
+    source = (
+        args.source
+        if args.source.startswith(_SQLITE_URI_PREFIXES)
+        else str(Path(args.source).resolve())
+    )
+    return asyncio.run(_export_async(args.db, source))
 
 
 if __name__ == "__main__":

@@ -130,6 +130,21 @@ async def build_task_variant_storage(
 
     ds = await src.get_datasource(db_name)
     if ds is not None:
+        # The committed YAML carries a relative connection_string
+        # (`sqlite:///<db>/<db>.sqlite`) so it stays portable across
+        # machines. Resolve it to an absolute path here, anchored at
+        # ``$BIRD_DB_PATH`` or a sibling ``mini-interact/`` next to
+        # ``slayer_models/``, before the SLayer MCP server reads it.
+        from bird_interact_agents.slayer_pipeline.portable_connection import (
+            resolve_committed_connection_string,
+        )
+
+        default_mini_interact_root = canonical_storage_root.parent.parent / "mini-interact"
+        resolved = resolve_committed_connection_string(
+            ds.connection_string or "", default_mini_interact_root
+        )
+        if resolved != ds.connection_string:
+            ds = ds.model_copy(update={"connection_string": resolved})
         await dst.save_datasource(ds)
 
     for name in await src.list_models():

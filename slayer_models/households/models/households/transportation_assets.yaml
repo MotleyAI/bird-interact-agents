@@ -101,20 +101,24 @@ columns:
     kb_id: 10
   sampled: '> 20 distinct'
 - name: vehicle_ownership_index
-  sql: COALESCE(CAST(vehicleinventory__vehicle_counts__Auto_Count AS REAL), 0) + COALESCE(CAST(vehicleinventory__vehicle_counts__Bike_Count
-    AS REAL), 0) + COALESCE(CAST(vehicleinventory__vehicle_counts__Motor_Count AS
-    REAL), 0)
+  sql: COALESCE(CAST(JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Auto_Count')
+    AS REAL), 0) + COALESCE(CAST(JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Bike_Count')
+    AS REAL), 0) + COALESCE(CAST(JSON_EXTRACT(vehicleinventory, '$.vehicle_counts.Motor_Count')
+    AS REAL), 0)
   type: DOUBLE
   primary_key: false
-  description: "Per column meanings ('defaulting to 0 if no vehicles are owned'),\
-    \ the three counts coalesce to 0 before summing so the index is well-defined when\
-    \ a sub-field is missing.\n\n[kb=14]\nCalculated as the sum of car, bicycle, and\
-    \ motorcycle counts. \u2014 Calculates the total number of vehicles owned by a\
-    \ household.\n[/kb=14]"
+  description: "Inlines the three JSON_EXTRACT paths instead of referencing the vehicleinventory__vehicle_counts__*_Count\
+    \ helper columns by name \u2014 SLayer does not recursively expand same-model\
+    \ derived refs in Column.sql (motley-ai DEV-1410). Per column meanings ('defaulting\
+    \ to 0 if no vehicles are owned'), each leaf coalesces to 0 so the index is well-defined\
+    \ when a sub-field is missing.\n\n[kb=14]\nCalculated as the sum of car, bicycle,\
+    \ and motorcycle counts. \u2014 Calculates the total number of vehicles owned\
+    \ by a household.\n[/kb=14]"
   label: Vehicle Ownership Index
   hidden: false
   meta:
     kb_id: 14
+  sampled: 0.0 .. 10.0
 measures: []
 aggregations: []
 joins:

@@ -295,6 +295,14 @@ async def classify_one(
             verdict = parse_verdict_json(text)
             if verdict.get("verdict") not in {"aware", "silent"}:
                 raise ValueError(f"invalid verdict payload: {verdict!r}")
+            reason = verdict.get("reason", "")
+            if not isinstance(reason, str):
+                raise ValueError(f"invalid reason type: {type(reason).__name__}")
+            evidence = verdict.get("kb_evidence_ids", []) or []
+            if not isinstance(evidence, list) or not all(
+                isinstance(x, int) for x in evidence
+            ):
+                raise ValueError(f"invalid kb_evidence_ids: {evidence!r}")
         except (ValueError, json.JSONDecodeError) as exc:
             last_exc = exc
             await asyncio.sleep(1)
@@ -460,6 +468,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = _build_parser().parse_args()
+    if args.concurrency < 1:
+        print("ERROR: --concurrency must be >= 1", file=sys.stderr)
+        return 2
     if not os.environ.get("ANTHROPIC_API_KEY"):
         print("ERROR: ANTHROPIC_API_KEY not set", file=sys.stderr)
         return 2

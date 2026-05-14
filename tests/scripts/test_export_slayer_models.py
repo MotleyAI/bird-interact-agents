@@ -80,7 +80,7 @@ def test_export_filters_memories_by_db_prefix(tmp_path, monkeypatch):
 
     monkeypatch.setattr(export_slayer_models, "DEST_ROOT", dest_root)
 
-    rc = asyncio.run(export_slayer_models._export_async("households", src_dir))
+    rc = asyncio.run(export_slayer_models._export_async("households", str(src_dir)))
     assert rc == 0
 
     dest_dir = dest_root / "households"
@@ -123,7 +123,7 @@ def test_export_with_no_memories_succeeds(tmp_path, monkeypatch):
     # No memories at all.
 
     monkeypatch.setattr(export_slayer_models, "DEST_ROOT", dest_root)
-    rc = asyncio.run(export_slayer_models._export_async("solar", src_dir))
+    rc = asyncio.run(export_slayer_models._export_async("solar", str(src_dir)))
     assert rc == 0
 
     dest_dir = dest_root / "solar"
@@ -133,3 +133,55 @@ def test_export_with_no_memories_succeeds(tmp_path, monkeypatch):
     mem_file = dest_dir / "memories.yaml"
     if mem_file.exists():
         assert mem_file.read_text().strip() in ("", "[]")
+
+
+def test_export_is_idempotent(tmp_path, monkeypatch):
+    """Re-exporting unchanged source memories produces a bit-identical
+    memories.yaml on the destination side. This guards against the
+    id/created_at-churn regression: ``save_memory`` would otherwise
+    allocate a fresh id and timestamp on every run.
+    """
+    src_dir = tmp_path / "src"
+    dest_root = tmp_path / "out"
+
+    asyncio.run(_seed_source(src_dir))
+    monkeypatch.setattr(export_slayer_models, "DEST_ROOT", dest_root)
+
+    rc = asyncio.run(export_slayer_models._export_async("households", str(src_dir)))
+    assert rc == 0
+    first = (dest_root / "households" / "memories.yaml").read_bytes()
+
+    rc = asyncio.run(export_slayer_models._export_async("households", str(src_dir)))
+    assert rc == 0
+    second = (dest_root / "households" / "memories.yaml").read_bytes()
+
+    assert first == second, "re-export should be byte-identical"
+
+
+def test_open_source_accepts_sqlite3_and_uri(tmp_path):
+    """``_open_source`` should accept ``.sqlite3`` files, ``sqlite://``
+    URIs, and ``yaml://`` URIs in addition to plain directory paths.
+    Delegates to SLayer's own resolver, so any backend the CLI accepts
+    works here too.
+    """
+    # All four shapes should resolve without raising; the returned
+    # backend should support the methods we need on the read side
+    # (list_models / list_memories / get_datasource).
+    sqlite3_file = tmp_path / "x.sqlite3"
+    sqlite3_file.touch()
+    backend = export_slayer_models._open_source(str(sqlite3_file))
+    assert hasattr(backend, "list_models")
+    assert hasattr(backend, "list_memories")
+
+    sqlite_uri = f"sqlite:///{sqlite3_file}"
+    backend = export_slayer_models._open_source(sqlite_uri)
+    assert hasattr(backend, "list_models")
+
+    yaml_dir = tmp_path / "yaml_storage"
+    yaml_dir.mkdir()
+    backend = export_slayer_models._open_source(str(yaml_dir))
+    assert hasattr(backend, "list_models")
+
+    yaml_uri = f"yaml://{yaml_dir}"
+    backend = export_slayer_models._open_source(yaml_uri)
+    assert hasattr(backend, "list_models")
