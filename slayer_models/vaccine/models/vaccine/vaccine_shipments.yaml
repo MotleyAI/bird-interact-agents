@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: vaccine_shipments
 sql_table: shipments
 query_variables: {}

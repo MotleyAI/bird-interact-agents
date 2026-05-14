@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: trader_intensity_metrics
 sql: "SELECT\n  t.tradereg,\n  t.voldaily * 1.0 / NULLIF(t.acctbal, 0) AS dtr,\n \
   \ CAST(json_extract(t.trading_performance, '$.risklevel.levratio') AS REAL) AS tle,\n\

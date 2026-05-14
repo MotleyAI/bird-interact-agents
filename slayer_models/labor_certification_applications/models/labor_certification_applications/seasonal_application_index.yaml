@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: seasonal_application_index
 source_queries:
 - version: 3

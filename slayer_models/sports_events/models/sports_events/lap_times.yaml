@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: lap_times
 sql_table: lap_times
 query_variables: {}

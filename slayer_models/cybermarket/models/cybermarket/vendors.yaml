@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: vendors
 sql_table: vendors
 query_variables: {}

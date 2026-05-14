@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: interactions
 sql_table: interactions
 query_variables: {}

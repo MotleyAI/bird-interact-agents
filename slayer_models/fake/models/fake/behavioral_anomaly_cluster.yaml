@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: behavioral_anomaly_cluster
 source_queries:
 - version: 3

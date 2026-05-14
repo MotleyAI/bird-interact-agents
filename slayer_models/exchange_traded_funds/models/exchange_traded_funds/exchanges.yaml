@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: exchanges
 sql_table: exchanges
 query_variables: {}

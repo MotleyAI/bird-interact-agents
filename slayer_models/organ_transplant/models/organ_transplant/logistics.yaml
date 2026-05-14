@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: logistics
 sql_table: logistics
 query_variables: {}

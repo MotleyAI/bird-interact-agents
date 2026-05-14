@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: commerceandcollection
 sql_table: commerceandcollection
 query_variables: {}

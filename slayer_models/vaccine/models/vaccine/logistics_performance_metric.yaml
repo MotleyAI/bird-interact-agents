@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: logistics_performance_metric
 source_queries:
 - version: 3

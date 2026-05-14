@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: mechanical_status
 sql_table: mechanical_status
 query_variables: {}

@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: average_stops_per_car
 source_queries:
 - version: 3

@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: testsessions
 sql_table: testsessions
 query_variables: {}

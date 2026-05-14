@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: scanfeatures
 sql_table: scanfeatures
 query_variables: {}

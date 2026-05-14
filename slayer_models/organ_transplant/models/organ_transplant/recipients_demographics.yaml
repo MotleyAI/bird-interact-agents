@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: recipients_demographics
 sql_table: recipients_demographics
 query_variables: {}

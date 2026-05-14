@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: riskmanagement
 sql_table: riskmanagement
 query_variables: {}

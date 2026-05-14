@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Verify every KB entry for a mini-interact DB is either encoded in the
-exported SLayer YAML models or documented in the per-DB notes file.
+exported SLayer YAML models or documented as a SLayer memory.
 
 Usage:
     python scripts/verify_kb_coverage.py --db <db>
@@ -12,11 +12,18 @@ Exit 0 only when every KB id for the DB is in **exactly one** of:
     models in ``bird-interact-agents/slayer_models/<db>/`` (walks
     ``SlayerModel.meta``, every ``Column.meta``, ``ModelMeasure.meta``,
     and ``Aggregation.meta``).
-  - the *documented* set: KB ids parsed from
-    ``bird-interact-agents/slayer_models/_notes/<db>.md`` headers of the
-    shape ``## KB <id> — …``.
+  - the *documented* set: a SLayer memory in the per-DB YAMLStorage at
+    ``slayer_models/<db>/`` whose ``learning`` body's first line is
+    ``KB <id> — `` (em-dash) and whose ``entities`` (linked_entities)
+    list contains at least one ref starting with ``<db>.``.
 
 An id appearing in neither set, or in both, fails the check.
+
+The documented-set check searches via ``SearchService`` (BM25 + tantivy
++ optional dense embeddings) with ``max_memories=5`` per KB id; the
+per-DB corpus is expected to stay well under that ceiling. If a DB's
+memory corpus ever grows past a few hundred, bump ``MAX_MEMORIES_PER_KB``
+or fall back to reading ``slayer_models/<db>/memories.yaml`` directly.
 """
 
 from __future__ import annotations
@@ -29,14 +36,20 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
+from slayer.search.service import SearchService
 from slayer.storage.yaml_storage import YAMLStorage
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SLAYER_MODELS_DIR = REPO_ROOT / "slayer_models"
-NOTES_DIR = SLAYER_MODELS_DIR / "_notes"
 DEFAULT_MINI_INTERACT_ROOT = REPO_ROOT.parent / "mini-interact"
 
-KB_HEADER_RE = re.compile(r"^## KB (\d+) — ", re.MULTILINE)
+# Compiled at module load: first non-blank line of a deferred-KB memory
+# must match this shape exactly. The id capture group is load-bearing.
+KB_MEMORY_HEAD_RE = re.compile(r"^KB (\d+) — ")
+
+# Bounded over-fetch ceiling per KB id when searching for documenting
+# memories. See module docstring for the rationale.
+MAX_MEMORIES_PER_KB = 5
 
 
 def _kb_path(mini_interact_root: Path, db: str) -> Path:
@@ -93,11 +106,60 @@ async def load_encoded_ids(db_dir: Path) -> set[int]:
     return ids
 
 
-def load_documented_ids(notes_path: Path) -> set[int]:
-    if not notes_path.exists():
+def _first_nonblank_line(text: str) -> str:
+    for line in text.splitlines():
+        if line.strip():
+            return line
+    return ""
+
+
+async def load_documented_ids(
+    *,
+    db: str,
+    db_dir: Path,
+    kb_ids: Iterable[int],
+    knowledge: dict[int, str],
+) -> set[int]:
+    """Return KB ids that a deferred-KB memory in *db_dir* attests to.
+
+    For each KB id, we hit ``SearchService.search(question=...)`` with a
+    question built from the KB id + its ``knowledge`` text, then filter
+    hits to those whose memory body's first line is exactly
+    ``KB <id> — `` AND whose linked entities (``Memory.entities``)
+    contain at least one ref starting with ``<db>.``.
+
+    The DB-prefix check is defensive: ``db_dir`` already scopes
+    YAMLStorage to one DB's ``memories.yaml``, but the contract on
+    deferred-KB memories requires the linked-entities attribution
+    independent of where the memory file physically lives.
+    """
+    if not (db_dir / "memories.yaml").exists():
         return set()
-    text = notes_path.read_text(encoding="utf-8")
-    return {int(m.group(1)) for m in KB_HEADER_RE.finditer(text)}
+    storage = YAMLStorage(base_dir=str(db_dir))
+    service = SearchService(storage=storage)
+    documented: set[int] = set()
+    db_prefix = f"{db}."
+    for kb_id in kb_ids:
+        question = f"KB {kb_id} — {knowledge.get(kb_id, '')}"
+        response = await service.search(
+            question=question,
+            max_memories=MAX_MEMORIES_PER_KB,
+            max_example_queries=0,
+            max_entities=0,
+        )
+        for hit in response.memories:
+            head = _first_nonblank_line(hit.text)
+            m = KB_MEMORY_HEAD_RE.match(head)
+            if not m or int(m.group(1)) != kb_id:
+                continue
+            try:
+                mem = await storage.get_memory(hit.id)
+            except Exception:  # noqa: BLE001 — best-effort
+                continue
+            if any(e.startswith(db_prefix) for e in mem.entities):
+                documented.add(kb_id)
+                break
+    return documented
 
 
 def _knowledge_text(kb_path: Path) -> dict[int, str]:
@@ -112,7 +174,9 @@ def _knowledge_text(kb_path: Path) -> dict[int, str]:
     return out
 
 
-async def verify_one(db: str, mini_interact_root: Path) -> tuple[set[int], set[int], dict[int, str]]:
+async def verify_one(
+    db: str, mini_interact_root: Path,
+) -> tuple[set[int], set[int], dict[int, str]]:
     """Return ``(unaccounted, overlap, knowledge)`` for the DB.
 
     ``knowledge`` maps KB id → its ``knowledge`` field, used for human
@@ -120,25 +184,26 @@ async def verify_one(db: str, mini_interact_root: Path) -> tuple[set[int], set[i
     """
     kb_path = _kb_path(mini_interact_root, db)
     db_dir = SLAYER_MODELS_DIR / db
-    notes_path = NOTES_DIR / f"{db}.md"
 
     if not kb_path.exists():
         raise FileNotFoundError(f"KB file not found: {kb_path}")
     if not db_dir.is_dir():
         raise FileNotFoundError(f"slayer_models dir not found: {db_dir}")
-    if not notes_path.exists():
-        raise FileNotFoundError(
-            f"Notes file not found: {notes_path}. Create it (empty body OK)."
-        )
 
     all_ids = load_kb_ids(kb_path)
+    knowledge = _knowledge_text(kb_path)
     encoded = await load_encoded_ids(db_dir)
-    documented = load_documented_ids(notes_path)
+    # Only search memories for ids that aren't already encoded; the
+    # documented set is unioned with encoded downstream so missing
+    # search hits for an encoded id can't cause an unaccounted failure.
+    candidates = all_ids - encoded
+    documented = await load_documented_ids(
+        db=db, db_dir=db_dir, kb_ids=candidates, knowledge=knowledge,
+    )
 
     accounted = encoded | documented
     unaccounted = all_ids - accounted
     overlap = encoded & documented
-    knowledge = _knowledge_text(kb_path)
     return unaccounted, overlap, knowledge
 
 
@@ -176,7 +241,16 @@ async def main_async(dbs: Iterable[str], mini_interact_root: Path) -> int:
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        description="Verify mini-interact KB coverage in exported SLayer YAML.",
+        description=(
+            "Verify mini-interact KB coverage in exported SLayer YAML "
+            "models and per-DB SLayer memories."
+        ),
+        epilog=(
+            "After the kb-notes-to-slayer-memories migration, --all will "
+            "fail for every DB except `households` until each is re-encoded "
+            "under the new translate-mini-interact-kb skill. Use --db "
+            "households for the day-to-day gate."
+        ),
     )
     g = p.add_mutually_exclusive_group(required=True)
     g.add_argument("--db", help="Verify one DB by name (e.g. 'households').")

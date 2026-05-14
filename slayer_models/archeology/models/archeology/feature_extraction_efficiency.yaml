@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: feature_extraction_efficiency
 source_queries:
 - version: 3

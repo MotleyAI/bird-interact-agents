@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: holdings
 sql_table: holdings
 query_variables: {}

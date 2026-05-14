@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: legal_representation_efficacy
 source_queries:
 - version: 3

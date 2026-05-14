@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: researchprocess
 sql_table: researchprocess
 query_variables: {}

@@ -44,16 +44,29 @@ async def test_resolve_raw_mode_returns_empty():
     assert deleted == []
 
 
-async def test_resolve_slayer_no_deletions_returns_canonical():
-    """Slayer mode with no deletions returns the canonical per-DB path."""
+async def test_resolve_slayer_no_deletions_materialises_per_task_copy():
+    """Slayer mode with no deletions still materialises a per-task copy
+    under $TMPDIR so the canonical reference stays read-only at runtime
+    (SLayer's first-load type-refinement and any agent
+    create_model/edit_model calls are confined to the per-task scratch
+    dir)."""
     path, deleted = await resolve_task_storage_dir(
         slayer_storage_root=str(SLAYER_MODELS_ROOT),
         db_name="households",
         task_data=_task("t1", "households", None),
         query_mode="slayer",
     )
-    assert path == f"{SLAYER_MODELS_ROOT}/households"
     assert deleted == []
+    # Per-task path, not the canonical one.
+    assert path != f"{SLAYER_MODELS_ROOT}/households"
+    assert Path(path).exists()
+
+    # Copy contains every model from the canonical reference.
+    src_names = sorted(
+        await YAMLStorage(base_dir=str(SLAYER_MODELS_ROOT / "households")).list_models()
+    )
+    dst_names = sorted(await YAMLStorage(base_dir=path).list_models())
+    assert dst_names == src_names
 
 
 async def test_resolve_slayer_with_deletion_drops_real_entity():

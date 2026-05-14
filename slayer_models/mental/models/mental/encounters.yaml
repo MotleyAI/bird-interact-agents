@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: encounters
 sql_table: encounters
 query_variables: {}

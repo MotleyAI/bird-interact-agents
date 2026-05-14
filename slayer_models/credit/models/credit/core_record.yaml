@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: core_record
 sql_table: core_record
 query_variables: {}

@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: mechanical
 sql_table: mechanical
 query_variables: {}

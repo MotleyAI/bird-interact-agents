@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: credit_accounts_and_history
 sql_table: credit_accounts_and_history
 query_variables: {}

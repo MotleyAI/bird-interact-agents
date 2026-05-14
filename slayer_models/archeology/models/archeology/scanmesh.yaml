@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: scanmesh
 sql_table: scanmesh
 query_variables: {}

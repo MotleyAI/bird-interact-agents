@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: mesh_to_point_ratio
 source_queries:
 - version: 3

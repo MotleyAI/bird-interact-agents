@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: datalogger
 sql_table: datalogger
 query_variables: {}

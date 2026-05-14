@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: cd_per_lane
 source_queries:
 - version: 3

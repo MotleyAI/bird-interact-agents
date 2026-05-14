@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: risk_metrics
 sql_table: risk_metrics
 query_variables: {}

@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: sprint_results
 sql_table: sprint_results
 query_variables: {}

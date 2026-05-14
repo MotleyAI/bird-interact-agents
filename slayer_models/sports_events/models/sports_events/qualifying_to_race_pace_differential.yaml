@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: qualifying_to_race_pace_differential
 sql: "SELECT\n  lt.rc_index AS rc_index,\n  lt.wheel_unit AS wheel_unit,\n  AVG(lt.msec_val\
   \ / 1000.0) AS avg_race_lap_seconds,\n  q.best_q_seconds AS best_qualifying_seconds,\n\

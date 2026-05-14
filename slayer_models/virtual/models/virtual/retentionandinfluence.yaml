@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: retentionandinfluence
 sql_table: retentionandinfluence
 query_variables: {}

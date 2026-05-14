@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: annual_returns
 sql_table: annual_returns
 query_variables: {}

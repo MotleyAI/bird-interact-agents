@@ -16,6 +16,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import MCPServerStdio
+from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.usage import UsageLimits
 
@@ -56,6 +57,125 @@ from bird_interact_agents.usage import TokenUsage
 _BY_NAME = {t.name: t for t in BIRD_INTERACT_TOOLS}
 
 
+# Higher retry budget than pydantic-ai's default of 2. The Anthropic SDK
+# already implements jittered exp backoff + retry-after on 429 and 5xx;
+# we just want a higher ceiling for concurrent benchmark bursts.
+_ANTHROPIC_CLIENT_RETRIES = 8
+
+# Cap on the number of error-sample blobs persisted per task. The samples
+# are for ad-hoc inspection; full error history can always be reconstructed
+# from the live run logs if needed.
+_TOOL_ERROR_SAMPLES_PER_TASK = 10
+_TOOL_ERROR_SAMPLE_CHARS = 400
+
+
+def _serialize_messages(agent_run: Any) -> list[dict]:
+    """Serialize a full PydanticAI message history to JSON-safe dicts.
+
+    Returns `[]` if the messages can't be retrieved or serialized — this
+    is a best-effort debug channel and must not block the run.
+    """
+    try:
+        messages = list(agent_run.all_messages())
+    except Exception:  # noqa: BLE001 — defensive
+        return []
+    try:
+        return ModelMessagesTypeAdapter.dump_python(messages, mode="json")
+    except Exception:  # noqa: BLE001 — fall back to part-by-part dump
+        out: list[dict] = []
+        for m in messages:
+            try:
+                out.append(m.model_dump(mode="json"))
+            except Exception:  # noqa: BLE001
+                out.append({"_repr": repr(m)})
+        return out
+
+
+def _extract_tool_stats(agent_run: Any) -> dict | None:
+    """Walk PydanticAI's recorded message history and produce per-tool
+    call/error statistics for offline failure-mode analysis.
+
+    Counts:
+    - `ToolCallPart` instances per `tool_name` → successful tool invocations
+      (from the agent's POV — the tool was found, args parsed, body ran).
+    - `RetryPromptPart` instances per `tool_name` → erroring invocations the
+      runtime asked the model to retry (Pydantic validation errors on tool
+      args, missing tool name, `ModelRetry` raised inside a tool body, plain
+      text where structured output was expected). This is the harness's
+      cleanest signal that *something went wrong inside the tool layer*,
+      separate from the submit_status path that records evaluator outcomes.
+
+    Returns `None` if the trajectory can't be walked — best-effort metric,
+    must not block the run.
+    """
+    try:
+        messages = list(agent_run.all_messages())
+    except Exception:  # noqa: BLE001 — defensive
+        return None
+
+    calls: dict[str, int] = {}
+    errors: dict[str, int] = {}
+    error_samples: list[dict[str, str]] = []
+
+    for msg in messages:
+        for part in getattr(msg, "parts", None) or []:
+            kind = getattr(part, "part_kind", None)
+            if kind == "tool-call":
+                name = getattr(part, "tool_name", None) or "<unknown>"
+                calls[name] = calls.get(name, 0) + 1
+            elif kind == "retry-prompt":
+                name = getattr(part, "tool_name", None) or "<unknown>"
+                errors[name] = errors.get(name, 0) + 1
+                if len(error_samples) < _TOOL_ERROR_SAMPLES_PER_TASK:
+                    content = getattr(part, "content", None)
+                    text = (
+                        content if isinstance(content, str) else str(content)
+                    )[:_TOOL_ERROR_SAMPLE_CHARS]
+                    error_samples.append({"tool": name, "error": text})
+
+    seen = set(calls) | set(errors)
+    per_tool = sorted(
+        ({"tool": t, "n_calls": calls.get(t, 0), "n_errors": errors.get(t, 0)}
+         for t in seen),
+        key=lambda x: (-x["n_calls"], x["tool"]),
+    )
+    return {
+        "per_tool": per_tool,
+        "total_calls": sum(calls.values()),
+        "total_errors": sum(errors.values()),
+        "error_samples": error_samples,
+    }
+
+
+def _build_anthropic_model_with_retries(model_id: str):
+    """Construct a PydanticAI `AnthropicModel` whose underlying SDK client
+    carries a higher `max_retries` budget than the library default.
+
+    Returns `None` (caller falls back to the default colon-form model
+    string) when the local environment can't construct the SDK client —
+    chiefly when an `ALL_PROXY=socks5h://…` env var is set without
+    `socksio` installed, which httpx flags at AsyncClient creation. We'd
+    rather lose the retry hardening than break the whole agent factory in
+    test environments.
+    """
+    try:
+        from anthropic import AsyncAnthropic
+        from pydantic_ai.models.anthropic import AnthropicModel
+        from pydantic_ai.providers.anthropic import AnthropicProvider
+    except Exception:  # noqa: BLE001 — defensive, never block on import
+        return None
+    try:
+        client = AsyncAnthropic(max_retries=_ANTHROPIC_CLIENT_RETRIES)
+    except Exception as e:  # noqa: BLE001 — env-dependent (e.g. SOCKS)
+        logger.warning(
+            "Falling back to default Anthropic client (max_retries=2): %s", e,
+        )
+        return None
+    return AnthropicModel(
+        model_id, provider=AnthropicProvider(anthropic_client=client),
+    )
+
+
 def _make_prepare_tools(strict_value: bool):
     """Return a `prepare_tools` callback that forces a uniform `strict` on
     every tool definition right before each model request.
@@ -93,6 +213,10 @@ class TaskDeps(BaseModel):
     # Token usage accumulator — written by the user-sim wrapper and the
     # post-run capture in run_task.
     usage: TokenUsage = Field(default_factory=TokenUsage)
+    # Full user-sim LLM exchange transcript (encoder + decoder calls per
+    # ask_user invocation). Each entry: {"phase": "encoder"|"decoder",
+    # "agent_question": str, "prompt": str, "response": str}.
+    user_sim_transcript: list[dict] = Field(default_factory=list)
     # SLayer client/storage cache (initialised lazily)
     _slayer_client: Any = None
     _slayer_storage: Any = None
@@ -262,7 +386,11 @@ class PydanticAIAgent:
         model: str = "anthropic/claude-sonnet-4-5",
         strict: bool = False,
     ) -> None:
-        from bird_interact_agents.model_string import build_pydantic_ai_model
+        from bird_interact_agents.model_string import (
+            build_pydantic_ai_model,
+            is_anthropic,
+            native_model_id,
+        )
 
         self.slayer_storage_root = slayer_storage_root
         # Accept the canonical LiteLLM-style `provider/model_id` and convert
@@ -270,7 +398,11 @@ class PydanticAIAgent:
         # `provider:model_id` string; for OpenAI-compatible third parties
         # like DeepInfra it's a fully-built OpenAIChatModel instance.
         self.model_id = model  # litellm form, kept for cost lookup
-        self.model = build_pydantic_ai_model(model)
+        anthropic_model = (
+            _build_anthropic_model_with_retries(native_model_id(model))
+            if is_anthropic(model) else None
+        )
+        self.model = anthropic_model or build_pydantic_ai_model(model)
         self.strict = strict
 
     def _select_agent(
@@ -356,6 +488,8 @@ class PydanticAIAgent:
         agent = self._select_agent(query_mode, eval_mode, slayer_storage_dir)
         prompt = await self._build_prompt(query_mode, eval_mode, task_data, budget, deps)
 
+        n_agent_turns: int | None = None
+        tool_stats: dict | None = None
         try:
             # Lift PydanticAI's default request_limit (50) above our
             # MAX_MODEL_TURNS cap so long-tail tasks don't get killed
@@ -378,16 +512,43 @@ class PydanticAIAgent:
                 completion=getattr(run_usage, "output_tokens", 0) or 0,
                 cache_read=getattr(run_usage, "cache_read_tokens", 0) or 0,
             )
+            try:
+                n_agent_turns = sum(
+                    1 for m in agent_run.all_messages()
+                    if type(m).__name__ == "ModelResponse"
+                )
+            except Exception:  # noqa: BLE001 — best-effort metric
+                n_agent_turns = None
+            tool_stats = _extract_tool_stats(agent_run)
+            agent_messages = _serialize_messages(agent_run)
         except Exception as e:
             logger.error("Agent error on %s: %s", instance_id, e)
+            partial = deps.result or {}
             return finalize_result_row(
                 {
                     "task_id": instance_id, "instance_id": instance_id,
                     "database": db_name,
-                    "phase1_passed": False, "phase2_passed": False,
-                    "total_reward": 0.0, "trajectory": [],
+                    "phase1_passed": partial.get("phase1_passed", False),
+                    "phase2_passed": partial.get("phase2_passed", False),
+                    "total_reward": partial.get("total_reward", 0.0),
+                    "submitted_sql": partial.get("submitted_sql"),
+                    "submitted_query": partial.get("submitted_query"),
+                    "trajectory": {
+                        "final_output_excerpt": "",
+                        "messages": [],
+                        "user_sim_transcript": list(deps.user_sim_transcript),
+                    },
                     "error": str(e),
                     "usage": deps.usage.model_dump(),
+                    "submission_status": partial.get(
+                        "submission_status", "never_submitted",
+                    ),
+                    "phase1_observation": partial.get("phase1_observation"),
+                    "phase2_observation": partial.get("phase2_observation"),
+                    "predicted_result_json": partial.get("predicted_result_json"),
+                    "gold_result_json": partial.get("gold_result_json"),
+                    "n_agent_turns": n_agent_turns,
+                    "tool_call_stats": tool_stats,
                 },
                 deleted_kb_ids=deleted_kb_ids,
                 slayer_storage_dir=slayer_storage_dir,
@@ -404,9 +565,22 @@ class PydanticAIAgent:
                 "total_reward": result.get("total_reward", 0.0),
                 "submitted_sql": result.get("submitted_sql"),
                 "submitted_query": result.get("submitted_query"),
-                "trajectory": [{"final_output": output_text[:500]}],
+                "trajectory": {
+                    "final_output_excerpt": output_text[:500],
+                    "messages": agent_messages,
+                    "user_sim_transcript": list(deps.user_sim_transcript),
+                },
                 "error": None,
                 "usage": deps.usage.model_dump(),
+                "submission_status": result.get(
+                    "submission_status", "never_submitted",
+                ),
+                "phase1_observation": result.get("phase1_observation"),
+                "phase2_observation": result.get("phase2_observation"),
+                "predicted_result_json": result.get("predicted_result_json"),
+                "gold_result_json": result.get("gold_result_json"),
+                "n_agent_turns": n_agent_turns,
+                "tool_call_stats": tool_stats,
             },
             deleted_kb_ids=deleted_kb_ids,
             slayer_storage_dir=slayer_storage_dir,

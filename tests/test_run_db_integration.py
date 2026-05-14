@@ -112,6 +112,58 @@ async def test_failed_task_still_lands_in_db(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_diagnostic_columns_persist(tmp_path, monkeypatch):
+    """Diagnostic fields produced by submit_* must reach the DB row.
+
+    The harness now classifies every submission and stores the
+    classifier verdict + observation + result snapshots. Verify the
+    `_persist` plumbing forwards all of those through to results.db.
+    """
+    import bird_interact_agents.run as run_mod
+
+    monkeypatch.setattr(run_mod, "load_tasks", lambda *a, **kw: [
+        {"instance_id": "t1", "selected_database": "fake",
+         "amb_user_query": "what is the count?", "sol_sql": ["SELECT 1"]},
+    ])
+    monkeypatch.setattr(run_mod, "calculate_budget", lambda *a, **kw: 18)
+
+    async def fake_oracle(td, dpb):
+        return {
+            "task_id": td["instance_id"], "instance_id": td["instance_id"],
+            "database": "fake", "phase1_passed": False, "phase2_passed": False,
+            "total_reward": 0.0, "trajectory": [], "error": None,
+            "submission_status": "wrong_result",
+            "phase1_observation": "Default test case failed: rows differ",
+            "phase2_observation": None,
+            "predicted_result_json": '{"row_count": 3}',
+            "gold_result_json": '{"row_count": 5}',
+            "n_agent_turns": 4,
+        }
+    monkeypatch.setattr(run_mod, "run_oracle_task", fake_oracle)
+
+    db_path = tmp_path / "results.db"
+    await run_mod.run_evaluation(
+        data_path="ignored", data_dir="ignored",
+        output_path=str(tmp_path / "eval.json"),
+        mode="oracle", query_mode="raw", framework="pydantic_ai",
+        concurrency=1,
+        agent_model="anthropic/claude-haiku-4-5-20251001",
+    )
+
+    with sqlite3.connect(db_path) as c:
+        rows = list(c.execute(
+            "SELECT instance_id, user_query, submission_status, "
+            "phase1_observation, predicted_result_json, gold_result_json, "
+            "n_agent_turns FROM task_results"
+        ))
+    assert rows == [(
+        "t1", "what is the count?", "wrong_result",
+        "Default test case failed: rows differ",
+        '{"row_count": 3}', '{"row_count": 5}', 4,
+    )]
+
+
+@pytest.mark.asyncio
 async def test_run_metadata_recorded(tmp_path, monkeypatch):
     import bird_interact_agents.run as run_mod
 

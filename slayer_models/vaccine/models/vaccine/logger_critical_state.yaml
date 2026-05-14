@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: logger_critical_state
 source_queries:
 - version: 3

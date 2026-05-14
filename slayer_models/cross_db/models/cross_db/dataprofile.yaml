@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: dataprofile
 sql_table: dataprofile
 query_variables: {}

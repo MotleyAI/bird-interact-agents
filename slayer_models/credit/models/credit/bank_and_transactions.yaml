@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: bank_and_transactions
 sql_table: bank_and_transactions
 query_variables: {}

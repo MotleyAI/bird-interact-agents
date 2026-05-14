@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: disasterevents
 sql_table: disasterevents
 query_variables: {}

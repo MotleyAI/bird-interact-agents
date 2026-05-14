@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: margin_call_risk
 source_queries:
 - version: 3

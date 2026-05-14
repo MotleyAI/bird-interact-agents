@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: electrical
 sql_table: electrical
 query_variables: {}
@@ -8,21 +8,28 @@ columns:
   sql: elecregistry
   type: TEXT
   primary_key: true
+  description: VARCHAR(50) PRIMARY KEY uniquely identifying each electrical record.
   hidden: false
 - name: engyunitref
   sql: engyunitref
   type: TEXT
   primary_key: false
+  description: VARCHAR(50) REFERENCES Panel(PaneMark), tying this electrical record
+    to a panel.
   hidden: false
 - name: efflogref
   sql: efflogref
   type: TEXT
   primary_key: false
+  description: VARCHAR(50) REFERENCES Performance(PerfRegistry), linking to a performance
+    record if relevant.
   hidden: false
 - name: iscinita
   sql: iscinita
   type: DOUBLE
   primary_key: false
+  description: DECIMAL(7,3) short-circuit current (Isc) at initial measurement (was
+    'IscInitialA') (e.g., 9.200).
   hidden: false
   format:
     type: float
@@ -30,6 +37,7 @@ columns:
   sql: isccurra
   type: DOUBLE
   primary_key: false
+  description: NUMERIC(7,3) current Isc measurement (was 'IscCurrentA') (e.g., 8.950).
   hidden: false
   format:
     type: float
@@ -37,6 +45,8 @@ columns:
   sql: vocinitv
   type: DOUBLE
   primary_key: false
+  description: NUMERIC(7,3) open-circuit voltage (Voc) initially (was 'VocInitialV')
+    (e.g., 49.000).
   hidden: false
   format:
     type: float
@@ -44,6 +54,7 @@ columns:
   sql: voccurrv
   type: DOUBLE
   primary_key: false
+  description: DECIMAL(7,3) current Voc measurement (was 'VocCurrentV') (e.g., 48.500).
   hidden: false
   format:
     type: float
@@ -51,6 +62,8 @@ columns:
   sql: impinita
   type: DOUBLE
   primary_key: false
+  description: DECIMAL(7,3) current at maximum power initially (was 'ImpInitialA')
+    (e.g., 8.700).
   hidden: false
   format:
     type: float
@@ -58,6 +71,7 @@ columns:
   sql: impcurra
   type: DOUBLE
   primary_key: false
+  description: NUMERIC(7,3) current Imp measurement (was 'ImpCurrentA') (e.g., 8.450).
   hidden: false
   format:
     type: float
@@ -65,6 +79,8 @@ columns:
   sql: vmpinitv
   type: DOUBLE
   primary_key: false
+  description: DECIMAL(7,3) voltage at maximum power initially (was 'VmpInitialV')
+    (e.g., 46.500).
   hidden: false
   format:
     type: float
@@ -72,6 +88,7 @@ columns:
   sql: vmpcurrv
   type: DOUBLE
   primary_key: false
+  description: NUMERIC(6,2) current Vmp measurement (was 'VmpCurrentV') (e.g., 46.12).
   hidden: false
   format:
     type: float
@@ -79,12 +96,12 @@ columns:
   sql: ffactorinit
   type: DOUBLE
   primary_key: false
-  description: "FillFactorInitial (KB#24): initial fill factor at install. Dimensionless\
-    \ 0-1; high-quality commercial panels: 0.75-0.85.\n\n[kb=24]\nA dimensionless\
-    \ value between 0 and 1 representing the ratio of maximum power point (Vmp \xD7\
-    \ Imp) to open-circuit voltage times short-circuit current (Voc \xD7 Isc). High-quality\
-    \ commercial panels typically have fill factors between 0.75 and 0.85. \u2014\
-    \ Illustrates the ratio of actual maximum power to theoretical power.\n[/kb=24]"
+  description: "Initial fill factor at panel commissioning; current fill factor\
+    \ is in ffactorcurr.\n\n[kb=24]\nA dimensionless value between 0 and 1 representing\
+    \ the ratio of maximum power point (Vmp \xD7 Imp) to open-circuit voltage times\
+    \ short-circuit current (Voc \xD7 Isc). High-quality commercial panels typically\
+    \ have fill factors between 0.75 and 0.85. \u2014 Illustrates a key indicator\
+    \ of solar cell quality.\n[/kb=24]"
   label: FillFactor (Fill Factor)
   hidden: false
   format:
@@ -95,15 +112,23 @@ columns:
   sql: ffactorcurr
   type: DOUBLE
   primary_key: false
-  description: 'FillFactorCurrent (KB#24): current fill factor measurement. Lower
-    than initial reflects degradation.'
+  description: "Current snapshot; initial fill factor is in ffactorinit.\n\n[kb=24]\n\
+    A dimensionless value between 0 and 1 representing the ratio of maximum power\
+    \ point (Vmp \xD7 Imp) to open-circuit voltage times short-circuit current (Voc\
+    \ \xD7 Isc). High-quality commercial panels typically have fill factors between\
+    \ 0.75 and 0.85. \u2014 Illustrates a key indicator of solar cell quality.\n[/kb=24]"
+  label: "FillFactor (Fill Factor) \u2014 current snapshot"
   hidden: false
   format:
     type: float
+  meta:
+    kb_id: 24
 - name: seriesresohm
   sql: seriesresohm
   type: DOUBLE
   primary_key: false
+  description: DECIMAL(7,3) series resistance in ohms (was 'SeriesResistanceOhm')
+    (e.g., 0.300).
   hidden: false
   format:
     type: float
@@ -111,37 +136,21 @@ columns:
   sql: shuntresohm
   type: DOUBLE
   primary_key: false
+  description: DECIMAL(4,1) shunt resistance in ohms (was 'ShuntResistanceOhm') (e.g.,
+    400.0).
   hidden: false
   format:
     type: float
-- name: ffdr
-  sql: CASE WHEN panel_performance.years_since_install > 0 THEN (ffactorinit - ffactorcurr)
-    / panel_performance.years_since_install * 100 ELSE NULL END
+- name: electrical_degradation_index
+  sql: (ffactorinit - ffactorcurr) / NULLIF(ffactorinit, 0) + (vocinitv - voccurrv)
+    / NULLIF(vocinitv, 0) + (iscinita - isccurra) / NULLIF(iscinita, 0)
   type: DOUBLE
   primary_key: false
-  description: "Fill Factor Degradation Rate (FFDR, KB#5): (FillFactorInitial - FillFactorCurrent)\
-    \ / Years_Since_Installation \xD7 100. Years_Since_Installation comes from the\
-    \ linked panel_performance row.\n\n[kb=5]\nFFDR = \\frac{FillFactorInitial - FillFactorCurrent}{Years\\\
-    _Since\\_Installation} \\times 100\\%, \\text{where FillFactorInitial and FillFactorCurrent\
-    \ are from the electrical table.} \u2014 Calculates the rate at which the fill\
-    \ factor of a panel is degrading over time.\n[/kb=5]"
-  label: Fill Factor Degradation Rate (FFDR)
-  hidden: false
-  meta:
-    kb_id: 5
-- name: edi
-  sql: CASE WHEN ffactorinit > 0 AND vocinitv > 0 AND iscinita > 0 THEN (ffactorinit
-    - ffactorcurr) / ffactorinit + (vocinitv - voccurrv) / vocinitv + (iscinita -
-    isccurra) / iscinita ELSE NULL END
-  type: DOUBLE
-  primary_key: false
-  description: "Electrical Degradation Index (EDI, KB#38): (FillFactorInitial - FillFactorCurrent)/FillFactorInitial\
-    \ + (VocInitialV - VocCurrV)/VocInitialV + (IscInitialA - IscCurrA)/IscInitialA.\
-    \ Higher = more severe combined electrical degradation.\n\n[kb=38]\nEDI = (FillFactorInitial\
-    \ - FillFactorCurrent)/FillFactorInitial + (VocInitialV - VocCurrV)/VocInitialV\
-    \ + (IscInitialA - IscCurrA)/IscInitialA, where higher values indicate more severe\
-    \ degradation. \u2014 Measures the combined degradation of electrical parameters.\n\
-    [/kb=38]"
+  description: "[kb=38]\nEDI = (FillFactorInitial - FillFactorCurrent)/FillFactorInitial\
+    \ + (VocInitialV - VocCurrV)/VocInitialV + (IscInitialA - IscCurrA)/IscInitialA,\
+    \ where higher values indicate more severe degradation. \u2014 A composite of\
+    \ three normalized electrical-parameter losses (fill factor, open-circuit voltage,\
+    \ short-circuit current); higher values indicate more severe degradation.\n[/kb=38]"
   label: Electrical Degradation Index (EDI)
   hidden: false
   meta:
@@ -149,18 +158,15 @@ columns:
 measures: []
 aggregations: []
 joins:
+- target_model: performance
+  join_pairs:
+  - - efflogref
+    - perfregistry
+  join_type: left
 - target_model: panel
   join_pairs:
   - - engyunitref
     - panemark
   join_type: left
-- target_model: panel_performance
-  join_pairs:
-  - - efflogref
-    - perfregistry
-  join_type: left
 filters: []
-description: Per-panel electrical parameters captured both initially and currently
-  (Isc, Voc, Imp, Vmp, FillFactor, plus series and shunt resistance). Joins to `panel`
-  (via `engyunitref`) and `panel_performance` (via `efflogref`).
 hidden: false

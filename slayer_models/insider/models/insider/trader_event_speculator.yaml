@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: trader_event_speculator
 sql: "SELECT\n  t.tradereg,\n  t.trading_performance,\n  json_extract(t.trading_performance,\
   \ '$.risklevel.risklevel') AS risk_appetite,\n  COALESCE(\n    SUM(CASE WHEN sf.corpeventprx\

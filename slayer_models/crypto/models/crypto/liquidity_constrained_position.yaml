@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: liquidity_constrained_position
 source_queries:
 - version: 3

@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: smart_money_accuracy
 source_queries:
 - version: 3

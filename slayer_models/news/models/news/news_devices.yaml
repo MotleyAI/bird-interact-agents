@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: news_devices
 sql_table: devices
 query_variables: {}

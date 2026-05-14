@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: conservation_budget_crisis
 sql: SELECT (SELECT SUM((((r.histsignrating + r.researchvalrating + r.cultscore) *
   (10 - CASE a.conservestatus WHEN 'Excellent' THEN 1 WHEN 'Good' THEN 3 WHEN 'Fair'

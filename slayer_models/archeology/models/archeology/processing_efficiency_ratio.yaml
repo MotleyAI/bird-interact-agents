@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: processing_efficiency_ratio
 source_queries:
 - version: 3

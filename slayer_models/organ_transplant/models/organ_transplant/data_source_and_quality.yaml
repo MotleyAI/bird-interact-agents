@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: data_source_and_quality
 sql_table: data_source_and_quality
 query_variables: {}

@@ -172,6 +172,11 @@ async def test_submit_query_bad_json_propagates_helper_message(monkeypatch):
     text = result["content"][0]["text"]
     assert "Invalid JSON" in text
     assert text.count("Remaining budget:") == 1
-    # Helper sets state.result on success; failure path leaves ctx result None.
-    assert agent_mod._ctx_var.get().get("result") is None
+    # Failure paths now record diagnostic state on `state.result` (the
+    # JSON-error is needed in results.db for offline failure-mode
+    # analysis). Lock the classifier verdict + that the task didn't pass.
+    rec = agent_mod._ctx_var.get().get("result")
+    assert rec is not None
+    assert rec.get("submission_status") == "json_error"
+    assert rec.get("phase1_passed") is False
     assert status.remaining_budget == start - ACTION_COSTS["submit_query"]

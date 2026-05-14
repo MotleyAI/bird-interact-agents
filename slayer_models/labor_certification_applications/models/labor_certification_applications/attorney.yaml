@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: attorney
 sql_table: attorney
 query_variables: {}

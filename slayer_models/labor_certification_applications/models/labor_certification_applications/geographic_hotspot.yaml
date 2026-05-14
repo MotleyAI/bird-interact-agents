@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: geographic_hotspot
 source_queries:
 - version: 3

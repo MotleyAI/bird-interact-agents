@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: qualifying_performance_cluster
 source_queries:
 - version: 3

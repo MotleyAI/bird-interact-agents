@@ -21,7 +21,7 @@ _TASK = {
     "instance_id": "alien_1",
 }
 _BUDGET = 12.0
-_SLAYER_DIR = "./slayer_storage/alien"
+_SLAYER_DIR = "./slayer_models/alien"
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -42,7 +42,7 @@ async def _pydantic_ai_prompt(query_mode: str, eval_mode: str) -> str:
         TaskDeps,
     )
 
-    pa = PydanticAIAgent(slayer_storage_root="./slayer_storage")
+    pa = PydanticAIAgent(slayer_storage_root="./slayer_models")
     deps = TaskDeps(
         status=SampleStatus(idx=0, original_data=_TASK),
         data_path_base=settings.db_path,

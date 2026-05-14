@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: real_time_session_efficiency
 source_queries:
 - version: 3

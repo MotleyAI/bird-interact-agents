@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: operation
 sql_table: operation
 query_variables: {}

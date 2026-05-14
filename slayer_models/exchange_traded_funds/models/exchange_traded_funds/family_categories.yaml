@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: family_categories
 sql_table: family_categories
 query_variables: {}

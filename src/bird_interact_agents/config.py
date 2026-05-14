@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     # User simulator prompt version: "v1" or "v2"
     user_sim_prompt_version: str = "v2"
 
+    # Model used by deterministic-pipeline LLM steps (e.g. text-as-date
+    # detection in scripts/regenerate_slayer_model.py). Bare Anthropic
+    # model id, not LiteLLM-prefixed. Env var: BIRD_AGENTS_LLM_MODEL.
+    agents_llm_model: str = "claude-haiku-4-5"
+
     model_config = {"env_prefix": "BIRD_", "env_file": ".env", "extra": "ignore"}
 
     @property
@@ -35,3 +40,7 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def get_default_llm_model() -> str:
+    return settings.agents_llm_model

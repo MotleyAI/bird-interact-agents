@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: life_support_reliability_classification
 source_queries:
 - version: 3

@@ -175,8 +175,8 @@ def _resolve_slayer_command() -> str:
     if on_path:
         return on_path
     raise RuntimeError(
-        "slayer CLI not found. Install with `uv pip install motley-slayer` "
-        "or `uv pip install -e ../slayer` and try again."
+        "slayer CLI not found. Install with `uv pip install 'motley-slayer[embedding-search]'` "
+        "or `uv pip install -e '../slayer[embedding-search]'` and try again."
     )
 
 
@@ -217,7 +217,7 @@ async def resolve_task_storage_dir(
     task_data: dict,
     query_mode: str,
 ) -> Tuple[str, list[int]]:
-    """Resolve the per-task SLayer storage path, applying HARD-8 deletions.
+    """Resolve the per-task SLayer storage path.
 
     Returns ``(slayer_storage_dir, deleted_kb_ids)``.
 
@@ -225,18 +225,18 @@ async def resolve_task_storage_dir(
       ``("", [])``. (The downstream slayer MCP launch is gated on
       ``query_mode == "slayer"`` in each adapter, so the empty string
       never reaches ``slayer_mcp_stdio_config``.)
-    - In slayer mode without HARD-8 deletions: returns
-      ``("<root>/<db_name>", [])`` — the canonical per-DB YAML.
-    - In slayer mode with deletions: builds a task-scoped variant
-      under ``$TMPDIR/bird_interact_w5_variants/<instance_id>/`` with
-      matching entities dropped, and returns its path + the sorted
-      deletion list.
+    - In slayer mode: ALWAYS materialises a per-task copy of the
+      canonical ``<root>/<db_name>`` under
+      ``$TMPDIR/bird_interact_w5_variants/<instance_id>/<db_name>/``,
+      optionally with HARD-8 deletions applied. The canonical
+      ``slayer_models/`` reference is therefore read-only at runtime —
+      SLayer's first-load type-refinement writes and the agent's
+      ``create_model`` / ``edit_model`` / ``delete_model`` calls land
+      in the per-task scratch dir, never in the committed reference.
     """
     if query_mode != "slayer" or not slayer_storage_root:
         return "", []
     deleted = sorted(extract_deleted_kb_ids(task_data))
-    if not deleted:
-        return f"{slayer_storage_root}/{db_name}", []
     instance_id = task_data["instance_id"]
     variant_dir = await build_task_variant_storage(
         canonical_storage_root=Path(slayer_storage_root),

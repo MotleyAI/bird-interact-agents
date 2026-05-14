@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: vaccine_viability_period
 source_queries:
 - version: 3

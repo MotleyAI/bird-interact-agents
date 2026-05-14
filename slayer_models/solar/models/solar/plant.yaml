@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: plant
 sql_table: plant
 query_variables: {}
@@ -8,30 +8,37 @@ columns:
   sql: growregistry
   type: TEXT
   primary_key: true
+  description: UUID PRIMARY KEY uniquely identifying each plant record (was 'RecordID')
+    (e.g., '3fa85f64-5717-4562-b3fc-2c963f66afa6').
   hidden: false
 - name: growalias
   sql: growalias
   type: TEXT
   primary_key: false
+  description: VARCHAR(100) naming or aliasing the plant (was 'PlantName') (e.g.,
+    'DesertSolarOne', 'ValleyGridAlpha').
   hidden: false
+  sampled: '> 20 distinct'
 - name: gencapmw
   sql: gencapmw
   type: DOUBLE
   primary_key: false
+  description: NUMERIC(7,3) indicating the generation capacity in megawatts (was 'PlantCapacityMW')
+    (e.g., 12.500).
   hidden: false
   format:
     type: float
+  sampled: 1.44 .. 499.99
 - name: initdate
   sql: initdate
-  type: TEXT
+  type: DATE
   primary_key: false
+  description: "DATE representing the plant\u2019s installation or commissioning date\
+    \ (was 'InstallationDate') (e.g., '2022-05-10')."
   hidden: false
+  sampled: '> 20 distinct'
 measures: []
 aggregations: []
 joins: []
 filters: []
-description: A solar power plant. One row per plant; downstream tables (panel, environment,
-  inverter, maintenance, alerts) reference it via `growregistry`. `gencapmw` is the
-  rated generation capacity in MW; `initdate` is the commissioning date used to derive
-  `Years_Since_Installation` for degradation metrics.
 hidden: false

@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: eventsandclub
 sql_table: eventsandclub
 query_variables: {}

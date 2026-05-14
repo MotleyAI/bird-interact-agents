@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: environmentalmonitoring
 sql_table: environmentalmonitoring
 query_variables: {}

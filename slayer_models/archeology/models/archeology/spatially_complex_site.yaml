@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: spatially_complex_site
 source_queries:
 - version: 3

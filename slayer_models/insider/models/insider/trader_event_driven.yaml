@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: trader_event_driven
 sql: "SELECT\n  tr.trdref AS tradereg,\n  SUM(CASE WHEN sf.corpeventprx IS NOT NULL\
   \ THEN 1 ELSE 0 END) * 1.0 / NULLIF(COUNT(sf.sentreg), 0) AS event_share,\n  COUNT(sf.sentreg)\

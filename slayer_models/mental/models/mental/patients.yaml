@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: patients
 sql_table: patients
 query_variables: {}

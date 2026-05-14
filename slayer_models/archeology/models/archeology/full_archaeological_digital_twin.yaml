@@ -1,4 +1,4 @@
-version: 5
+version: 6
 name: full_archaeological_digital_twin
 source_queries:
 - version: 3
